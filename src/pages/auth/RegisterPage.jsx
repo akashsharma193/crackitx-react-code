@@ -9,7 +9,8 @@ const RegisterPage = () => {
         email: '',
         batch: '',
         orgCode: '',
-        password: ''
+        password: '',
+        confirmPassword: ''
     });
 
     const handleInputChange = (e) => {
@@ -119,7 +120,7 @@ const RegisterPage = () => {
                                     </svg>
                                 </div>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="batch"
                                     placeholder="Batch"
                                     value={formData.batch}
@@ -143,7 +144,7 @@ const RegisterPage = () => {
                                     </svg>
                                 </div>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="orgCode"
                                     placeholder="Org Code"
                                     value={formData.orgCode}
@@ -171,6 +172,30 @@ const RegisterPage = () => {
                                     name="password"
                                     placeholder="Password"
                                     value={formData.password}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    style={{
+                                        paddingLeft: '48px',
+                                        paddingRight: '16px',
+                                        paddingTop: '16px',
+                                        paddingBottom: '16px',
+                                        fontSize: '16px'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Confirm Password Field */}
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
+                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="password"
+                                    name="confirmPassword"
+                                    placeholder="Confirm Password"
+                                    value={formData.confirmPassword}
                                     onChange={handleInputChange}
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
                                     style={{
