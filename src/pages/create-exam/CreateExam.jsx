@@ -392,7 +392,7 @@ const CreateExam = () => {
                         </div>
 
                         {/* Organization Code */}
-                        <div>
+                        {/* <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">
                                 Organization Code
                             </label>
@@ -403,6 +403,39 @@ const CreateExam = () => {
                                 className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
                                 placeholder="Organization Code"
                             />
+                        </div> */}
+
+                        {/* Exam Duration */}
+                        <div >
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                Exam Duration (minutes)
+                            </label>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 text-left flex items-center justify-between cursor-pointer"
+                                >
+                                    <span>{formData.examDuration}</span>
+                                    <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 !mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                        {durationOptions.map((option) => (
+                                            <button
+                                                key={option}
+                                                onClick={() => {
+                                                    handleInputChange('examDuration', option);
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="w-full !px-4 !py-3 text-left hover:bg-[#5E48EF]/5 first:rounded-t-lg last:rounded-b-lg transition-colors cursor-pointer"
+                                            >
+                                                {option}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Batch */}
@@ -468,38 +501,7 @@ const CreateExam = () => {
                         </div>
                     </div>
 
-                    {/* Exam Duration */}
-                    <div className="!mt-6">
-                        <label className="block text-sm font-medium text-gray-600 !mb-2">
-                            Exam Duration (minutes)
-                        </label>
-                        <div className="relative md:w-1/2">
-                            <button
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 text-left flex items-center justify-between cursor-pointer"
-                            >
-                                <span>{formData.examDuration}</span>
-                                <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
 
-                            {isDropdownOpen && (
-                                <div className="absolute top-full left-0 right-0 !mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                    {durationOptions.map((option) => (
-                                        <button
-                                            key={option}
-                                            onClick={() => {
-                                                handleInputChange('examDuration', option);
-                                                setIsDropdownOpen(false);
-                                            }}
-                                            className="w-full !px-4 !py-3 text-left hover:bg-[#5E48EF]/5 first:rounded-t-lg last:rounded-b-lg transition-colors cursor-pointer"
-                                        >
-                                            {option}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
                     {/* Import from Excel Button */}
                     <div className="flex justify-center !mt-8">
@@ -556,8 +558,8 @@ const CreateExam = () => {
             {showDialog && (
                 <CreateExamDialog
                     isOpen={showDialog}
-                    onClose={() => setShowDialog(false)} 
-                    onConfirm={handleCreate} 
+                    onClose={() => setShowDialog(false)}
+                    onConfirm={handleCreate}
                 />
             )}
         </div>
