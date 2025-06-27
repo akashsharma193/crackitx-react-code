@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import WelcomeComponent from '../../components/auth/WelcomeComponent';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import apiClient from '../../api/axiosConfig';
+import { toast } from 'react-toastify';
+import { User, Phone, Mail, Users, Building, Lock, CheckCircle } from 'lucide-react';
 
 const RegisterPage = () => {
+    const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
         name: '',
         number: '',
@@ -13,6 +18,8 @@ const RegisterPage = () => {
         confirmPassword: ''
     });
 
+    const [isLoading, setIsLoading] = useState(false);
+
     const handleInputChange = (e) => {
         setFormData({
             ...formData,
@@ -20,9 +27,198 @@ const RegisterPage = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const validateForm = () => {
+        if (!formData.name.trim()) {
+            toast.error('Please enter your name');
+            return false;
+        }
+
+        if (!formData.number.trim()) {
+            toast.error('Please enter your mobile number');
+            return false;
+        }
+
+        if (!formData.email.trim()) {
+            toast.error('Please enter your email');
+            return false;
+        }
+
+        if (!formData.batch.trim()) {
+            toast.error('Please enter your batch');
+            return false;
+        }
+
+        if (!formData.orgCode.trim()) {
+            toast.error('Please enter organization code');
+            return false;
+        }
+
+        if (!formData.password) {
+            toast.error('Please enter a password');
+            return false;
+        }
+
+        if (!formData.confirmPassword) {
+            toast.error('Please confirm your password');
+            return false;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            toast.error('Please enter a valid email address');
+            return false;
+        }
+
+        const mobileRegex = /^[0-9]{10}$/;
+        if (!mobileRegex.test(formData.number)) {
+            toast.error('Please enter a valid 10-digit mobile number');
+            return false;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+            toast.error('Passwords do not match');
+            return false;
+        }
+
+        if (formData.password.length < 6) {
+            toast.error('Password must be at least 6 characters long');
+            return false;
+        }
+
+        return true;
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form submitted:', formData);
+
+        if (!validateForm()) {
+            return;
+        }
+
+        if (isLoading) {
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const registrationData = {
+                name: formData.name.trim(),
+                mobile: formData.number.trim(),
+                email: formData.email.trim().toLowerCase(),
+                batch: formData.batch.trim(),
+                password: formData.password,
+                orgCode: formData.orgCode.trim()
+            };
+
+            console.log('Sending registration data:', { ...registrationData, password: '[HIDDEN]' });
+
+            const response = await apiClient.post('/user-open/registration', registrationData, {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                timeout: 30000,
+                retry: 3,
+                retryDelay: 1000
+            });
+
+            console.log('Registration response:', response);
+
+            // Check for successful response
+            if (response.data && (response.status === 200 || response.status === 201)) {
+                toast.success('Registration successful! Please login to continue.');
+
+                // Clear form
+                setFormData({
+                    name: '',
+                    number: '',
+                    email: '',
+                    batch: '',
+                    orgCode: '',
+                    password: '',
+                    confirmPassword: ''
+                });
+
+                // Navigate after a short delay
+                setTimeout(() => {
+                    navigate('/', { replace: true });
+                }, 1500);
+            } else {
+                toast.error('Unexpected response from server. Please try again.');
+            }
+
+        } catch (error) {
+            console.error('Registration error:', error);
+
+            if (error.code === 'ECONNABORTED') {
+                toast.error('Request timeout. Please check your connection and try again.');
+            } else if (error.response) {
+                const status = error.response.status;
+                const data = error.response.data;
+
+                console.log('Error response:', { status, data });
+
+                let errorMessage = 'Registration failed';
+
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data?.message) {
+                    errorMessage = data.message;
+                } else if (data?.error) {
+                    errorMessage = data.error;
+                } else if (data?.detail) {
+                    errorMessage = data.detail;
+                } else if (data?.errors && Array.isArray(data.errors)) {
+                    errorMessage = data.errors.join(', ');
+                }
+
+                // Handle specific status codes
+                switch (status) {
+                    case 400:
+                        toast.error(errorMessage || 'Bad request. Please check your input.');
+                        break;
+                    case 401:
+                        toast.error('Unauthorized. Please check your credentials.');
+                        break;
+                    case 403:
+                        toast.error('Access forbidden. Please check your organization code.');
+                        break;
+                    case 409:
+                        toast.error('User already exists with this email or mobile number.');
+                        break;
+                    case 422:
+                        toast.error(errorMessage || 'Please check your input and try again.');
+                        break;
+                    case 429:
+                        toast.error('Too many requests. Please wait and try again later.');
+                        break;
+                    case 500:
+                        toast.error('Server error. Please try again later.');
+                        break;
+                    case 502:
+                        toast.error('Bad gateway. Server is temporarily unavailable.');
+                        break;
+                    case 503:
+                        toast.error('Service unavailable. Please try again later.');
+                        break;
+                    case 504:
+                        toast.error('Gateway timeout. Please try again.');
+                        break;
+                    default:
+                        toast.error(errorMessage || `Server error (${status}). Please try again.`);
+                }
+            } else if (error.request) {
+                // Network error
+                console.log('Network error:', error.request);
+                toast.error('Network error. Please check your internet connection and try again.');
+            } else {
+                // Other errors
+                console.log('Other error:', error.message);
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -38,21 +234,20 @@ const RegisterPage = () => {
                             REGISTER
                         </h1>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Username Field */}
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Name Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
+                                    <User className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="text"
                                     name="name"
-                                    placeholder="Name"
+                                    placeholder="Full Name"
                                     value={formData.name}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -63,20 +258,20 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Number Field */}
+                            {/* Mobile Number Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                                    </svg>
+                                    <Phone className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="number"
+                                    type="tel"
                                     name="number"
-                                    placeholder="Number"
+                                    placeholder="Mobile Number"
                                     value={formData.number}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    maxLength="10"
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -90,18 +285,16 @@ const RegisterPage = () => {
                             {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                                    </svg>
+                                    <Mail className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="email"
                                     name="email"
-                                    placeholder="Email"
+                                    placeholder="Email Address"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -115,9 +308,7 @@ const RegisterPage = () => {
                             {/* Batch Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                                    </svg>
+                                    <Users className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="text"
@@ -125,7 +316,8 @@ const RegisterPage = () => {
                                     placeholder="Batch"
                                     value={formData.batch}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -136,20 +328,19 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Org Code Field*/}
+                            {/* Organization Code Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
-                                    </svg>
+                                    <Building className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="text"
                                     name="orgCode"
-                                    placeholder="Org Code"
+                                    placeholder="Organization Code"
                                     value={formData.orgCode}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all "
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -160,12 +351,10 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Password Code */}
+                            {/* Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                    </svg>
+                                    <Lock className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="password"
@@ -173,7 +362,8 @@ const RegisterPage = () => {
                                     placeholder="Password"
                                     value={formData.password}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -187,9 +377,7 @@ const RegisterPage = () => {
                             {/* Confirm Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                    </svg>
+                                    <CheckCircle className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="password"
@@ -197,7 +385,8 @@ const RegisterPage = () => {
                                     placeholder="Confirm Password"
                                     value={formData.confirmPassword}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -208,11 +397,11 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-
                             {/* Register Button */}
                             <button
-                                onClick={handleSubmit}
-                                className="w-full rounded-xl text-white font-semibold transition-all hover:opacity-90 focus:outline-none cursor-pointer"
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full rounded-xl text-white font-semibold transition-all hover:opacity-90 focus:outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                 style={{
                                     background: 'linear-gradient(135deg, #735FF1 0%, #624CEF 100%)',
                                     paddingTop: '16px',
@@ -222,22 +411,22 @@ const RegisterPage = () => {
                                     fontSize: '16px'
                                 }}
                             >
-                                Register
+                                {isLoading ? 'Creating Account...' : 'Register'}
                             </button>
 
-                            {/* Register Link */}
+                            {/* Login Link */}
                             <div className="text-center">
                                 <span className="text-gray-600" style={{ fontSize: '14px' }}>
                                     Already have an account?{' '}
                                 </span>
-                                <Link to='/'
+                                <Link to='/' 
                                     className="text-gray-900 font-semibold hover:text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
                                     style={{ fontSize: '14px' }}
                                 >
                                     Login
                                 </Link>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,82 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
+import apiClient from '../api/axiosConfig';
 
 const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    const clearLocalStorage = () => {
+        try {
+            localStorage.clear();
+        } catch (error) {
+            console.error('Error clearing localStorage:', error);
+        }
+    };
+
+    // Handle logout process
+    const handleLogout = async () => {
+        try {
+            setIsLoggingOut(true);
+
+            const response = await apiClient.post('/user-secured/logOut');
+
+            if (response.data.success || response.status === 200) {
+                clearLocalStorage();
+
+                toast.success('Logout successful');
+
+                onClose();
+
+                if (onConfirm) {
+                    onConfirm();
+                }
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+
+            } else {
+                const errorMessage = response.data.message || 'Logout failed. Please try again.';
+                toast.error(errorMessage);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            let errorMessage = 'An unexpected error occurred during logout.';
+
+            if (error.response) {
+                if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.response.status === 401) {
+                    errorMessage = 'Session expired. You will be logged out.';
+                    clearLocalStorage();
+                    toast.success('Logout successful');
+                    onClose();
+                    if (onConfirm) {
+                        onConfirm();
+                    }
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                    return;
+                } else if (error.response.status === 500) {
+                    errorMessage = 'Server error. Please try again later.';
+                } else if (error.response.status === 404) {
+                    errorMessage = 'Logout service not found.';
+                } else {
+                    errorMessage = `Request failed with status ${error.response.status}`;
+                }
+            } else if (error.request) {
+                errorMessage = 'Network error. Please check your internet connection.';
+            } else if (error.code === 'ECONNABORTED') {
+                errorMessage = 'Request timeout. Please try again.';
+            }
+
+            toast.error(errorMessage);
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -15,15 +91,21 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
                     <div className="flex justify-center gap-4">
                         <button
                             onClick={onClose}
-                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer"
+                            disabled={isLoggingOut}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={onConfirm}
-                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[80px]"
                         >
-                            Logout
+                            {isLoggingOut ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                'Logout'
+                            )}
                         </button>
                     </div>
                 </div>

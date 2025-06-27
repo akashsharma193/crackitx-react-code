@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -10,6 +8,8 @@ import EditStudent from './pages/students/EditStudents'
 import PastExamDetails from './pages/past-exams/PastExamDetails'
 import PastExamStudentView from './pages/past-exams/PastExamStudentView'
 import EditExam from './pages/active-exams/EditExam'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -24,9 +24,21 @@ function App() {
         <Route path="/past-exam-details/:id" element={<PastExamDetails />} />
         <Route path="/past-exam/student-view/:id" element={<PastExamStudentView />} />
         <Route path="/edit-exam/:id" element={<EditExam />} />
-
-
       </Routes>
+
+      {/* Toast Container for notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </>
   )
 }

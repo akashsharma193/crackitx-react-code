@@ -9,13 +9,9 @@ import Dashboard from '../Dashboard/Dashboard';
 import ActiveExams from '../active-exams/ActiveExams';
 import LogoutDialog from '../../components/LogOutComponent';
 import CreateExam from '../create-exam/CreateExam';
+import UpcomingExam from '../upcoming-exam/UpcomingExam';
 
 // Dummy Components
-const UpcomingExam = () => (
-    <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
-        Coming Soon
-    </div>
-);
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
         Coming Soon

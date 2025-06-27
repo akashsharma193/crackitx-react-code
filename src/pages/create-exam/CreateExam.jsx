@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { ChevronDown, Download, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import apiClient from '../../api/axiosConfig';
 
-const CreateExamDialog = ({ isOpen, onClose, onConfirm }) => {
+const CreateExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
     if (!isOpen) return null;
 
     return (
@@ -16,15 +18,17 @@ const CreateExamDialog = ({ isOpen, onClose, onConfirm }) => {
                     <div className="flex justify-center gap-4">
                         <button
                             onClick={onClose}
-                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer"
+                            disabled={isLoading}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={onConfirm}
-                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                            disabled={isLoading}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Create
+                            {isLoading ? 'Creating...' : 'Create'}
                         </button>
                     </div>
                 </div>
@@ -33,12 +37,70 @@ const CreateExamDialog = ({ isOpen, onClose, onConfirm }) => {
     );
 };
 
+const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
+        <div className="flex items-center justify-between !mb-4">
+            <h3 className="text-[#5E48EF] text-lg font-medium">
+                Question {questionIndex + 1}
+            </h3>
+            <button
+                onClick={() => onDeleteQuestion(question.id)}
+                className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                aria-label="Delete question"
+            >
+                <Trash2 className="w-5 h-5" />
+            </button>
+        </div>
+
+        <div className="!mb-6">
+            <textarea
+                value={question.question}
+                onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
+                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
+                placeholder="Enter your question here..."
+                rows="3"
+            />
+        </div>
+
+        <div className="!mb-4">
+            <h4 className="text-sm font-medium text-gray-600 !mb-3">
+                Options (Select one as the correct answer)
+            </h4>
+            <div className="space-y-3">
+                {question.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-3 !mb-3">
+                        <button
+                            onClick={() => onCorrectAnswerChange(question.id, index)}
+                            className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center ${question.correctAnswer === index
+                                ? 'border-[#5E48EF] bg-[#5E48EF]'
+                                : 'border-[#5E48EF] bg-transparent'
+                                }`}
+                            aria-label={`Select option ${index + 1} as correct answer`}
+                        >
+                            {question.correctAnswer === index && (
+                                <div className="w-2 h-2 bg-white rounded-full" />
+                            )}
+                        </button>
+                        <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => onOptionChange(question.id, index, e.target.value)}
+                            className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder={`Option ${index + 1}`}
+                        />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 const CreateExam = () => {
     const [formData, setFormData] = useState({
-        subjectName: 'xyz@gmail.com',
-        teacherName: 'Contentive',
+        subjectName: '',
+        teacherName: '',
         organizationCode: 'Contentive',
-        batch: 'Contentive',
+        batch: '',
         startTime: '',
         endTime: '',
         examDuration: '30 mins'
@@ -59,6 +121,7 @@ const CreateExam = () => {
         selectedDate: null
     });
     const [showDialog, setShowDialog] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [questions, setQuestions] = useState([
         {
             id: 1,
@@ -131,16 +194,131 @@ const CreateExam = () => {
     }, []);
 
     const handleSubmit = useCallback(() => {
+        // Validation
+        if (!formData.subjectName.trim()) {
+            toast.error('Subject name is required');
+            return;
+        }
+        if (!formData.teacherName.trim()) {
+            toast.error('Teacher name is required');
+            return;
+        }
+        if (!formData.batch.trim()) {
+            toast.error('Batch is required');
+            return;
+        }
+        if (!formData.startTime) {
+            toast.error('Start date is required');
+            return;
+        }
+        if (!formData.endTime) {
+            toast.error('End date is required');
+            return;
+        }
+
+        const validQuestions = questions.filter(q =>
+            q.question.trim() !== '' &&
+            q.options.every(opt => opt.trim() !== '') &&
+            q.correctAnswer !== null
+        );
+
+        if (validQuestions.length === 0) {
+            toast.error('At least one complete question is required');
+            return;
+        }
+
         setShowDialog(true);
-    }, []);
+    }, [formData, questions]);
 
-    const handleCreate = useCallback(() => {
-        const examData = {
+    const formatDateForAPI = (dateString) => {
+        // Convert "10 May 2024" format to "2024-05-10T20:30:00.000"
+        const parts = dateString.split(' ');
+        const day = parts[0].padStart(2, '0');
+        const monthName = parts[1];
+        const year = parts[2];
 
-            ...formData,
-            questions: questions.filter(q => q.question.trim() !== '')
-        };
-        console.log('Exam Data:', examData);
+        const monthIndex = months.indexOf(monthName);
+        const month = (monthIndex + 1).toString().padStart(2, '0');
+
+        return `${year}-${month}-${day}T20:30:00.000`;
+    };
+
+    const handleCreate = useCallback(async () => {
+        setIsLoading(true);
+
+        try {
+            // Prepare questions data
+            const validQuestions = questions.filter(q =>
+                q.question.trim() !== '' &&
+                q.options.every(opt => opt.trim() !== '') &&
+                q.correctAnswer !== null
+            );
+
+            const questionList = validQuestions.map(q => ({
+                question: q.question.trim(),
+                options: q.options.map(opt => opt.trim()),
+                correctAnswer: q.options[q.correctAnswer].trim()
+            }));
+
+            // Prepare exam data
+            const examData = {
+                questionList,
+                examDuration: formData.examDuration.replace(' mins', ''), // Remove 'mins' suffix
+                subjectName: formData.subjectName.trim(),
+                teacherName: formData.teacherName.trim(),
+                batch: formData.batch.trim(),
+                startTime: formatDateForAPI(formData.startTime),
+                endTime: formatDateForAPI(formData.endTime)
+            };
+
+            console.log('Sending exam data:', examData);
+
+            const response = await apiClient.post('/questionPaper/createQuestionPaper', examData);
+
+            console.log('API Response:', response.data);
+
+            // Success
+            toast.success('Exam created successfully!');
+            setShowDialog(false);
+
+            // Reset form
+            setFormData({
+                subjectName: '',
+                teacherName: '',
+                organizationCode: 'Contentive',
+                batch: '',
+                startTime: '',
+                endTime: '',
+                examDuration: '30 mins'
+            });
+            setQuestions([{
+                id: 1,
+                question: '',
+                options: ['', '', '', ''],
+                correctAnswer: null
+            }]);
+            setShowQuestions(false);
+
+        } catch (error) {
+            console.error('Error creating exam:', error);
+
+            // Handle different types of errors
+            if (error.response) {
+                // Server responded with error status
+                const errorMessage = error.response.data?.message ||
+                    error.response.data?.error ||
+                    `Server error: ${error.response.status}`;
+                toast.error(errorMessage);
+            } else if (error.request) {
+                // Request was made but no response received
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                // Something else happened
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }, [formData, questions]);
 
     const handleDateSelect = (date, isStartDate) => {
@@ -287,64 +465,6 @@ const CreateExam = () => {
         );
     };
 
-    const QuestionCard = ({ question, questionIndex }) => (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
-            <div className="flex items-center justify-between !mb-4">
-                <h3 className="text-[#5E48EF] text-lg font-medium">
-                    Question {questionIndex + 1}
-                </h3>
-                <button
-                    onClick={() => deleteQuestion(question.id)}
-                    className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                    aria-label="Delete question"
-                >
-                    <Trash2 className="w-5 h-5" />
-                </button>
-            </div>
-
-            <div className="!mb-6">
-                <textarea
-                    value={question.question}
-                    onChange={(e) => handleQuestionChange(question.id, 'question', e.target.value)}
-                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
-                    placeholder="Enter your question here..."
-                    rows="3"
-                />
-            </div>
-
-            <div className="!mb-4">
-                <h4 className="text-sm font-medium text-gray-600 !mb-3">
-                    Options (Select one as the correct answer)
-                </h4>
-                <div className="space-y-3">
-                    {question.options.map((option, index) => (
-                        <div key={index} className="flex items-center gap-3 !mb-3">
-                            <button
-                                onClick={() => handleCorrectAnswerChange(question.id, index)}
-                                className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center ${question.correctAnswer === index
-                                    ? 'border-[#5E48EF] bg-[#5E48EF]'
-                                    : 'border-[#5E48EF] bg-transparent'
-                                    }`}
-                                aria-label={`Select option ${index + 1} as correct answer`}
-                            >
-                                {question.correctAnswer === index && (
-                                    <div className="w-2 h-2 bg-white rounded-full" />
-                                )}
-                            </button>
-                            <input
-                                type="text"
-                                value={option}
-                                onChange={(e) => handleOptionChange(question.id, index, e.target.value)}
-                                className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                                placeholder={`Option ${index + 1}`}
-                            />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
@@ -390,20 +510,6 @@ const CreateExam = () => {
                                 placeholder="Teacher Name"
                             />
                         </div>
-
-                        {/* Organization Code */}
-                        {/* <div>
-                            <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                Organization Code
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.organizationCode}
-                                onChange={(e) => handleInputChange('organizationCode', e.target.value)}
-                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                                placeholder="Organization Code"
-                            />
-                        </div> */}
 
                         {/* Exam Duration */}
                         <div >
@@ -501,8 +607,6 @@ const CreateExam = () => {
                         </div>
                     </div>
 
-
-
                     {/* Import from Excel Button */}
                     <div className="flex justify-center !mt-8">
                         <button className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer">
@@ -520,6 +624,10 @@ const CreateExam = () => {
                                 key={question.id}
                                 question={question}
                                 questionIndex={index}
+                                onQuestionChange={handleQuestionChange}
+                                onOptionChange={handleOptionChange}
+                                onCorrectAnswerChange={handleCorrectAnswerChange}
+                                onDeleteQuestion={deleteQuestion}
                             />
                         ))}
                     </div>
@@ -549,22 +657,24 @@ const CreateExam = () => {
 
                     <button
                         onClick={handleSubmit}
-                        className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-12 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all shadow-lg cursor-pointer"
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-12 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Submit
+                        {isLoading ? 'Submitting...' : 'Submit'}
                     </button>
                 </div>
             </div>
+
             {showDialog && (
                 <CreateExamDialog
                     isOpen={showDialog}
                     onClose={() => setShowDialog(false)}
                     onConfirm={handleCreate}
+                    isLoading={isLoading}
                 />
             )}
         </div>
     );
-
 };
 
 export default CreateExam;

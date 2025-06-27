@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Eye, Trash2, Search, X, Download } from 'lucide-react';
+import apiClient from '../../api/axiosConfig';
 
 const DeleteExamDialog = ({ isOpen, onClose, onConfirm }) => {
     if (!isOpen) return null;
@@ -34,23 +34,57 @@ const DeleteExamDialog = ({ isOpen, onClose, onConfirm }) => {
     );
 };
 
-const activeExamData = Array.from({ length: 10 }, (_, i) => ({
-    srNo: i + 1,
-    testName: 'Cell text',
-    conductedBy: 'Cell text',
-    startTime: 'Cell text',
-    endTime: 'Cell text',
-    isVisible: i % 2 === 0,
-}));
-
 const ActiveExams = () => {
-    const navigate = useNavigate();
-    const [examData, setExamData] = useState(activeExamData);
+    const [examData, setExamData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [examToDelete, setExamToDelete] = useState(null);  // Track which exam is being deleted
+    const [examToDelete, setExamToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTerm, setFilterTerm] = useState('');
+
+    // Fetch data from API
+    useEffect(() => {
+        const fetchExamData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await apiClient.get('/answerPaper/getAllTest');
+
+                if (response.data.success && response.data.data) {
+                    // Transform API data to match the component's expected format
+                    const transformedData = response.data.data.map((item, index) => ({
+                        srNo: index + 1,
+                        testName: item.subjectName || 'N/A',
+                        conductedBy: item.teacherName || 'N/A',
+                        startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
+                        endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A',
+                        isVisible: true, // Default visibility
+                        questionId: item.questionId,
+                        orgCode: item.orgCode,
+                        batch: item.batch,
+                        userId: item.userId
+                    }));
+
+                    setExamData(transformedData);
+                } else {
+                    throw new Error(response.data.message || 'Failed to fetch exam data');
+                }
+            } catch (err) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch exam data');
+                console.error('Error fetching exam data:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchExamData();
+    }, []);
 
     const handleViewClick = (examId) => {
-        navigate(`/edit-exam/${examId}`);
+        // Navigate to edit exam page - replace with your routing logic
+        console.log('Navigate to edit exam:', examId);
     };
 
     const handleToggleVisibility = (index) => {
@@ -62,20 +96,58 @@ const ActiveExams = () => {
     };
 
     const handleDeleteClick = (examId) => {
-        setExamToDelete(examId);  // Set the exam to delete
-        setShowDeleteDialog(true);  // Show the delete dialog
+        setExamToDelete(examId);
+        setShowDeleteDialog(true);
     };
 
     const handleDeleteConfirm = () => {
-        setExamData(prevData => prevData.filter(exam => exam.srNo !== examToDelete));  // Delete the exam
-        setShowDeleteDialog(false);  // Close the dialog
-        setExamToDelete(null);  // Reset the exam to delete
+        setExamData(prevData => prevData.filter(exam => exam.srNo !== examToDelete));
+        setShowDeleteDialog(false);
+        setExamToDelete(null);
     };
 
     const handleDeleteCancel = () => {
-        setShowDeleteDialog(false);  // Close the dialog without deleting
-        setExamToDelete(null);  // Reset the exam to delete
+        setShowDeleteDialog(false);
+        setExamToDelete(null);
     };
+
+    const handleClear = () => {
+        setSearchTerm('');
+        setFilterTerm('');
+    };
+
+    // Filter data based on search and filter terms
+    const filteredExamData = examData.filter(exam => {
+        const matchesSearch = searchTerm === '' ||
+            exam.testName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            exam.conductedBy.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesFilter = filterTerm === '' ||
+            exam.testName.toLowerCase().includes(filterTerm.toLowerCase()) ||
+            exam.conductedBy.toLowerCase().includes(filterTerm.toLowerCase());
+
+        return matchesSearch && matchesFilter;
+    });
+
+    if (loading) {
+        return (
+            <div className="flex-1 !py-0 overflow-y-auto">
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-[#7966F1] text-lg">Loading exams...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex-1 !py-0 overflow-y-auto">
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-red-500 text-lg">Error: {error}</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
@@ -88,6 +160,8 @@ const ActiveExams = () => {
                         <input
                             type="text"
                             placeholder="Search"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
                         />
                     </div>
@@ -98,12 +172,17 @@ const ActiveExams = () => {
                         <input
                             type="text"
                             placeholder="Filter"
+                            value={filterTerm}
+                            onChange={(e) => setFilterTerm(e.target.value)}
                             className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
                         />
                     </div>
 
                     {/* Clear Button */}
-                    <button className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2">
+                    <button
+                        onClick={handleClear}
+                        className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2"
+                    >
                         <X size={16} className="text-gray-500" />
                         Clear
                     </button>
@@ -133,36 +212,44 @@ const ActiveExams = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {examData.map((exam, index) => (
-                            <tr key={index} className="border-t hover:bg-gray-50">
-                                <td className="!px-6 !py-4">{exam.srNo}</td>
-                                <td className="!px-6 !py-4">{exam.testName}</td>
-                                <td className="!px-6 !py-4">{exam.conductedBy}</td>
-                                <td className="!px-6 !py-4">{exam.startTime}</td>
-                                <td className="!px-6 !py-4">{exam.endTime}</td>
-                                <td className="!px-6 !py-4">
-                                    <label className="inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={exam.isVisible}
-                                            onChange={() => handleToggleVisibility(index)}
-                                        />
-                                        <div className={`relative w-11 h-6 rounded-full peer transition-colors duration-200 ease-in-out ${exam.isVisible ? 'bg-[#7966F1]' : 'bg-gray-200'
-                                            }`}>
-                                            <div className={`absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform duration-200 ease-in-out ${exam.isVisible ? 'translate-x-5' : 'translate-x-0'
-                                                }`} />
-                                        </div>
-                                    </label>
-                                </td>
-                                <td className="!px-6 !py-4">
-                                    <Eye className="text-[#7966F1] cursor-pointer" size={20} onClick={() => handleViewClick(exam.srNo)} />
-                                </td>
-                                <td className="!px-6 !py-4">
-                                    <Trash2 className="text-[#ef4444] cursor-pointer" size={20} onClick={() => handleDeleteClick(exam.srNo)} />
+                        {filteredExamData.length > 0 ? (
+                            filteredExamData.map((exam, index) => (
+                                <tr key={exam.questionId || index} className="border-t hover:bg-gray-50">
+                                    <td className="!px-6 !py-4">{exam.srNo}</td>
+                                    <td className="!px-6 !py-4">{exam.testName}</td>
+                                    <td className="!px-6 !py-4">{exam.conductedBy}</td>
+                                    <td className="!px-6 !py-4">{exam.startTime}</td>
+                                    <td className="!px-6 !py-4">{exam.endTime}</td>
+                                    <td className="!px-6 !py-4">
+                                        <label className="inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={exam.isVisible}
+                                                onChange={() => handleToggleVisibility(index)}
+                                            />
+                                            <div className={`relative w-11 h-6 rounded-full peer transition-colors duration-200 ease-in-out ${exam.isVisible ? 'bg-[#7966F1]' : 'bg-gray-200'
+                                                }`}>
+                                                <div className={`absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform duration-200 ease-in-out ${exam.isVisible ? 'translate-x-5' : 'translate-x-0'
+                                                    }`} />
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td className="!px-6 !py-4">
+                                        <Eye className="text-[#7966F1] cursor-pointer" size={20} onClick={() => handleViewClick(exam.srNo)} />
+                                    </td>
+                                    <td className="!px-6 !py-4">
+                                        <Trash2 className="text-[#ef4444] cursor-pointer" size={20} onClick={() => handleDeleteClick(exam.srNo)} />
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
+                                    {examData.length === 0 ? 'No exams found' : 'No exams match your search criteria'}
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             </div>

@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import WelcomeComponent from '../../components/auth/WelcomeComponent';
 import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../../api/axiosConfig';
+import { toast } from 'react-toastify';
+import { Mail, Lock } from 'lucide-react';
 
 const LoginPage = () => {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: ''
     });
+
+    const [isLoading, setIsLoading] = useState(false);
+
+    const getDeviceId = () => {
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('deviceId', deviceId);
+        }
+        return deviceId;
+    };
 
     const handleInputChange = (e) => {
         setFormData({
@@ -17,10 +31,83 @@ const LoginPage = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        navigate('/home');
-        console.log('Login attempt:', formData);
+
+        if (!formData.email || !formData.password) {
+            toast.error('Please fill in all fields');
+            return;
+        }
+
+        setIsLoading(true);
+        var deviceId = getDeviceId();
+        try {
+            const response = await apiClient.post('/user-open/login', {
+                email: formData.email,
+                password: formData.password
+            }, {
+                headers: {
+                    'deviceId': deviceId,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const clearNavigationHistory = () => {
+                window.history.replaceState(null, '', '/home');
+
+                const currentLength = window.history.length;
+                window.history.go(-currentLength + 1);
+
+                window.history.pushState(null, '', window.location.href);
+                window.addEventListener('popstate', (event) => {
+                    window.history.pushState(null, '', window.location.href);
+                });
+            };
+
+            if (response.data && response.status === 200) {
+                toast.success('Login successful!');
+                if (response.data.data.token) {
+                    localStorage.setItem('authToken', response.data.data.token);
+                }
+                if (response.data.data.refreshToken) {
+                    localStorage.setItem('refreshToken', response.data.data.refreshToken);
+                }
+                navigate('/home', { replace: true });
+            }
+
+        } catch (error) {
+            console.error('Login error:', error);
+
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data?.message ||
+                    error.response.data?.error ||
+                    error.response.data?.detail ||
+                    'Login failed';
+
+                if (status === 400) {
+                    toast.error(message || 'Bad request. Please check your input.');
+                } else if (status === 401) {
+                    toast.error('Invalid email or password');
+                } else if (status === 404) {
+                    toast.error('User not found');
+                } else if (status === 422) {
+                    toast.error('Please check your input and try again');
+                } else if (status >= 500) {
+                    toast.error('Server error. Please try again later');
+                } else {
+                    toast.error(message);
+                }
+            } else if (error.request) {
+                // Network error
+                toast.error('Network error. Please check your connection');
+            } else {
+                // Other error
+                toast.error('An unexpected error occurred');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -36,21 +123,20 @@ const LoginPage = () => {
                             LOGIN
                         </h1>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Username Field */}
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
+                                    <Mail className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="text"
-                                    name="username"
-                                    placeholder="Username"
-                                    value={formData.username}
+                                    type="email"
+                                    name="email"
+                                    placeholder="Email"
+                                    value={formData.email}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -64,9 +150,7 @@ const LoginPage = () => {
                             {/* Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                    </svg>
+                                    <Lock className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="password"
@@ -74,7 +158,8 @@ const LoginPage = () => {
                                     placeholder="Password"
                                     value={formData.password}
                                     onChange={handleInputChange}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all"
+                                    disabled={isLoading}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',
@@ -88,8 +173,10 @@ const LoginPage = () => {
                             {/* Forgot Password */}
                             <div className="text-right">
                                 <button
-                                    className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
+                                    type="button"
+                                    className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{ fontSize: '14px' }}
+                                    disabled={isLoading}
                                 >
                                     Forgot Password?
                                 </button>
@@ -97,8 +184,9 @@ const LoginPage = () => {
 
                             {/* Login Button */}
                             <button
-                                onClick={handleSubmit}
-                                className="w-full rounded-xl text-white font-semibold transition-all hover:opacity-90 focus:outline-none cursor-pointer"
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full rounded-xl text-white font-semibold transition-all hover:opacity-90 focus:outline-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                 style={{
                                     background: 'linear-gradient(135deg, #735FF1 0%, #624CEF 100%)',
                                     paddingTop: '16px',
@@ -108,7 +196,7 @@ const LoginPage = () => {
                                     fontSize: '16px'
                                 }}
                             >
-                                Login
+                                {isLoading ? 'Logging in...' : 'Login'}
                             </button>
 
                             {/* Register Link */}
@@ -123,7 +211,7 @@ const LoginPage = () => {
                                     Register
                                 </Link>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
