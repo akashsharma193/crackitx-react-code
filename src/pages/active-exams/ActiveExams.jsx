@@ -133,7 +133,7 @@ const ActiveExams = () => {
         return (
             <div className="flex-1 !py-0 overflow-y-auto">
                 <div className="flex items-center justify-center h-64">
-                    <div className="text-[#7966F1] text-lg">Loading exams...</div>
+                    <div className="text-[#7966F1] text-lg font-semibold">Loading Active Exams...</div>
                 </div>
             </div>
         );
