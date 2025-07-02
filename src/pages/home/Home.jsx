@@ -5,7 +5,7 @@ import SidebarComponent from '../../components/SidebarComponenet';
 
 import Students from '../Students/Student';
 import PastExams from '../past-exams/PastExams';
-import Dashboard from '../Dashboard/Dashboard';
+import Dashboard from '../dashboard/Dashboard';
 import ActiveExams from '../active-exams/ActiveExams';
 import LogoutDialog from '../../components/LogOutComponent';
 import CreateExam from '../create-exam/CreateExam';
@@ -17,7 +17,6 @@ const EResources = () => (
         Coming Soon
     </div>
 );
-
 
 const Home = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
@@ -46,15 +45,8 @@ const Home = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userSession');
         sessionStorage.clear();
-
         navigate('/', { replace: true });
-
-        window.history.pushState(null, null, '/');
-        window.addEventListener('popstate', function (event) {
-            window.history.pushState(null, null, '/');
-        });
     };
-
 
     const handleLogoutCancel = () => {
         setShowLogoutDialog(false);
@@ -63,7 +55,7 @@ const Home = () => {
     const renderContent = () => {
         switch (activeTab) {
             case 'Dashboard':
-                return <Dashboard />;
+                return <Dashboard setActiveTab={setActiveTab} />;
             case 'Students':
                 return <Students />;
             case 'Past Exams':

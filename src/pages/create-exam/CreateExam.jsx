@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, Download, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -108,18 +108,6 @@ const CreateExam = () => {
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showQuestions, setShowQuestions] = useState(false);
-    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const [startDatePickerData, setStartDatePickerData] = useState({
-        selectedYear: 2024,
-        selectedMonth: 4, // May (0-indexed)
-        selectedDate: null
-    });
-    const [endDatePickerData, setEndDatePickerData] = useState({
-        selectedYear: 2024,
-        selectedMonth: 4, // May (0-indexed)
-        selectedDate: null
-    });
     const [showDialog, setShowDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [questions, setQuestions] = useState([
@@ -132,16 +120,6 @@ const CreateExam = () => {
     ]);
 
     const durationOptions = ['5 mins', '10 mins', '15 mins', '20 mins', '25 mins', '30 mins'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const years = Array.from({ length: 10 }, (_, i) => 2021 + i);
-
-    const getDaysInMonth = (year, month) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
-
-    const getFirstDayOfMonth = (year, month) => {
-        return new Date(year, month, 1).getDay();
-    };
 
     const handleInputChange = useCallback((field, value) => {
         setFormData(prev => ({
@@ -208,11 +186,17 @@ const CreateExam = () => {
             return;
         }
         if (!formData.startTime) {
-            toast.error('Start date is required');
+            toast.error('Start date and time is required');
             return;
         }
         if (!formData.endTime) {
-            toast.error('End date is required');
+            toast.error('End date and time is required');
+            return;
+        }
+
+        // Validate that end time is after start time
+        if (new Date(formData.endTime) <= new Date(formData.startTime)) {
+            toast.error('End date and time must be after start date and time');
             return;
         }
 
@@ -230,17 +214,18 @@ const CreateExam = () => {
         setShowDialog(true);
     }, [formData, questions]);
 
-    const formatDateForAPI = (dateString) => {
-        // Convert "10 May 2024" format to "2024-05-10T20:30:00.000"
-        const parts = dateString.split(' ');
-        const day = parts[0].padStart(2, '0');
-        const monthName = parts[1];
-        const year = parts[2];
+    const formatDateForAPI = (dateTimeString) => {
+        if (!dateTimeString) return '';
+        const date = new Date(dateTimeString);
 
-        const monthIndex = months.indexOf(monthName);
-        const month = (monthIndex + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
 
-        return `${year}-${month}-${day}T20:30:00.000`;
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000`;
     };
 
     const handleCreate = useCallback(async () => {
@@ -268,7 +253,8 @@ const CreateExam = () => {
                 teacherName: formData.teacherName.trim(),
                 batch: formData.batch.trim(),
                 startTime: formatDateForAPI(formData.startTime),
-                endTime: formatDateForAPI(formData.endTime)
+                endTime: formatDateForAPI(formData.endTime),
+                "orgCode": localStorage.getItem('orgCode'),
             };
 
             console.log('Sending exam data:', examData);
@@ -321,148 +307,29 @@ const CreateExam = () => {
         }
     }, [formData, questions]);
 
-    const handleDateSelect = (date, isStartDate) => {
-        const pickerData = isStartDate ? startDatePickerData : endDatePickerData;
-        const monthName = months[pickerData.selectedMonth];
-        const formattedDate = `${date} ${monthName} ${pickerData.selectedYear}`;
-
-        if (isStartDate) {
-            setFormData(prev => ({ ...prev, startTime: formattedDate }));
-            setShowStartDatePicker(false);
-        } else {
-            setFormData(prev => ({ ...prev, endTime: formattedDate }));
-            setShowEndDatePicker(false);
-        }
+    // Get current date and time in the required format for datetime-local input
+    const getCurrentDateTime = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
-    const DatePicker = ({ isStartDate, pickerData, setPickerData, onDateSelect }) => {
-        const daysInMonth = getDaysInMonth(pickerData.selectedYear, pickerData.selectedMonth);
-        const firstDay = getFirstDayOfMonth(pickerData.selectedYear, pickerData.selectedMonth);
-        const prevMonthDays = pickerData.selectedMonth === 0 ?
-            getDaysInMonth(pickerData.selectedYear - 1, 11) :
-            getDaysInMonth(pickerData.selectedYear, pickerData.selectedMonth - 1);
-
-        const calendarDays = [];
-
-        // Previous month days
-        for (let i = firstDay - 1; i >= 0; i--) {
-            calendarDays.push({
-                day: prevMonthDays - i,
-                isCurrentMonth: false,
-                isNextMonth: false
-            });
-        }
-
-        // Current month days
-        for (let day = 1; day <= daysInMonth; day++) {
-            calendarDays.push({
-                day,
-                isCurrentMonth: true,
-                isNextMonth: false
-            });
-        }
-
-        // Next month days
-        const remainingDays = 42 - calendarDays.length;
-        for (let day = 1; day <= remainingDays; day++) {
-            calendarDays.push({
-                day,
-                isCurrentMonth: false,
-                isNextMonth: true
-            });
-        }
-
-        const navigateMonth = (direction) => {
-            setPickerData(prev => {
-                if (direction === 'prev') {
-                    if (prev.selectedMonth === 0) {
-                        return { ...prev, selectedMonth: 11, selectedYear: prev.selectedYear - 1 };
-                    } else {
-                        return { ...prev, selectedMonth: prev.selectedMonth - 1 };
-                    }
-                } else {
-                    if (prev.selectedMonth === 11) {
-                        return { ...prev, selectedMonth: 0, selectedYear: prev.selectedYear + 1 };
-                    } else {
-                        return { ...prev, selectedMonth: prev.selectedMonth + 1 };
-                    }
-                }
-            });
-        };
-
-        return (
-            <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-4 z-50 w-80 !px-4 !py-4">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-800">
-                        {months[pickerData.selectedMonth]} {pickerData.selectedYear}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => navigateMonth('prev')}
-                            className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                        >
-                            <ChevronLeft className="w-5 h-5 text-gray-600" />
-                        </button>
-                        <button
-                            onClick={() => navigateMonth('next')}
-                            className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                        >
-                            <ChevronRight className="w-5 h-5 text-gray-600" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Year and Month Selectors */}
-                <div className="flex gap-2 mb-4">
-                    <select
-                        value={pickerData.selectedYear}
-                        onChange={(e) => setPickerData(prev => ({ ...prev, selectedYear: parseInt(e.target.value) }))}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] text-sm"
-                    >
-                        {years.map(year => (
-                            <option key={year} value={year}>{year}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={pickerData.selectedMonth}
-                        onChange={(e) => setPickerData(prev => ({ ...prev, selectedMonth: parseInt(e.target.value) }))}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] text-sm"
-                    >
-                        {months.map((month, index) => (
-                            <option key={month} value={index}>{month}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Calendar */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center text-xs font-medium text-gray-500 p-2">
-                            {day}
-                        </div>
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.map((dayObj, index) => (
-                        <button
-                            key={index}
-                            onClick={() => dayObj.isCurrentMonth && onDateSelect(dayObj.day, isStartDate)}
-                            className={`
-                                p-2 text-sm rounded-lg transition-colors
-                                ${dayObj.isCurrentMonth
-                                    ? 'text-gray-900 hover:bg-[#5E48EF] hover:text-white cursor-pointer'
-                                    : 'text-gray-300 cursor-not-allowed'
-                                }
-                            `}
-                        >
-                            {dayObj.day}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
+    const formatDisplayDateTime = (dateTimeString) => {
+        if (!dateTimeString) return '';
+        const date = new Date(dateTimeString);
+        return date.toLocaleString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
     };
 
     return (
@@ -512,7 +379,7 @@ const CreateExam = () => {
                         </div>
 
                         {/* Exam Duration */}
-                        <div >
+                        <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">
                                 Exam Duration (minutes)
                             </label>
@@ -558,51 +425,51 @@ const CreateExam = () => {
                             />
                         </div>
 
-                        {/* Start Date */}
-                        <div className="relative">
+                        {/* Start Date and Time */}
+                        <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                Start Date
+                                Start Date & Time
                             </label>
-                            <button
-                                onClick={() => {
-                                    setShowStartDatePicker(!showStartDatePicker);
-                                    setShowEndDatePicker(false);
-                                }}
-                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 text-left"
-                            >
-                                {formData.startTime || "Select Start Date"}
-                            </button>
-                            {showStartDatePicker && (
-                                <DatePicker
-                                    isStartDate={true}
-                                    pickerData={startDatePickerData}
-                                    setPickerData={setStartDatePickerData}
-                                    onDateSelect={handleDateSelect}
+                            <div className="relative">
+                                <input
+                                    type="datetime-local"
+                                    value={formData.startTime}
+                                    onChange={(e) => handleInputChange('startTime', e.target.value)}
+                                    min={getCurrentDateTime()}
+                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5"
                                 />
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Calendar className="w-5 h-5 text-gray-400" />
+                                </div>
+                            </div>
+                            {formData.startTime && (
+                                <p className="text-xs text-gray-500 !mt-1">
+                                    Selected: {formatDisplayDateTime(formData.startTime)}
+                                </p>
                             )}
                         </div>
 
-                        {/* End Date */}
-                        <div className="relative">
+                        {/* End Date and Time */}
+                        <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                End Date
+                                End Date & Time
                             </label>
-                            <button
-                                onClick={() => {
-                                    setShowEndDatePicker(!showEndDatePicker);
-                                    setShowStartDatePicker(false);
-                                }}
-                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 text-left"
-                            >
-                                {formData.endTime || "Select End Date"}
-                            </button>
-                            {showEndDatePicker && (
-                                <DatePicker
-                                    isStartDate={false}
-                                    pickerData={endDatePickerData}
-                                    setPickerData={setEndDatePickerData}
-                                    onDateSelect={handleDateSelect}
+                            <div className="relative">
+                                <input
+                                    type="datetime-local"
+                                    value={formData.endTime}
+                                    onChange={(e) => handleInputChange('endTime', e.target.value)}
+                                    min={formData.startTime || getCurrentDateTime()}
+                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5"
                                 />
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                    <Clock className="w-5 h-5 text-gray-400" />
+                                </div>
+                            </div>
+                            {formData.endTime && (
+                                <p className="text-xs text-gray-500 !mt-1">
+                                    Selected: {formatDisplayDateTime(formData.endTime)}
+                                </p>
                             )}
                         </div>
                     </div>
@@ -664,6 +531,9 @@ const CreateExam = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Toast Container */}
+            <ToastContainer />
 
             {showDialog && (
                 <CreateExamDialog

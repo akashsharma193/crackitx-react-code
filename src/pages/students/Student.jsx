@@ -42,6 +42,19 @@ const DeleteUserDialog = ({ isOpen, onClose, onConfirm, loading }) => {
     );
 };
 
+const CircularLoader = () => {
+    return (
+        <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 border-4 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
+                <div className="text-[#7966F1] text-lg font-semibold">
+                    Loading Students Data...
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Students = () => {
     const navigate = useNavigate();
     const [students, setStudents] = useState([]);
@@ -56,28 +69,18 @@ const Students = () => {
     const [userToDelete, setUserToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Fetch students data with POST API
     const fetchStudents = async (page = 0, search = '', filter = '') => {
         try {
             setLoading(true);
 
-            // Construct filter object based on search and filter terms
             const filterObj = {};
 
-            // Add search functionality - you can modify these field names based on your API
             if (search.trim()) {
-                filterObj.name = search.trim(); // Search by name
-                // You can add more fields to search by:
-                // filterObj.email = search.trim();
-                // filterObj.mobile = search.trim();
+                filterObj.name = search.trim();
             }
 
-            // Add filter functionality - you can customize this based on your needs
             if (filter.trim()) {
-                filterObj.batch = filter.trim(); // Filter by batch
-                // You can add more filter fields:
-                // filterObj.status = filter.trim();
-                // filterObj.department = filter.trim();
+                filterObj.batch = filter.trim();
             }
 
             const requestBody = {
@@ -205,14 +208,8 @@ const Students = () => {
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
-            {/* Loading State */}
-            {loading && (
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-[#7966F1] text-lg font-semibold">
-                        Loading Students Data...
-                    </div>
-                </div>
-            )}
+            {/* Loading State with Circular Loader */}
+            {loading && <CircularLoader />}
 
             {/* Content - Only show when not loading */}
             {!loading && (

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import studentsIcon from '/src/assets/icons/students-icon.png';
 import examhistoryIcon from '/src/assets/icons/exam-history-icon.png';
 import createExamIcon from '/src/assets/icons/create-exam-icon.png';
 import activeExamIcon from '/src/assets/icons/active-exams-icon.png';
 import resourcesIcon from '/src/assets/icons/e-resources-icon.png';
 import apiClient from '../../api/axiosConfig';
+import { useNavigate } from 'react-router-dom';
 
-const Dashboard = () => {
+const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
     const [dashboardData, setDashboardData] = useState({
         userCount: 0,
         totalExamCount: 0,
@@ -16,14 +17,14 @@ const Dashboard = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
-    // Dashboard Cards with dynamic counts
     const dashboardCards = [
-        { title: 'All Students', icon: studentsIcon, count: dashboardData.userCount },
-        { title: 'Exam History', icon: examhistoryIcon, count: dashboardData.pastExamCount },
-        { title: 'Create Exam', icon: createExamIcon, count: dashboardData.totalExamCount },
-        { title: 'Active Exam', icon: activeExamIcon, count: dashboardData.activeExamCount },
-        { title: 'E-Resources', icon: resourcesIcon, count: dashboardData.upComingExamCount },
+        { title: 'All Students', icon: studentsIcon, count: dashboardData.userCount, tab: 'Students' },
+        { title: 'Exam History', icon: examhistoryIcon, count: dashboardData.pastExamCount, tab: 'Past Exams' },
+        { title: 'Create Exam', icon: createExamIcon, count: dashboardData.totalExamCount, tab: 'Create Exam' },
+        { title: 'Active Exam', icon: activeExamIcon, count: dashboardData.activeExamCount, tab: 'Active Exam' },
+        { title: 'E-Resources', icon: resourcesIcon, count: dashboardData.upComingExamCount, tab: 'E-Resources' },
     ];
 
     const fetchDashboardData = async () => {
@@ -80,7 +81,7 @@ const Dashboard = () => {
                     <p>{error}</p>
                     <button
                         onClick={fetchDashboardData}
-                        className='mt-2 px-4 py-2 bg-[#7966F1] text-white rounded hover:bg-[#6855E0]'
+                        className='!mt-2 !px-4 !py-2 bg-[#7966F1] text-white rounded hover:bg-[#6855E0]'
                     >
                         Retry
                     </button>
@@ -96,6 +97,7 @@ const Dashboard = () => {
                 {dashboardCards.map((card, index) => (
                     <div
                         key={index}
+                        onClick={() => setActiveTab(card.tab)}  // Trigger activeTab change on card click
                         className='cursor-pointer max-w-sm rounded-lg flex bg-[#7966F1] !p-4 justify-between items-center text-white text-lg font-medium border-white border-2'
                         style={{ boxShadow: '4px 4px 8px rgba(0, 0, 0, 0.5)' }}
                     >
@@ -111,4 +113,4 @@ const Dashboard = () => {
     )
 }
 
-export default Dashboard
+export default Dashboard;
