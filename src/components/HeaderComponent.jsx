@@ -29,6 +29,9 @@ const HeaderComponent = () => {
                     if (userData.orgCode) {
                         localStorage.setItem('orgCode', userData.orgCode);
                     }
+                    if (userData.orgCode) {
+                        localStorage.setItem('userId', userData.userId);
+                    }
                 } else {
                     console.error('Failed to fetch user profile:', response.data.message);
                 }

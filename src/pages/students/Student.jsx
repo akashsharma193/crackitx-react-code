@@ -64,10 +64,22 @@ const Students = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [debouncedFilterTerm, setDebouncedFilterTerm] = useState('');
     const [pageSize] = useState(10); // Items per page
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Debounce search and filter terms
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+            setDebouncedFilterTerm(filterTerm);
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, filterTerm]);
 
     const fetchStudents = async (page = 0, search = '', filter = '') => {
         try {
@@ -89,37 +101,58 @@ const Students = () => {
                 filter: filterObj
             };
 
+            console.log('Fetching students with params:', requestBody);
+
             const response = await apiClient.post(`/admin-secured/getAllUser`, requestBody);
 
             if (response.data.success) {
-                setStudents(response.data.data.content);
-                setTotalPages(response.data.data.totalPages);
-                setTotalElements(response.data.data.totalElements);
-                setCurrentPage(response.data.data.number);
+                const responseData = response.data.data;
+
+                // Ensure we have valid data structure
+                const content = Array.isArray(responseData.content) ? responseData.content : [];
+                const pageInfo = responseData.page || {};
+
+                const totalPages = typeof pageInfo.totalPages === 'number' ? pageInfo.totalPages : 0;
+                const totalElements = typeof pageInfo.totalElements === 'number' ? pageInfo.totalElements : 0;
+                const currentPageNumber = typeof pageInfo.number === 'number' ? pageInfo.number : 0;
+
+                setStudents(content);
+                setTotalPages(totalPages);
+                setTotalElements(totalElements);
+                setCurrentPage(currentPageNumber);
+
+                console.log('Students data updated:', {
+                    studentsCount: content.length,
+                    totalPages,
+                    totalElements,
+                    currentPage: currentPageNumber
+                });
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch students');
             }
         } catch (error) {
             console.error('Error fetching students:', error);
             toast.error('Failed to fetch students data');
+            setStudents([]);
+            setTotalPages(0);
+            setTotalElements(0);
+            setCurrentPage(0);
         } finally {
             setLoading(false);
         }
     };
 
+    // Initial data fetch
     useEffect(() => {
-        fetchStudents(0, searchTerm, filterTerm);
+        fetchStudents(0, '', '');
     }, []);
 
-    // Handle search with debouncing
+    // Fetch data when debounced search/filter terms change
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (searchTerm !== '' || filterTerm !== '') {
-                fetchStudents(0, searchTerm, filterTerm);
-                setCurrentPage(0); // Reset to first page when searching/filtering
-            }
-        }, 500); // 500ms delay for debouncing
-
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, filterTerm]);
+        // Reset to first page when search/filter changes
+        setCurrentPage(0);
+        fetchStudents(0, debouncedSearchTerm, debouncedFilterTerm);
+    }, [debouncedSearchTerm, debouncedFilterTerm]);
 
     const handleEditClick = (student) => {
         navigate(`/edit-user/${student.id}`, {
@@ -146,12 +179,12 @@ const Students = () => {
             const response = await apiClient.post('/admin-secured/enableDisableUser', requestBody);
 
             if (response.data.success) {
-                toast.success('User deleted successfully!');
+                toast.success('User disabled successfully!');
                 setShowDeleteDialog(false);
                 setUserToDelete(null);
 
-                // Refresh the table data
-                await fetchStudents(currentPage, searchTerm, filterTerm);
+                // Refresh the table data with current page and filters
+                await fetchStudents(currentPage, debouncedSearchTerm, debouncedFilterTerm);
             } else {
                 throw new Error(response.data.message || 'Failed to disable user');
             }
@@ -169,17 +202,20 @@ const Students = () => {
     };
 
     const handlePageChange = (newPage) => {
-        if (newPage >= 0 && newPage < totalPages) {
-            fetchStudents(newPage, searchTerm, filterTerm);
+        if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
+            setCurrentPage(newPage);
+            fetchStudents(newPage, debouncedSearchTerm, debouncedFilterTerm);
         }
     };
 
     const handleClear = () => {
         setSearchTerm('');
         setFilterTerm('');
+        setDebouncedSearchTerm('');
+        setDebouncedFilterTerm('');
+        setCurrentPage(0);
         // Fetch data without any filters
         fetchStudents(0, '', '');
-        setCurrentPage(0);
     };
 
     const handleSearchChange = (e) => {
@@ -193,17 +229,62 @@ const Students = () => {
     // Handle search on Enter key press
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
-            fetchStudents(0, searchTerm, filterTerm);
+            setDebouncedSearchTerm(searchTerm);
             setCurrentPage(0);
+            fetchStudents(0, searchTerm, filterTerm);
         }
     };
 
     // Handle filter on Enter key press
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
-            fetchStudents(0, searchTerm, filterTerm);
+            setDebouncedFilterTerm(filterTerm);
             setCurrentPage(0);
+            fetchStudents(0, searchTerm, filterTerm);
         }
+    };
+
+    // Handle Create Student button click
+    const handleCreateStudentClick = () => {
+        navigate('/create-student');
+    };
+
+    // Calculate pagination display values
+    const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 1;
+    const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
+    const hasFilters = debouncedSearchTerm.trim() || debouncedFilterTerm.trim();
+
+    // Generate pagination buttons
+    const generatePaginationButtons = () => {
+        const buttons = [];
+        const maxVisibleButtons = 5;
+
+        if (totalPages <= maxVisibleButtons) {
+            // Show all pages if total pages is less than or equal to max visible
+            for (let i = 0; i < totalPages; i++) {
+                buttons.push(i);
+            }
+        } else {
+            // Show pages with ellipsis logic
+            if (currentPage < 3) {
+                // Show first 5 pages
+                for (let i = 0; i < maxVisibleButtons; i++) {
+                    buttons.push(i);
+                }
+            } else if (currentPage > totalPages - 4) {
+                // Show last 5 pages
+                for (let i = totalPages - maxVisibleButtons; i < totalPages; i++) {
+                    buttons.push(i);
+                }
+            } else {
+                // Show current page and 2 pages on each side
+                for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+                    buttons.push(i);
+                }
+            }
+        }
+
+        return buttons;
     };
 
     return (
@@ -255,7 +336,10 @@ const Students = () => {
 
                         {/* Right-Side Buttons */}
                         <div className="flex items-center gap-4 mt-4 md:mt-0">
-                            <button className="bg-white text-[#7966F1] font-semibold !px-4 !py-2 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+                            <button
+                                onClick={handleCreateStudentClick}
+                                className="bg-white text-[#7966F1] font-semibold !px-4 !py-2 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                            >
                                 Create Student
                             </button>
                             <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
@@ -282,12 +366,12 @@ const Students = () => {
                             <tbody>
                                 {students.length > 0 ? (
                                     students.map((student, index) => (
-                                        <tr key={student.id} className="border-t hover:bg-gray-50">
-                                            <td className="!px-6 !py-4">{currentPage * pageSize + index + 1}</td>
-                                            <td className="!px-6 !py-4">{student.name}</td>
-                                            <td className="!px-6 !py-4">{student.email}</td>
-                                            <td className="!px-6 !py-4">{student.mobile}</td>
-                                            <td className="!px-6 !py-4">{student.batch}</td>
+                                        <tr key={student.id || index} className="border-t hover:bg-gray-50">
+                                            <td className="!px-6 !py-4">{(currentPage * pageSize) + index + 1}</td>
+                                            <td className="!px-6 !py-4">{student.name || 'N/A'}</td>
+                                            <td className="!px-6 !py-4">{student.email || 'N/A'}</td>
+                                            <td className="!px-6 !py-4">{student.mobile || 'N/A'}</td>
+                                            <td className="!px-6 !py-4">{student.batch || 'N/A'}</td>
                                             <td className="!px-6 !py-4">
                                                 <Eye className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors" size={20} />
                                             </td>
@@ -310,52 +394,43 @@ const Students = () => {
                                 ) : (
                                     <tr>
                                         <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
-                                            {searchTerm || filterTerm ? 'No students found matching your criteria' : 'No student data'}
+                                            {hasFilters ? 'No students found matching your criteria' : 'No student data available'}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
 
-                        {/* Pagination - Only show if there's data */}
-                        {students.length > 0 && (
+                        {/* Pagination */}
+                        {totalElements > 0 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
-                                    Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} students
-                                    {(searchTerm || filterTerm) && (
+                                    Showing {startIndex} to {endIndex} of {totalElements} students
+                                    {hasFilters && (
                                         <span className="text-[#7966F1] ml-2">
                                             (filtered)
                                         </span>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 0}
-                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                            }`}
-                                    >
-                                        <ChevronLeft size={16} />
-                                        Previous
-                                    </button>
+                                {totalPages > 1 && (
+                                    <div className="flex items-center gap-2">
+                                        {/* Previous Button */}
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 0}
+                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                }`}
+                                        >
+                                            <ChevronLeft size={16} />
+                                            Previous
+                                        </button>
 
-                                    <div className="flex items-center gap-1">
-                                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                            let pageNum;
-                                            if (totalPages <= 5) {
-                                                pageNum = i;
-                                            } else if (currentPage < 3) {
-                                                pageNum = i;
-                                            } else if (currentPage > totalPages - 4) {
-                                                pageNum = totalPages - 5 + i;
-                                            } else {
-                                                pageNum = currentPage - 2 + i;
-                                            }
-
-                                            return (
+                                        {/* Pagination Buttons */}
+                                        <div className="flex items-center gap-1">
+                                            {generatePaginationButtons().map((pageNum) => (
                                                 <button
                                                     key={pageNum}
                                                     onClick={() => handlePageChange(pageNum)}
@@ -366,22 +441,23 @@ const Students = () => {
                                                 >
                                                     {pageNum + 1}
                                                 </button>
-                                            );
-                                        })}
-                                    </div>
+                                            ))}
+                                        </div>
 
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages - 1}
-                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                            }`}
-                                    >
-                                        Next
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
+                                        {/* Next Button */}
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages - 1}
+                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                }`}
+                                        >
+                                            Next
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

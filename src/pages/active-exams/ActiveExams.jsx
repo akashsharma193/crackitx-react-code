@@ -111,9 +111,12 @@ const ActiveExams = () => {
                 }));
 
                 setExamData(transformedData);
-                setTotalPages(response.data.data.totalPages);
-                setTotalElements(response.data.data.totalElements);
-                setCurrentPage(response.data.data.number);
+                
+                // Fix pagination data extraction based on API response structure
+                const pageData = response.data.data.page;
+                setTotalPages(pageData.totalPages);
+                setTotalElements(pageData.totalElements);
+                setCurrentPage(pageData.number);
             } else {
                 throw new Error(response.data.message || 'Failed to fetch exam data');
             }
@@ -248,6 +251,39 @@ const ActiveExams = () => {
         }
     };
 
+    // Calculate pagination display numbers
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisiblePages = 5;
+        
+        if (totalPages <= maxVisiblePages) {
+            // Show all pages if total pages is less than max visible
+            for (let i = 0; i < totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Show smart pagination
+            if (currentPage <= 2) {
+                // Show first 5 pages
+                for (let i = 0; i < maxVisiblePages; i++) {
+                    pages.push(i);
+                }
+            } else if (currentPage >= totalPages - 3) {
+                // Show last 5 pages
+                for (let i = totalPages - maxVisiblePages; i < totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                // Show current page and 2 pages before and after
+                for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+                    pages.push(i);
+                }
+            }
+        }
+        
+        return pages;
+    };
+
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
             {/* Loading State with Circular Loader */}
@@ -367,8 +403,8 @@ const ActiveExams = () => {
                             </tbody>
                         </table>
 
-                        {/* Pagination - Only show if there's data */}
-                        {examData.length > 0 && (
+                        {/* Pagination - Only show if there's data and more than one page */}
+                        {examData.length > 0 && totalPages > 1 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
                                     Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} exams
@@ -393,31 +429,18 @@ const ActiveExams = () => {
                                     </button>
 
                                     <div className="flex items-center gap-1">
-                                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                            let pageNum;
-                                            if (totalPages <= 5) {
-                                                pageNum = i;
-                                            } else if (currentPage < 3) {
-                                                pageNum = i;
-                                            } else if (currentPage > totalPages - 4) {
-                                                pageNum = totalPages - 5 + i;
-                                            } else {
-                                                pageNum = currentPage - 2 + i;
-                                            }
-
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => handlePageChange(pageNum)}
-                                                    className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
-                                                        ? 'bg-[#7966F1] text-white'
-                                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                                        }`}
-                                                >
-                                                    {pageNum + 1}
-                                                </button>
-                                            );
-                                        })}
+                                        {getPageNumbers().map((pageNum) => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
+                                                    ? 'bg-[#7966F1] text-white'
+                                                    : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                    }`}
+                                            >
+                                                {pageNum + 1}
+                                            </button>
+                                        ))}
                                     </div>
 
                                     <button

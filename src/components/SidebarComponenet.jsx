@@ -10,9 +10,9 @@ import logOutIcon from '/src/assets/icons/logout-icon.png';
 const sidebarItems = [
     { label: 'Dashboard', icon: dashboardIcon },
     { label: 'Students', icon: studentsIcon },
-    { label: 'Past Exams', icon: examhistoryIcon },
     { label: 'Create Exam', icon: createExamIcon },
     { label: 'Active Exam', icon: activeExamIcon },
+    { label: 'Past Exams', icon: examhistoryIcon },
     { label: 'Upcoming Exam', icon: activeExamIcon },
     { label: 'E-Resources', icon: resourcesIcon },
     { label: 'Log Out', icon: logOutIcon },
