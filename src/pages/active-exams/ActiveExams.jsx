@@ -358,7 +358,7 @@ const ActiveExams = () => {
                                     <th className="!px-6 !py-4">End Time</th>
                                     {/* <th className="!px-6 !py-4">Test Visibility</th> */}
                                     <th className="!px-6 !py-4">View</th>
-                                    <th className="!px-6 !py-4">Delete</th>
+                                    {/* <th className="!px-6 !py-4">Delete</th> */}
                                 </tr>
                             </thead>
                             <tbody>
@@ -395,9 +395,6 @@ const ActiveExams = () => {
                                                         View
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="!px-6 !py-4">
-                                                <Trash2 className="text-[#ef4444] cursor-pointer hover:text-red-700 transition-colors" size={20} onClick={() => handleDeleteClick(exam)} />
                                             </td>
                                         </tr>
                                     ))

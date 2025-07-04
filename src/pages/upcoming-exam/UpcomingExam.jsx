@@ -406,6 +406,7 @@ const UpcomingExam = () => {
                                                     <Eye
                                                         className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
                                                         size={20}
+                                                        onClick={() => handleViewClick(exam)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                                         View
@@ -417,7 +418,7 @@ const UpcomingExam = () => {
                                                     <Edit
                                                         className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
                                                         size={20}
-                                                        onClick={() => handleEditClick(student)}
+                                                        onClick={() => handleEditClick(exam)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                                         Edit
@@ -429,7 +430,7 @@ const UpcomingExam = () => {
                                                     <Trash2
                                                         className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
                                                         size={20}
-                                                        onClick={() => handleDeleteClick(student)}
+                                                        onClick={() => handleDeleteClick(exam)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                                         Delete

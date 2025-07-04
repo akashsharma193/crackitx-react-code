@@ -111,6 +111,7 @@ const CreateExam = () => {
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [questions, setQuestions] = useState([
         {
             id: 1,
@@ -265,7 +266,7 @@ const CreateExam = () => {
                 batch: formData.batch.trim(),
                 startTime: formatDateForAPI(formData.startTime),
                 endTime: formatDateForAPI(formData.endTime),
-                isActive: formData.isActive,
+                isActive: isActiveDisabled ? true : formData.isActive, // Send true if checkbox is disabled
                 "orgCode": localStorage.getItem('orgCode'),
             };
 
@@ -318,7 +319,8 @@ const CreateExam = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [formData, questions]);
+    }, [formData, questions, isActiveDisabled]);
+
 
     // Get current date and time in the required format for datetime-local input
     const getCurrentDateTime = () => {
@@ -496,6 +498,7 @@ const CreateExam = () => {
                                 checked={formData.isActive}
                                 onChange={(e) => handleInputChange('isActive', e.target.checked)}
                                 disabled={!canToggleActive()}
+                                onClick={() => setIsActiveDisabled(!canToggleActive())} // Track whether the checkbox is disabled
                                 className="w-5 h-5 text-[#5E48EF] border-2 border-[#5E48EF] rounded focus:ring-[#5E48EF] focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             />
                             <label
