@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Search, X, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Trash2, Search, X, Download, ChevronLeft, ChevronRight, Eye, Edit } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -104,19 +104,23 @@ const UpcomingExam = () => {
                     conductedBy: item.teacherName || 'N/A',
                     startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
                     endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A',
-                    examDuration: item.examDuration || 'N/A',
+                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A',
                     isVisible: item.isVisible !== undefined ? item.isVisible : true,
                     questionId: item.questionId,
                     orgCode: item.orgCode,
                     batch: item.batch,
                     userId: item.userId,
-                    id: item.id || item.questionId // Add id for operations
+                    id: item.id || item.questionId,
+                    // Store original item for editing
+                    originalData: item
                 }));
 
                 setExamData(transformedData);
-                setTotalPages(response.data.data.totalPages);
-                setTotalElements(response.data.data.totalElements);
-                setCurrentPage(response.data.data.number);
+
+                // FIX: Access pagination data from the 'page' object
+                setTotalPages(response.data.data.page.totalPages);
+                setTotalElements(response.data.data.page.totalElements);
+                setCurrentPage(response.data.data.page.number);
             } else {
                 throw new Error(response.data.message || 'Failed to fetch exam data');
             }
@@ -149,6 +153,49 @@ const UpcomingExam = () => {
         // Navigate to view exam page - replace with your routing logic
         console.log('Navigate to view exam:', exam);
         // Example: navigate(`/exam/${exam.id}`);
+    };
+
+    const handleEditClick = (exam) => {
+        // Navigate to edit exam page with exam data
+        console.log('Navigate to edit exam:', exam);
+
+        // Convert datetime strings to the format expected by datetime-local inputs
+        const formatDateTimeForInput = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
+        // Prepare exam data for editing
+        const examEditData = {
+            id: exam.id || exam.questionId,
+            subjectName: exam.originalData.subjectName || '',
+            teacherName: exam.originalData.teacherName || '',
+            batch: exam.originalData.batch || '',
+            examDuration: exam.originalData.examDuration ? `${exam.originalData.examDuration} mins` : '30 mins',
+            startTime: formatDateTimeForInput(exam.originalData.startTime),
+            endTime: formatDateTimeForInput(exam.originalData.endTime),
+            isActive: exam.originalData.isActive !== undefined ? exam.originalData.isActive : true,
+            questionList: exam.originalData.questionList || [],
+            orgCode: exam.originalData.orgCode || localStorage.getItem('orgCode'),
+            userId: exam.originalData.userId
+        };
+
+        // Navigate to edit page with state
+        navigate('/edit-upcoming-exam', {
+            state: {
+                examData: examEditData,
+                isEdit: true
+            }
+        });
     };
 
     const handleToggleVisibility = async (index, exam) => {
@@ -326,7 +373,8 @@ const UpcomingExam = () => {
                                     <th className="!px-6 !py-4">End Time</th>
                                     <th className="!px-6 !py-4">Test Visibility</th>
                                     <th className="!px-6 !py-4">View</th>
-                                    <th className="!px-6 !py-4">Delete</th>
+                                    <th className="!px-4 !py-4">Edit</th>
+                                    <th className="!px-4 !py-4">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -354,16 +402,45 @@ const UpcomingExam = () => {
                                                 </label>
                                             </td>
                                             <td className="!px-6 !py-4">
-                                                <Eye className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors" size={20} onClick={() => handleViewClick(exam)} />
+                                                <div className="relative group inline-block">
+                                                    <Eye
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        View
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="!px-6 !py-4">
-                                                <Trash2 className="text-[#ef4444] cursor-pointer hover:text-red-700 transition-colors" size={20} onClick={() => handleDeleteClick(exam)} />
+                                                <div className="relative group inline-block">
+                                                    <Edit
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                        onClick={() => handleEditClick(student)}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Edit
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="!px-6 !py-4">
+                                                <div className="relative group inline-block">
+                                                    <Trash2
+                                                        className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                                                        size={20}
+                                                        onClick={() => handleDeleteClick(student)}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Delete
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="9" className="!px-6 !py-8 text-center text-gray-500">
                                             {searchTerm || filterTerm ? 'No upcoming exams found matching your criteria' : 'No upcoming exams found'}
                                         </td>
                                     </tr>
@@ -371,8 +448,8 @@ const UpcomingExam = () => {
                             </tbody>
                         </table>
 
-                        {/* Pagination - Only show if there's data */}
-                        {examData.length > 0 && (
+                        {/* Pagination - Only show if there's data AND more than 1 page */}
+                        {examData.length > 0 && totalPages > 1 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
                                     Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} exams

@@ -103,7 +103,8 @@ const CreateExam = () => {
         batch: '',
         startTime: '',
         endTime: '',
-        examDuration: '30 mins'
+        examDuration: '30 mins',
+        isActive: true
     });
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -170,6 +171,16 @@ const CreateExam = () => {
     const handleAddQuestions = useCallback(() => {
         setShowQuestions(true);
     }, []);
+
+    // Check if start date is more than 24 hours from current time
+    const canToggleActive = () => {
+        if (!formData.startTime) return false;
+        const startDate = new Date(formData.startTime);
+        const currentDate = new Date();
+        const timeDifference = startDate.getTime() - currentDate.getTime();
+        const hoursDifference = timeDifference / (1000 * 3600);
+        return hoursDifference > 24;
+    };
 
     const handleSubmit = useCallback(() => {
         // Validation
@@ -254,6 +265,7 @@ const CreateExam = () => {
                 batch: formData.batch.trim(),
                 startTime: formatDateForAPI(formData.startTime),
                 endTime: formatDateForAPI(formData.endTime),
+                isActive: formData.isActive,
                 "orgCode": localStorage.getItem('orgCode'),
             };
 
@@ -275,7 +287,8 @@ const CreateExam = () => {
                 batch: '',
                 startTime: '',
                 endTime: '',
-                examDuration: '30 mins'
+                examDuration: '30 mins',
+                isActive: true
             });
             setQuestions([{
                 id: 1,
@@ -470,6 +483,31 @@ const CreateExam = () => {
                                 <p className="text-xs text-gray-500 !mt-1">
                                     Selected: {formatDisplayDateTime(formData.endTime)}
                                 </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Is Active Checkbox - Centered */}
+                    <div className="flex justify-center !mt-6">
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="isActive"
+                                checked={formData.isActive}
+                                onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                                disabled={!canToggleActive()}
+                                className="w-5 h-5 text-[#5E48EF] border-2 border-[#5E48EF] rounded focus:ring-[#5E48EF] focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            />
+                            <label
+                                htmlFor="isActive"
+                                className={`text-sm font-medium ${!canToggleActive() ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}
+                            >
+                                Is Active
+                            </label>
+                            {!canToggleActive() && formData.startTime && (
+                                <span className="text-xs text-gray-400 !ml-2">
+                                    (Can only be toggled if start date is more than 24 hours from now)
+                                </span>
                             )}
                         </div>
                     </div>

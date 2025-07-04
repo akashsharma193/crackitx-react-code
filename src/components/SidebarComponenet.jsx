@@ -12,7 +12,7 @@ const sidebarItems = [
     { label: 'Students', icon: studentsIcon },
     { label: 'Create Exam', icon: createExamIcon },
     { label: 'Active Exam', icon: activeExamIcon },
-    { label: 'Past Exams', icon: examhistoryIcon },
+    { label: 'Exam History', icon: examhistoryIcon },
     { label: 'Upcoming Exam', icon: activeExamIcon },
     { label: 'E-Resources', icon: resourcesIcon },
     { label: 'Log Out', icon: logOutIcon },

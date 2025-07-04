@@ -58,7 +58,7 @@ const Home = () => {
                 return <Dashboard setActiveTab={setActiveTab} />;
             case 'Students':
                 return <Students />;
-            case 'Past Exams':
+            case 'Exam History':
                 return <PastExams />;
             case 'Create Exam':
                 return <CreateExam />;

@@ -10,7 +10,7 @@ const CircularLoader = () => {
             <div className="flex flex-col items-center gap-3">
                 <div className="w-12 h-12 border-4 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
                 <div className="text-[#7966F1] text-lg font-semibold">
-                    Loading Past Exams...
+                    Loading Exam History...
                 </div>
             </div>
         </div>
@@ -68,7 +68,7 @@ const PastExams = () => {
                 filter: filterObj
             };
 
-            console.log('Fetching past exams with body:', requestBody);
+            console.log('Fetching Exam History with body:', requestBody);
             const response = await apiClient.post('/questionPaper/getPastExam', requestBody);
 
             if (response.data.success && response.data.data) {
@@ -78,23 +78,24 @@ const PastExams = () => {
                     testName: item.subjectName || 'N/A',
                     batch: item.batch || 'N/A',
                     conductedBy: item.teacherName || 'N/A',
-                    examDuration: item.duration ? `${item.duration} mins` : 'N/A',
+                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A', // Fixed: was item.duration
                     studentCount: item.totalStudents || item.studentCount || 0,
                     startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
                     endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A',
                     questionId: item.questionId,
                     orgCode: item.orgCode,
                     userId: item.userId,
-                    id: item.id || item.questionId, // Add id for navigation
-                    // Additional fields that might be useful
+                    id: item.id || item.questionId,
                     status: item.status || 'Completed',
                     avgScore: item.avgScore || 0
                 }));
 
                 setExamData(transformedData);
-                setTotalPages(response.data.data.totalPages);
-                setTotalElements(response.data.data.totalElements);
-                setCurrentPage(response.data.data.number);
+
+                // FIX: Access pagination data from the 'page' object
+                setTotalPages(response.data.data.page.totalPages);
+                setTotalElements(response.data.data.page.totalElements);
+                setCurrentPage(response.data.data.page.number);
             } else {
                 throw new Error(response.data.message || 'Failed to fetch past exam data');
             }
@@ -170,7 +171,7 @@ const PastExams = () => {
 
     const handleDownload = () => {
         // Add download functionality for past exams
-        console.log('Download past exams data');
+        console.log('Download Exam History data');
         toast.info('Download functionality coming soon!');
     };
 
@@ -302,11 +303,15 @@ const PastExams = () => {
                                             <td className="!px-6 !py-4">{exam.examDuration}</td>
                                             <td className="!px-6 !py-4">{exam.studentCount}</td>
                                             <td className="!px-6 !py-4">
-                                                <Eye
-                                                    className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                    size={20}
-                                                    onClick={() => handleViewClick(exam)}
-                                                />
+                                                <div className="relative group inline-block">
+                                                    <Eye
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        View
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

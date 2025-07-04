@@ -11,6 +11,7 @@ import EditExam from './pages/active-exams/EditExam'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import CreateStudent from './pages/students/CreateStudent'
+import EditUpcomingExams from './pages/upcoming-exam/EditUpcomingExams'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -26,6 +27,7 @@ function App() {
         <Route path="/past-exam/student-view/:id" element={<PastExamStudentView />} />
         <Route path="/edit-exam/:id" element={<EditExam />} />
         <Route path="/create-student" element={<CreateStudent />} />
+        <Route path="/edit-upcoming-exam" element={<EditUpcomingExams />} />
       </Routes>
 
       {/* Toast Container for notifications */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Pencil, Download, Search, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Eye, Edit, Download, Search, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
@@ -373,21 +373,39 @@ const Students = () => {
                                             <td className="!px-6 !py-4">{student.mobile || 'N/A'}</td>
                                             <td className="!px-6 !py-4">{student.batch || 'N/A'}</td>
                                             <td className="!px-6 !py-4">
-                                                <Eye className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors" size={20} />
+                                                <div className="relative group inline-block">
+                                                    <Eye
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        View
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="!px-6 !py-4">
-                                                <Pencil
-                                                    className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                    size={20}
-                                                    onClick={() => handleEditClick(student)}
-                                                />
+                                                <div className="relative group inline-block">
+                                                    <Edit
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                        onClick={() => handleEditClick(student)}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Edit
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="!px-6 !py-4">
-                                                <Trash2
-                                                    className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
-                                                    size={20}
-                                                    onClick={() => handleDeleteClick(student)}
-                                                />
+                                                <div className="relative group inline-block">
+                                                    <Trash2
+                                                        className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                                                        size={20}
+                                                        onClick={() => handleDeleteClick(student)}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        Delete
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

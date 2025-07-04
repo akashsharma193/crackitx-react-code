@@ -21,9 +21,9 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
 
     const dashboardCards = [
         { title: 'All Students', icon: studentsIcon, count: dashboardData.userCount, tab: 'Students' },
-        { title: 'Create Exam', icon: createExamIcon, count: dashboardData.totalExamCount, tab: 'Create Exam' },
+        // { title: 'Create Exam', icon: createExamIcon, count: dashboardData.totalExamCount, tab: 'Create Exam' },
         { title: 'Active Exam', icon: activeExamIcon, count: dashboardData.activeExamCount, tab: 'Active Exam' },
-        { title: 'Exam History', icon: examhistoryIcon, count: dashboardData.pastExamCount, tab: 'Past Exams' },
+        { title: 'Exam History', icon: examhistoryIcon, count: dashboardData.pastExamCount, tab: 'Exam History' },
         { title: 'Upcoming Exam', icon: activeExamIcon, count: dashboardData.upComingExamCount, tab: 'Upcoming Exam' },
         { title: 'E-Resources', icon: resourcesIcon, count: 0, tab: 'E-Resources' },
     ];
@@ -56,7 +56,7 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
             <>
                 <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full'>
-                    {[...Array(6)].map((_, index) => (
+                    {[...Array(5)].map((_, index) => (
                         <div
                             key={index}
                             className='cursor-pointer max-w-sm rounded-lg flex bg-gray-200 animate-pulse !p-4 justify-between items-center text-white text-lg font-medium border-white border-2'

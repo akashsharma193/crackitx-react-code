@@ -111,7 +111,7 @@ const ActiveExams = () => {
                 }));
 
                 setExamData(transformedData);
-                
+
                 // Fix pagination data extraction based on API response structure
                 const pageData = response.data.data.page;
                 setTotalPages(pageData.totalPages);
@@ -255,7 +255,7 @@ const ActiveExams = () => {
     const getPageNumbers = () => {
         const pages = [];
         const maxVisiblePages = 5;
-        
+
         if (totalPages <= maxVisiblePages) {
             // Show all pages if total pages is less than max visible
             for (let i = 0; i < totalPages; i++) {
@@ -280,7 +280,7 @@ const ActiveExams = () => {
                 }
             }
         }
-        
+
         return pages;
     };
 
@@ -356,7 +356,7 @@ const ActiveExams = () => {
                                     <th className="!px-6 !py-4">Test Conducted By</th>
                                     <th className="!px-6 !py-4">Start Time</th>
                                     <th className="!px-6 !py-4">End Time</th>
-                                    <th className="!px-6 !py-4">Test Visibility</th>
+                                    {/* <th className="!px-6 !py-4">Test Visibility</th> */}
                                     <th className="!px-6 !py-4">View</th>
                                     <th className="!px-6 !py-4">Delete</th>
                                 </tr>
@@ -370,7 +370,7 @@ const ActiveExams = () => {
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
-                                            <td className="!px-6 !py-4">
+                                            {/* <td className="!px-6 !py-4">
                                                 <label className="inline-flex items-center cursor-pointer">
                                                     <input
                                                         type="checkbox"
@@ -384,9 +384,17 @@ const ActiveExams = () => {
                                                             }`} />
                                                     </div>
                                                 </label>
-                                            </td>
+                                            </td> */}
                                             <td className="!px-6 !py-4">
-                                                <Eye className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors" size={20} onClick={() => handleViewClick(exam)} />
+                                                <div className="relative group inline-block">
+                                                    <Eye
+                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                        size={20}
+                                                    />
+                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                        View
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="!px-6 !py-4">
                                                 <Trash2 className="text-[#ef4444] cursor-pointer hover:text-red-700 transition-colors" size={20} onClick={() => handleDeleteClick(exam)} />
