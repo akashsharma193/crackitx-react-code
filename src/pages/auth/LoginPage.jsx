@@ -15,6 +15,43 @@ const LoginPage = () => {
 
     const [isLoading, setIsLoading] = useState(false);
 
+    const decodeJWT = (token) => {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (error) {
+            console.error('Error decoding JWT:', error);
+            return null;
+        }
+    };
+
+    // Function to check if user has Admin role
+    const checkAdminRole = (token) => {
+        try {
+            const decodedToken = decodeJWT(token);
+
+            if (!decodedToken) {
+                console.error('Failed to decode token');
+                return false;
+            }
+
+            console.log('Decoded token:', decodedToken);
+            console.log('Token expiration:', new Date(decodedToken.exp * 1000));
+
+            localStorage.setItem('userRole', decodedToken.Roles);
+            console.log(`Stored User Role: ${localStorage.getItem('userRole')}`);
+
+            return decodedToken.Roles === 'Admin';
+        } catch (error) {
+            console.error('Error checking admin role:', error);
+            return false;
+        }
+    };
+
     const getDeviceId = () => {
         let deviceId = localStorage.getItem('deviceId');
         if (!deviceId) {
@@ -40,43 +77,58 @@ const LoginPage = () => {
         }
 
         setIsLoading(true);
-        var deviceId = getDeviceId();
+        const deviceId = getDeviceId();
+
+        const requestData = {
+            email: formData.email.trim(),
+            password: formData.password.trim()
+        };
+
+        const requestHeaders = {
+            'deviceId': deviceId,
+            'Content-Type': 'application/json'
+        };
+
         try {
-            const response = await apiClient.post('/user-open/login', {
-                email: formData.email,
-                password: formData.password
-            }, {
-                headers: {
-                    'deviceId': deviceId,
-                    'Content-Type': 'application/json'
-                }
+            const response = await apiClient.post('/user-open/login', requestData, {
+                headers: requestHeaders
             });
 
-            const clearNavigationHistory = () => {
-                window.history.replaceState(null, '', '/home');
-
-                const currentLength = window.history.length;
-                window.history.go(-currentLength + 1);
-
-                window.history.pushState(null, '', window.location.href);
-                window.addEventListener('popstate', (event) => {
-                    window.history.pushState(null, '', window.location.href);
-                });
-            };
+            console.log('Login response:', response.data);
 
             if (response.data && response.status === 200) {
                 toast.success('Login successful!');
+
+                // Store tokens
                 if (response.data.data.token) {
                     localStorage.setItem('authToken', response.data.data.token);
+                    console.log('Auth token stored');
                 }
                 if (response.data.data.refreshToken) {
                     localStorage.setItem('refreshToken', response.data.data.refreshToken);
+                    console.log('Refresh token stored');
                 }
+
+                // Store user data if available
+                if (response.data.data.user) {
+                    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+                }
+
+                const token = localStorage.getItem('authToken');
+                const isAdmin = checkAdminRole(token);
+
+                console.log('User is admin:', isAdmin);
+
                 navigate('/home', { replace: true });
             }
 
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('=== LOGIN ERROR DEBUG ===');
+            console.error('Full error object:', error);
+            console.error('Error response:', error.response);
+            console.error('Error request:', error.request);
+            console.error('Error message:', error.message);
+            console.error('========================');
 
             if (error.response) {
                 const status = error.response.status;
@@ -84,6 +136,12 @@ const LoginPage = () => {
                     error.response.data?.error ||
                     error.response.data?.detail ||
                     'Login failed';
+
+                console.log('Error response:', {
+                    status,
+                    message,
+                    data: error.response.data
+                });
 
                 if (status === 400) {
                     toast.error(message || 'Bad request. Please check your input.');
@@ -99,10 +157,10 @@ const LoginPage = () => {
                     toast.error(message);
                 }
             } else if (error.request) {
-                // Network error
+                console.log('Network error:', error.request);
                 toast.error('Network error. Please check your connection');
             } else {
-                // Other error
+                console.log('Other error:', error.message);
                 toast.error('An unexpected error occurred');
             }
         } finally {

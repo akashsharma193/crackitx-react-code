@@ -19,17 +19,23 @@ const HeaderComponent = () => {
         const fetchUserProfile = async () => {
             try {
                 setIsLoading(true);
-                const response = await apiClient.get('/user-secured/getUserProfile');
+
+                const isAdmin = localStorage.getItem('userRole') === 'Admin';
+
+                const endpoint = isAdmin
+                    ? '/user-secured/getUserProfile'
+                    : '/user-activity/getUserProfile';
+
+                const response = await apiClient.get(endpoint);
 
                 if (response.data.success && response.data.data) {
                     const userData = response.data.data;
                     setUserProfile(userData);
 
-                    // Store orgCode in localStorage
                     if (userData.orgCode) {
                         localStorage.setItem('orgCode', userData.orgCode);
                     }
-                    if (userData.orgCode) {
+                    if (userData.userId) {
                         localStorage.setItem('userId', userData.userId);
                     }
                 } else {
@@ -53,6 +59,7 @@ const HeaderComponent = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userSession');
         localStorage.removeItem('orgCode'); // Remove orgCode on logout
+        localStorage.removeItem('userRole'); // Remove userRole on logout
         sessionStorage.clear();
 
         navigate('/', { replace: true });
@@ -67,15 +74,15 @@ const HeaderComponent = () => {
     const profileOptions = [
         {
             icon: <User size={18} className="text-gray-600" />,
-            label: userProfile?.name || 'Admin'
+            label: userProfile?.name || 'User'
         },
         {
             icon: <Mail size={18} className="text-gray-600" />,
-            label: userProfile?.email || 'admin@gmail.com'
+            label: userProfile?.email || 'user@gmail.com'
         },
         {
             icon: <Phone size={18} className="text-gray-600" />,
-            label: userProfile?.mobile || '9967422806'
+            label: userProfile?.mobile || 'No phone number'
         },
         {
             icon: <LogOut size={18} className="text-gray-600" />,
@@ -84,7 +91,6 @@ const HeaderComponent = () => {
         },
     ];
 
-    // Show loading state if data is still being fetched
     if (isLoading) {
         return (
             <div className='flex justify-between items-center !px-8 !py-3 border-b-2 border-b-gray-200'>
@@ -97,7 +103,7 @@ const HeaderComponent = () => {
                     <img
                         className='h-[50px] cursor-pointer'
                         src={adminImage}
-                        alt="Admin"
+                        alt="Profile"
                     />
                 </div>
             </div>
@@ -112,14 +118,14 @@ const HeaderComponent = () => {
                 <div className='flex gap-20'>
                     <div className='flex items-center gap-4'>
                         <h2 className='font-bold text-lg text-[#7966F1]'>
-                            Hey, {userProfile?.name || 'Admin'}
+                            Hey, {userProfile?.name || 'User'}
                         </h2>
                         <img className='h-[50px]' src={welcomeImage} alt="Welcome" />
                     </div>
                     <img
                         className='h-[50px] cursor-pointer'
                         src={adminImage}
-                        alt="Admin"
+                        alt="Profile"
                         onClick={() => setShowProfile(prev => !prev)}
                     />
                 </div>
@@ -130,8 +136,8 @@ const HeaderComponent = () => {
                     <div className='flex justify-center items-center gap-4 !mb-4'>
                         <img className='h-[60px]' src={adminImage} alt="Profile" />
                         <div>
-                            <p>{userProfile?.name || 'Admin'}</p>
-                            <p>{userProfile?.email || 'admin@gmail.com'}</p>
+                            <p>{userProfile?.name || 'User'}</p>
+                            <p>{userProfile?.email || 'user@gmail.com'}</p>
                         </div>
                     </div>
                     <hr />
