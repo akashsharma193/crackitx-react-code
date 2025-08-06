@@ -39,12 +39,7 @@ const LoginPage = () => {
                 return false;
             }
 
-            console.log('Decoded token:', decodedToken);
-            console.log('Token expiration:', new Date(decodedToken.exp * 1000));
-
             localStorage.setItem('userRole', decodedToken.Roles);
-            console.log(`Stored User Role: ${localStorage.getItem('userRole')}`);
-
             return decodedToken.Roles === 'Admin';
         } catch (error) {
             console.error('Error checking admin role:', error);
@@ -94,41 +89,59 @@ const LoginPage = () => {
                 headers: requestHeaders
             });
 
-            console.log('Login response:', response.data);
-
             if (response.data && response.status === 200) {
                 toast.success('Login successful!');
 
                 // Store tokens
                 if (response.data.data.token) {
                     localStorage.setItem('authToken', response.data.data.token);
-                    console.log('Auth token stored');
                 }
                 if (response.data.data.refreshToken) {
                     localStorage.setItem('refreshToken', response.data.data.refreshToken);
-                    console.log('Refresh token stored');
                 }
 
-                // Store user data if available
+                // Store user data if available and ensure userId is accessible
                 if (response.data.data.user) {
-                    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+                    const userData = response.data.data.user;
+                    
+                    // Debug log to see the actual structure
+                    console.log('Login Response User Data:', userData);
+                    
+                    // Store the complete user data
+                    localStorage.setItem('userData', JSON.stringify(userData));
+                    
+                    // Also store userId separately for easy access if it exists in different formats
+                    const userId = userData.userId || userData.id || userData.user_id || userData.ID;
+                    if (userId) {
+                        localStorage.setItem('userId', userId.toString());
+                        console.log('Stored User ID:', userId);
+                    } else {
+                        console.warn('No userId found in user data:', userData);
+                    }
                 }
 
                 const token = localStorage.getItem('authToken');
-                const isAdmin = checkAdminRole(token);
-
-                console.log('User is admin:', isAdmin);
+                
+                // Also try to extract userId from JWT token if not available in user data
+                const decodedToken = decodeJWT(token);
+                if (decodedToken) {
+                    console.log('Decoded Token:', decodedToken);
+                    
+                    // Check if userId is available in token
+                    const tokenUserId = decodedToken.userId || decodedToken.id || decodedToken.user_id || decodedToken.sub;
+                    if (tokenUserId && !localStorage.getItem('userId')) {
+                        localStorage.setItem('userId', tokenUserId.toString());
+                        console.log('Stored User ID from token:', tokenUserId);
+                    }
+                }
+                
+                checkAdminRole(token);
 
                 navigate('/home', { replace: true });
             }
 
         } catch (error) {
-            console.error('=== LOGIN ERROR DEBUG ===');
-            console.error('Full error object:', error);
-            console.error('Error response:', error.response);
-            console.error('Error request:', error.request);
-            console.error('Error message:', error.message);
-            console.error('========================');
+            console.error('Login error:', error);
 
             if (error.response) {
                 const status = error.response.status;
@@ -136,12 +149,6 @@ const LoginPage = () => {
                     error.response.data?.error ||
                     error.response.data?.detail ||
                     'Login failed';
-
-                console.log('Error response:', {
-                    status,
-                    message,
-                    data: error.response.data
-                });
 
                 if (status === 400) {
                     toast.error(message || 'Bad request. Please check your input.');
@@ -157,10 +164,8 @@ const LoginPage = () => {
                     toast.error(message);
                 }
             } else if (error.request) {
-                console.log('Network error:', error.request);
                 toast.error('Network error. Please check your connection');
             } else {
-                console.log('Other error:', error.message);
                 toast.error('An unexpected error occurred');
             }
         } finally {
@@ -217,7 +222,7 @@ const LoginPage = () => {
                                     value={formData.password}
                                     onChange={handleInputChange}
                                     disabled={isLoading}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
                                         paddingRight: '16px',

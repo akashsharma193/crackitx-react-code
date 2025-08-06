@@ -14,6 +14,8 @@ import UserSidebarComponent from '../../components/UserSidebarComponent';
 import UserActiveExams from '../active-exams/UserActiveExams';
 import Students from '../students/Student';
 import UserExamHistory from '../past-exams/UserExamHistory';
+import { toast } from 'react-toastify';
+import QuizPage from '../quiz-page/Quiz_Page';
 
 // Dummy Components
 const EResources = () => (
@@ -22,14 +24,35 @@ const EResources = () => (
     </div>
 );
 
-const isAdmin = localStorage.getItem('userRole') === 'Admin';
-
 const Home = () => {
-    console.log(localStorage.getItem('authToken'));
     const [activeTab, setActiveTab] = useState('Dashboard');
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+    const [userRole, setUserRole] = useState(null);
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Quiz navigation state
+    const [currentView, setCurrentView] = useState('normal'); // 'normal' or 'quiz'
+    const [selectedExam, setSelectedExam] = useState(null);
+
+    // Check user role on component mount and when localStorage changes
+    useEffect(() => {
+        const checkUserRole = () => {
+            const role = localStorage.getItem('userRole');
+            console.log('Current user role:', role);
+            setUserRole(role);
+        };
+
+        // Check role immediately
+        checkUserRole();
+
+        // Optional: Listen for storage changes (useful if role changes in another tab)
+        window.addEventListener('storage', checkUserRole);
+
+        return () => {
+            window.removeEventListener('storage', checkUserRole);
+        };
+    }, []);
 
     useEffect(() => {
         if (location.state && location.state.activeTab) {
@@ -45,13 +68,40 @@ const Home = () => {
             setShowLogoutDialog(true);
         } else {
             setActiveTab(tab);
+            // Reset quiz view when changing tabs
+            setCurrentView('normal');
+            setSelectedExam(null);
         }
+    };
+
+    // Quiz navigation handlers
+    const handleNavigateToQuiz = (examData) => {
+        console.log('Navigating to quiz with data:', examData);
+        setSelectedExam(examData);
+        setCurrentView('quiz');
+    };
+
+    const handleBackToExams = () => {
+        setCurrentView('normal');
+        setSelectedExam(null);
+    };
+
+    const handleQuizSubmit = (results) => {
+        console.log('Quiz results:', results);
+        toast.success(`Quiz completed! Score: ${results.score}%`);
+
+        // Optional: Auto navigate back after a delay
+        setTimeout(() => {
+            handleBackToExams();
+        }, 3000);
     };
 
     const handleLogoutConfirm = () => {
         localStorage.removeItem('authToken');
-        localStorage.removeItem('userSession');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
         localStorage.removeItem('userRole');
+        localStorage.removeItem('deviceId');
 
         sessionStorage.clear();
         navigate('/', { replace: true });
@@ -60,6 +110,9 @@ const Home = () => {
     const handleLogoutCancel = () => {
         setShowLogoutDialog(false);
     };
+
+    // Check if user is admin
+    const isAdmin = userRole === 'Admin';
 
     // Admin render content function
     const renderAdminContent = () => {
@@ -83,15 +136,27 @@ const Home = () => {
         }
     };
 
-    // User render content function
+    // User render content function with quiz navigation
     const renderUserContent = () => {
+        // If we're in quiz mode, show the quiz page
+        if (currentView === 'quiz') {
+            return (
+                <QuizPage
+                    examData={selectedExam}
+                    onSubmitQuiz={handleQuizSubmit}
+                    onBackToExams={handleBackToExams}
+                />
+            );
+        }
+
+        // Otherwise, render normal content based on active tab
         switch (activeTab) {
             case 'Dashboard':
                 return <UserDashboard setActiveTab={setActiveTab} />;
-            case 'All Tests':
+            case 'All Test':
                 return <PastExams />;
             case 'Active Exam':
-                return <UserActiveExams />;
+                return <UserActiveExams onNavigateToQuiz={handleNavigateToQuiz} />;
             case 'Exam History':
                 return <UserExamHistory />;
             case 'Unattempted Exam':
@@ -110,6 +175,15 @@ const Home = () => {
         return isAdmin ? renderAdminContent() : renderUserContent();
     };
 
+    // Show loading if userRole is not yet determined
+    if (userRole === null) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-lg">Loading...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen flex flex-col">
             <HeaderComponent />
@@ -125,7 +199,7 @@ const Home = () => {
                         setActiveTab={handleTabChange}
                     />
                 )}
-                <div className={`flex-1 overflow-y-auto ${activeTab === 'Dashboard' ? '!px-6 !py-8' : ''}`}>
+                <div className={`flex-1 overflow-y-auto ${activeTab === 'Dashboard' && currentView === 'normal' ? '!px-6 !py-8' : ''}`}>
                     {renderContent()}
                 </div>
             </div>

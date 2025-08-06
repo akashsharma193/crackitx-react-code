@@ -12,6 +12,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import CreateStudent from './pages/students/CreateStudent'
 import EditUpcomingExams from './pages/upcoming-exam/EditUpcomingExams'
+import ExamContainer from './components/ExamContainer'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -22,6 +23,7 @@ function App() {
         <Route path='/' element={<LoginPage />}></Route>
         <Route path='/register' element={<RegisterPage />}></Route>
         <Route path='/home' element={<Home />}></Route>
+        <Route path='/exams' element={<ExamContainer />}></Route>
         <Route path="/edit-user/:id" element={<EditStudent />} />
         <Route path="/past-exam-details/:id" element={<PastExamDetails />} />
         <Route path="/past-exam/student-view/:id" element={<PastExamStudentView />} />
