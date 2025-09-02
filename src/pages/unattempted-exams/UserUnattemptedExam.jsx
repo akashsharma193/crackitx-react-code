@@ -120,7 +120,8 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                 endTime: exam.fullData.endTime,
                 questionList: exam.fullData.questionList || [],
                 minusMarks: exam.fullData.minusMarks,
-                actualDuration: parseInt(exam.fullData.examDuration || 30)
+                actualDuration: parseInt(exam.fullData.examDuration || 30),
+                hideSubmitButton: true 
             };
 
             if (!examDetails.questionList || examDetails.questionList.length === 0) {
@@ -214,8 +215,10 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
 
             {!loading && !error && (
                 <>
+                    {/* Header with search and filter controls */}
                     <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5">
                         <div className="flex items-center gap-4 flex-wrap">
+                            {/* Subject search input */}
                             <div className="relative min-w-[320px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -228,6 +231,7 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                                 />
                             </div>
 
+                            {/* Teacher filter input */}
                             <div className="relative min-w-[200px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -240,6 +244,7 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                                 />
                             </div>
 
+                            {/* Clear filters button */}
                             <button
                                 onClick={handleClear}
                                 className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -249,6 +254,7 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                             </button>
                         </div>
 
+                        {/* Download button */}
                         <div className="flex items-center gap-4 mt-4 md:mt-0">
                             <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
                                 <Download size={20} />
@@ -256,6 +262,7 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                         </div>
                     </div>
 
+                    {/* Main table container */}
                     <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
@@ -311,6 +318,7 @@ const UserUnattemptedExams = ({ onNavigateToQuiz }) => {
                             </tbody>
                         </table>
 
+                        {/* Pagination */}
                         {examData.length > 0 && totalPages > 1 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">

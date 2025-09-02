@@ -69,7 +69,8 @@ const UserActiveExams = ({ onNavigateToQuiz }) => {
                     userId: item.userId,
                     totalQuestions: item.questionList ? item.questionList.length : 0,
                     // Store the full item data for quiz navigation
-                    fullData: item
+                    fullData: item,
+                    hideSubmitButton: false,
                 }));
 
                 setExamData(transformedData);

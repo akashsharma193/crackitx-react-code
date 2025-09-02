@@ -20,7 +20,6 @@ import UserUnattemptedExams from '../unattempted-exams/UserUnattemptedExam';
 import UserPassedExams from '../passed-exams/UserPassedExams';
 import UserFailedExams from '../failed-exams/UserFailedExams';
 
-// Dummy Components
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
         Coming Soon
@@ -34,11 +33,9 @@ const Home = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Quiz navigation state
-    const [currentView, setCurrentView] = useState('normal'); // 'normal' or 'quiz'
+    const [currentView, setCurrentView] = useState('normal');
     const [selectedExam, setSelectedExam] = useState(null);
 
-    // Check user role on component mount and when localStorage changes
     useEffect(() => {
         const checkUserRole = () => {
             const role = localStorage.getItem('userRole');
@@ -46,10 +43,8 @@ const Home = () => {
             setUserRole(role);
         };
 
-        // Check role immediately
         checkUserRole();
 
-        // Optional: Listen for storage changes (useful if role changes in another tab)
         window.addEventListener('storage', checkUserRole);
 
         return () => {
@@ -71,13 +66,11 @@ const Home = () => {
             setShowLogoutDialog(true);
         } else {
             setActiveTab(tab);
-            // Reset quiz view when changing tabs
             setCurrentView('normal');
             setSelectedExam(null);
         }
     };
 
-    // Quiz navigation handlers
     const handleNavigateToQuiz = (examData) => {
         console.log('Navigating to quiz with data:', examData);
         setSelectedExam(examData);
@@ -93,7 +86,6 @@ const Home = () => {
         console.log('Quiz results:', results);
         toast.success(`Quiz completed! Score: ${results.score}%`);
 
-        // Optional: Auto navigate back after a delay
         setTimeout(() => {
             handleBackToExams();
         }, 3000);
@@ -114,10 +106,8 @@ const Home = () => {
         setShowLogoutDialog(false);
     };
 
-    // Check if user is admin
     const isAdmin = userRole === 'Admin';
 
-    // Admin render content function
     const renderAdminContent = () => {
         switch (activeTab) {
             case 'Dashboard':
@@ -139,20 +129,18 @@ const Home = () => {
         }
     };
 
-    // User render content function with quiz navigation
     const renderUserContent = () => {
-        // If we're in quiz mode, show the quiz page
         if (currentView === 'quiz') {
             return (
                 <QuizPage
                     examData={selectedExam}
                     onSubmitQuiz={handleQuizSubmit}
                     onBackToExams={handleBackToExams}
+                    hideSubmitButton={selectedExam?.hideSubmitButton}
                 />
             );
         }
 
-        // Otherwise, render normal content based on active tab
         switch (activeTab) {
             case 'Dashboard':
                 return <UserDashboard setActiveTab={setActiveTab} />;
@@ -163,7 +151,7 @@ const Home = () => {
             case 'Exam History':
                 return <UserExamHistory />;
             case 'Unattempted Exam':
-                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;ome
+                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;
             case 'Passed Exam':
                 return <UserPassedExams />;
             case 'Failed Exam':
@@ -173,12 +161,10 @@ const Home = () => {
         }
     };
 
-    // Main render content function that delegates to admin or user
     const renderContent = () => {
         return isAdmin ? renderAdminContent() : renderUserContent();
     };
 
-    // Show loading if userRole is not yet determined
     if (userRole === null) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -207,7 +193,6 @@ const Home = () => {
                 </div>
             </div>
 
-            {/* Logout Confirmation Dialog */}
             <LogoutDialog
                 isOpen={showLogoutDialog}
                 onClose={handleLogoutCancel}

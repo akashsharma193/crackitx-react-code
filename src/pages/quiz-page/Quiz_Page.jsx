@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Send, ArrowLeft, AlertCircle } from 'lucide-react';
 import apiClient from '../../api/axiosConfig';
 
-const QuizPage = ({ examData, onSubmitQuiz, onBackToExams }) => {
+const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) => {
     const currentExam = examData;
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -17,7 +17,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams }) => {
     const [quizResults, setQuizResults] = useState(null);
 
     const timerRef = useRef(null);
-
+    console.log('hideSubmitButton prop:', hideSubmitButton);
     useEffect(() => {
         if (currentExam?.questionList) {
             setQuestions(currentExam.questionList);
@@ -285,14 +285,14 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams }) => {
                                             onClick={() => handleAnswerSelect(option)}
                                             disabled={isSubmitted}
                                             className={`w-full text-left !p-4 border-2 rounded-lg transition-all duration-200 ${isSelected
-                                                    ? 'bg-[#7966F1] text-white border-[#7966F1]'
-                                                    : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-[#7966F1]'
+                                                ? 'bg-[#7966F1] text-white border-[#7966F1]'
+                                                : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-[#7966F1]'
                                                 } ${!isSubmitted ? 'cursor-pointer' : 'cursor-default'}`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold ${isSelected
-                                                        ? 'border-white text-white'
-                                                        : 'border-gray-300 text-gray-600'
+                                                    ? 'border-white text-white'
+                                                    : 'border-gray-300 text-gray-600'
                                                     }`}>
                                                     {String.fromCharCode(65 + optionIndex)}
                                                 </span>
@@ -318,7 +318,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams }) => {
                             </button>
 
                             <div className="flex items-center gap-4">
-                                {!isSubmitted && (
+                                {!isSubmitted && !hideSubmitButton && (
                                     <button
                                         onClick={() => handleSubmitQuiz(false)}
                                         disabled={submitting}
@@ -557,10 +557,10 @@ const ResultPage = ({ results, onBackToExams }) => {
                             <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                 <div className="flex items-start gap-4">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${question.userAnswer === question.correctAnswer
-                                            ? 'bg-green-500 text-white'
-                                            : question.userAnswer === null
-                                                ? 'bg-gray-500 text-white'
-                                                : 'bg-red-500 text-white'
+                                        ? 'bg-green-500 text-white'
+                                        : question.userAnswer === null
+                                            ? 'bg-gray-500 text-white'
+                                            : 'bg-red-500 text-white'
                                         }`}>
                                         {index + 1}
                                     </div>
