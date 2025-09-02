@@ -244,7 +244,7 @@ const UserFailedExams = ({ onNavigateToResults }) => {
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
                                             <td className="!px-6 !py-4">
-                                                <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                                <span className="bg-red-100 text-red-800 text-xs font-medium !px-2.5 !py-0.5 rounded-full">
                                                     Failed
                                                 </span>
                                             </td>

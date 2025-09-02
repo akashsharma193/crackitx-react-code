@@ -163,7 +163,7 @@ const Home = () => {
             case 'Exam History':
                 return <UserExamHistory />;
             case 'Unattempted Exam':
-                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;
+                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;ome
             case 'Passed Exam':
                 return <UserPassedExams />;
             case 'Failed Exam':

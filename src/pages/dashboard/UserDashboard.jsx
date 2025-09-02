@@ -25,8 +25,8 @@ const UserDashboard = ({ setActiveTab }) => {
         { title: 'Active Exam', icon: activeExamIcon, count: userDashboardData.activeExamCount, tab: 'Active Exam' },
         { title: 'Exam History', icon: examhistoryIcon, count: userDashboardData.pastExamCount, tab: 'Exam History' },
         { title: 'Unattempted Exam', icon: activeExamIcon, count: userDashboardData.unAttemptedExam, tab: 'Upcoming Exam' },
-        { title: 'Passed Exams', icon: resourcesIcon, count: userDashboardData.passedExam, tab: 'Exam History' },
-        { title: 'Failed Exams', icon: resourcesIcon, count: userDashboardData.failedExam, tab: 'Exam History' },
+        { title: 'Passed Exams', icon: resourcesIcon, count: userDashboardData.passedExam, tab: 'Passed Exam' },
+        { title: 'Failed Exams', icon: resourcesIcon, count: userDashboardData.failedExam, tab: 'Failed Exam' },
     ];
 
     const fetchDashboardData = async () => {
