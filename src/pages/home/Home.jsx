@@ -16,6 +16,9 @@ import Students from '../students/Student';
 import UserExamHistory from '../past-exams/UserExamHistory';
 import { toast } from 'react-toastify';
 import QuizPage from '../quiz-page/Quiz_Page';
+import UserUnattemptedExams from '../unattempted-exams/UserUnattemptedExam';
+import UserPassedExams from '../passed-exams/UserPassedExams';
+import UserFailedExams from '../failed-exams/UserFailedExams';
 
 // Dummy Components
 const EResources = () => (
@@ -160,11 +163,11 @@ const Home = () => {
             case 'Exam History':
                 return <UserExamHistory />;
             case 'Unattempted Exam':
-                return <UpcomingExam />;
+                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;
             case 'Passed Exam':
-                return <EResources />;
+                return <UserPassedExams />;
             case 'Failed Exam':
-                return <EResources />;
+                return <UserFailedExams />;
             default:
                 return <div className='p-6'>No Content</div>;
         }
