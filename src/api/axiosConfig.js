@@ -5,7 +5,7 @@ const apiClient = axios.create({
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
-        'encDisabled': false
+        'encDisabled': 'false'
     }
 });
 
@@ -20,7 +20,6 @@ const processQueue = (error, token = null) => {
             prom.resolve(token);
         }
     });
-
     failedQueue = [];
 };
 
@@ -39,23 +38,28 @@ apiClient.interceptors.request.use(
 
         if (!config.url.includes('/user-open/')) {
             if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
+                config.headers['Authorization'] = `Bearer ${token}`;
             }
         }
 
-        if (deviceId && !config.headers.deviceId) {
-            config.headers.deviceId = deviceId;
+        if (deviceId) {
+            config.headers['deviceId'] = deviceId;
         }
 
-        config.headers.encDisabled = false;
+        config.headers['encDisabled'] = 'false';
+        config.headers['Content-Type'] = 'application/json';
 
-        if (config.data) {
+        if (config.method === 'get' || config.method === 'delete') {
+            if (!config.data) {
+                config.data = {
+                    encPayload: encodeBase64({})
+                };
+            }
+        }
+
+        if (config.data && !config.data.encPayload) {
             config.data = {
                 encPayload: encodeBase64(config.data)
-            };
-        } else if (config.method === 'get' || config.method === 'delete') {
-            config.data = {
-                encPayload: encodeBase64({})
             };
         }
 
@@ -81,7 +85,6 @@ apiClient.interceptors.response.use(
         }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
-
             if (originalRequest.url.includes('/user-open/login')) {
                 return Promise.reject(error);
             }
@@ -90,7 +93,7 @@ apiClient.interceptors.response.use(
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 }).then(token => {
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    originalRequest.headers['Authorization'] = `Bearer ${token}`;
                     return apiClient(originalRequest);
                 }).catch(err => {
                     return Promise.reject(err);
@@ -108,7 +111,7 @@ apiClient.interceptors.response.use(
             }
 
             try {
-                const response = await axios.post(
+                const refreshResponse = await axios.post(
                     `${apiClient.defaults.baseURL}/user-open/refresh-token`,
                     { 
                         encPayload: encodeBase64({ refreshToken })
@@ -116,12 +119,12 @@ apiClient.interceptors.response.use(
                     {
                         headers: {
                             'Content-Type': 'application/json',
-                            'encDisabled': false
+                            'encDisabled': 'false'
                         }
                     }
                 );
 
-                let responseData = response.data;
+                let responseData = refreshResponse.data;
                 if (responseData.encPayloadRes) {
                     responseData = decodeBase64(responseData.encPayloadRes);
                 }
@@ -135,8 +138,7 @@ apiClient.interceptors.response.use(
                         localStorage.setItem('refreshToken', newRefreshToken);
                     }
 
-                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
+                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
                     processQueue(null, newToken);
 
                     return apiClient(originalRequest);
@@ -164,7 +166,7 @@ const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userData');
-    localStorage.removeRole('userRole');
+    localStorage.removeItem('userRole');
     window.location.href = '/';
 };
 
