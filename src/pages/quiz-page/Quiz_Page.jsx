@@ -9,21 +9,27 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [questions, setQuestions] = useState([]);
     const [timeRemaining, setTimeRemaining] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
-    const [visitedQuestions, setVisitedQuestions] = useState(new Set([0])); // Track visited questions, start with first question
+    const [visitedQuestions, setVisitedQuestions] = useState(new Set([0]));
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [examStarted, setExamStarted] = useState(false);
     const [showResultPage, setShowResultPage] = useState(false);
     const [quizResults, setQuizResults] = useState(null);
+    const [questionStartTimes, setQuestionStartTimes] = useState({});
+    const [questionTimeTaken, setQuestionTimeTaken] = useState({});
 
     const timerRef = useRef(null);
+    
     console.log('hideSubmitButton prop:', hideSubmitButton);
+    
     useEffect(() => {
         if (currentExam?.questionList) {
             setQuestions(currentExam.questionList);
             const duration = currentExam.actualDuration || parseInt(currentExam.examDuration || 30);
             setTimeRemaining(duration * 60);
             setExamStarted(true);
+            const startTime = Date.now();
+            setQuestionStartTimes({ 0: startTime });
         }
     }, [currentExam]);
 
@@ -49,8 +55,33 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
+    const formatTimeDisplay = (milliseconds) => {
+        if (!milliseconds) return '0s';
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        }
+        return `${seconds}s`;
+    };
+
+    const recordQuestionTime = (questionIndex) => {
+        const currentTime = Date.now();
+        const startTime = questionStartTimes[questionIndex];
+        if (startTime && !questionTimeTaken[questionIndex]) {
+            const timeTaken = currentTime - startTime;
+            setQuestionTimeTaken(prev => ({
+                ...prev,
+                [questionIndex]: timeTaken
+            }));
+        }
+    };
+
     const handleAnswerSelect = (selectedOption) => {
         if (isSubmitted) return;
+
+        recordQuestionTime(currentQuestionIndex);
 
         const updatedAnswers = {
             ...selectedAnswers,
@@ -65,30 +96,38 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
     const goToQuestion = (questionIndex) => {
         if (questionIndex >= 0 && questionIndex < questions.length) {
+            recordQuestionTime(currentQuestionIndex);
+            
             setCurrentQuestionIndex(questionIndex);
-            // Mark question as visited
             setVisitedQuestions(prev => new Set([...prev, questionIndex]));
+            
+            if (!questionStartTimes[questionIndex]) {
+                setQuestionStartTimes(prev => ({
+                    ...prev,
+                    [questionIndex]: Date.now()
+                }));
+            }
         }
     };
 
     const goToPrevious = () => {
         if (currentQuestionIndex > 0) {
             const newIndex = currentQuestionIndex - 1;
-            setCurrentQuestionIndex(newIndex);
-            setVisitedQuestions(prev => new Set([...prev, newIndex]));
+            goToQuestion(newIndex);
         }
     };
 
     const goToNext = () => {
         if (currentQuestionIndex < questions.length - 1) {
             const newIndex = currentQuestionIndex + 1;
-            setCurrentQuestionIndex(newIndex);
-            setVisitedQuestions(prev => new Set([...prev, newIndex]));
+            goToQuestion(newIndex);
         }
     };
 
     const handleSubmitQuiz = async (autoSubmit = false) => {
         if (submitting) return;
+
+        recordQuestionTime(currentQuestionIndex);
 
         if (!autoSubmit) {
             const unansweredCount = questions.length - Object.keys(selectedAnswers).length;
@@ -116,12 +155,13 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
             console.log('User Data:', userData);
             console.log('Extracted User ID:', userId);
 
-            const answerPaper = questions.map((question) => ({
+            const answerPaper = questions.map((question, index) => ({
                 question: question.question,
                 options: question.options,
                 correctAnswer: question.correctAnswer,
-                userAnswer: selectedAnswers[questions.indexOf(question)] || null,
-                color: null
+                userAnswer: selectedAnswers[index] || null,
+                color: null,
+                timeTaken: questionTimeTaken[index] || 0
             }));
 
             const submissionData = {
@@ -137,7 +177,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 endTime: currentExam?.endTime
             };
 
-            console.log('Submission Data:', submissionData); // Debug log
+            console.log('Submission Data:', submissionData);
 
             await apiClient.post('/user-activity/saveAnswePaper', submissionData);
 
@@ -165,7 +205,8 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 questions: questions.map((q, index) => ({
                     ...q,
                     userAnswer: selectedAnswers[index] || null,
-                    isCorrect: selectedAnswers[index] === q.correctAnswer
+                    isCorrect: selectedAnswers[index] === q.correctAnswer,
+                    timeTaken: q.timeTaken || questionTimeTaken[index] || 0
                 }))
             });
 
@@ -417,6 +458,17 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 };
 
 const ResultPage = ({ results, onBackToExams }) => {
+    const formatTimeDisplay = (milliseconds) => {
+        if (!milliseconds) return '0s';
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        }
+        return `${seconds}s`;
+    };
+
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
         const wrongPercentage = (wrong / total) * 100;
@@ -566,7 +618,12 @@ const ResultPage = ({ results, onBackToExams }) => {
                                     </div>
 
                                     <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-800 !mb-4">{question.question}</h3>
+                                        <div className="flex items-center gap-4 !mb-4">
+                                            <h3 className="font-semibold text-gray-800">{question.question}</h3>
+                                            <span className="text-sm text-gray-500 bg-gray-100 !px-2 !py-1 rounded">
+                                                Time Taken: {formatTimeDisplay(question.timeTaken)}
+                                            </span>
+                                        </div>
 
                                         <div className="space-y-2">
                                             {question.options.map((option, optionIndex) => {

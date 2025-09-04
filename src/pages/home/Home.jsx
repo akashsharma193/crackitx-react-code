@@ -19,6 +19,7 @@ import QuizPage from '../quiz-page/Quiz_Page';
 import UserUnattemptedExams from '../unattempted-exams/UserUnattemptedExam';
 import UserPassedExams from '../passed-exams/UserPassedExams';
 import UserFailedExams from '../failed-exams/UserFailedExams';
+import AllTests from '../all-test/AllTest';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -145,7 +146,7 @@ const Home = () => {
             case 'Dashboard':
                 return <UserDashboard setActiveTab={setActiveTab} />;
             case 'All Test':
-                return <PastExams />;
+                return <AllTests />;
             case 'Active Exam':
                 return <UserActiveExams onNavigateToQuiz={handleNavigateToQuiz} />;
             case 'Exam History':

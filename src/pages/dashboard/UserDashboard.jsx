@@ -21,7 +21,7 @@ const UserDashboard = ({ setActiveTab }) => {
     const navigate = useNavigate();
 
     const userDashboardCards = [
-        { title: 'All Tests', icon: studentsIcon, count: userDashboardData.totalExamCount, tab: 'Exam History' },
+        { title: 'All Tests', icon: studentsIcon, count: userDashboardData.totalExamCount, tab: 'All Test' },
         { title: 'Active Exam', icon: activeExamIcon, count: userDashboardData.activeExamCount, tab: 'Active Exam' },
         { title: 'Exam History', icon: examhistoryIcon, count: userDashboardData.pastExamCount, tab: 'Exam History' },
         { title: 'Unattempted Exam', icon: activeExamIcon, count: userDashboardData.unAttemptedExam, tab: 'Unattempted Exam' },

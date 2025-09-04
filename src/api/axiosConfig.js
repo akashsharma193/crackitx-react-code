@@ -4,7 +4,8 @@ const apiClient = axios.create({
     baseURL: 'https://online-examination-secured.onrender.com',
     timeout: 30000,
     headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'encDisabled': false
     }
 });
 
@@ -23,6 +24,14 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+const encodeBase64 = (data) => {
+    return btoa(JSON.stringify(data));
+};
+
+const decodeBase64 = (encodedData) => {
+    return JSON.parse(atob(encodedData));
+};
+
 apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('authToken');
@@ -38,6 +47,18 @@ apiClient.interceptors.request.use(
             config.headers.deviceId = deviceId;
         }
 
+        config.headers.encDisabled = false;
+
+        if (config.data) {
+            config.data = {
+                encPayload: encodeBase64(config.data)
+            };
+        } else if (config.method === 'get' || config.method === 'delete') {
+            config.data = {
+                encPayload: encodeBase64({})
+            };
+        }
+
         return config;
     },
     (error) => {
@@ -47,10 +68,17 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
     (response) => {
+        if (response.data && response.data.encPayloadRes) {
+            response.data = decodeBase64(response.data.encPayloadRes);
+        }
         return response;
     },
     async (error) => {
         const originalRequest = error.config;
+
+        if (error.response?.data?.encPayloadRes) {
+            error.response.data = decodeBase64(error.response.data.encPayloadRes);
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
 
@@ -82,17 +110,25 @@ apiClient.interceptors.response.use(
             try {
                 const response = await axios.post(
                     `${apiClient.defaults.baseURL}/user-open/refresh-token`,
-                    { refreshToken },
+                    { 
+                        encPayload: encodeBase64({ refreshToken })
+                    },
                     {
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'encDisabled': false
                         }
                     }
                 );
 
-                if (response.data && response.data.data && response.data.data.token) {
-                    const newToken = response.data.data.token;
-                    const newRefreshToken = response.data.data.refreshToken;
+                let responseData = response.data;
+                if (responseData.encPayloadRes) {
+                    responseData = decodeBase64(responseData.encPayloadRes);
+                }
+
+                if (responseData && responseData.data && responseData.data.token) {
+                    const newToken = responseData.data.token;
+                    const newRefreshToken = responseData.data.refreshToken;
 
                     localStorage.setItem('authToken', newToken);
                     if (newRefreshToken) {
@@ -128,7 +164,7 @@ const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userData');
-    localStorage.removeItem('userRole');
+    localStorage.removeRole('userRole');
     window.location.href = '/';
 };
 

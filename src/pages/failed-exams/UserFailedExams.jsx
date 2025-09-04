@@ -16,18 +16,15 @@ const CircularLoader = () => {
     );
 };
 
-// Quiz Results Display Component
 const QuizResultsPage = ({ resultData, onBack }) => {
     const { answerList, subjectName, teacherName, startTime, endTime } = resultData;
     
-    // Calculate statistics
     const totalQuestions = answerList.length;
     const correctAnswers = answerList.filter(item => item.userAnswer === item.correctAnswer).length;
     const wrongAnswers = answerList.filter(item => item.userAnswer && item.userAnswer !== item.correctAnswer).length;
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
-    // Pie Chart Component
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
         const wrongPercentage = (wrong / total) * 100;
@@ -115,7 +112,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
-            {/* Header */}
             <div className="bg-[#7966F1] text-white !px-6 !py-4 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     {onBack && (
@@ -134,10 +130,8 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                 </div>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto !px-6 !py-8">
                 <div className="max-w-6xl !mx-auto">
-                    {/* Summary Card */}
                     <div className="bg-white rounded-lg !p-8 shadow-md !mb-8">
                         <div className="flex flex-col lg:flex-row items-center gap-8">
                             <div className="flex justify-center">
@@ -176,7 +170,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                     </div>
                                 </div>
 
-                                {/* Exam Details */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                                     <div className="flex items-center gap-2">
                                         <Clock size={16} />
@@ -191,7 +184,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                         </div>
                     </div>
 
-                    {/* Questions Review */}
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
 
@@ -202,7 +194,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                             return (
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
-                                        {/* Question Number with Status */}
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                                             isCorrect
                                                 ? 'bg-green-500 text-white'
@@ -214,10 +205,8 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                         </div>
 
                                         <div className="flex-1">
-                                            {/* Question */}
                                             <h3 className="font-semibold text-gray-800 !mb-4">{item.question}</h3>
 
-                                            {/* Options */}
                                             <div className="space-y-2">
                                                 {item.options.map((option, optionIndex) => {
                                                     const isCorrectOption = option === item.correctAnswer;
@@ -270,7 +259,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                                 })}
                                             </div>
 
-                                            {/* Status Message */}
                                             {isSkipped && (
                                                 <div className="!mt-3 text-sm text-gray-500 bg-gray-100 !p-3 rounded flex items-center gap-2">
                                                     <MinusCircle size={16} />
@@ -289,7 +277,6 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     );
 };
 
-// Main UserFailedExams Component
 const UserFailedExams = ({ onNavigateToResults }) => {
     const [examData, setExamData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -302,8 +289,7 @@ const UserFailedExams = ({ onNavigateToResults }) => {
     const [totalElements, setTotalElements] = useState(0);
     const [pageSize] = useState(10);
 
-    // States for result viewing
-    const [viewLoading, setViewLoading] = useState(false);
+    const [loadingStates, setLoadingStates] = useState({});
     const [showResults, setShowResults] = useState(false);
     const [currentResults, setCurrentResults] = useState(null);
 
@@ -378,27 +364,25 @@ const UserFailedExams = ({ onNavigateToResults }) => {
         return () => clearTimeout(timeoutId);
     }, [searchTerm, filterTerm]);
 
-    // Handle view click to fetch answer paper details
     const handleViewClick = async (exam) => {
         if (!exam.questionId) {
             toast.error('Question ID not found for this exam');
             return;
         }
 
+        const loadingKey = exam.questionId;
+
         try {
-            setViewLoading(true);
+            setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
             
-            // Fetch the answer paper using the API endpoint
             const response = await apiClient.get(`/user-activity/getAnswerPaper/${exam.questionId}`);
             
             if (response.data.success && response.data.data) {
                 const answerPaperData = response.data.data;
                 
-                // Set the results data and show results page
                 setCurrentResults(answerPaperData);
                 setShowResults(true);
                 
-                // Also call the callback if provided
                 if (onNavigateToResults) {
                     onNavigateToResults(answerPaperData);
                 }
@@ -410,11 +394,10 @@ const UserFailedExams = ({ onNavigateToResults }) => {
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch answer paper details';
             toast.error(errorMessage);
         } finally {
-            setViewLoading(false);
+            setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
         }
     };
 
-    // Handle back from results
     const handleBackFromResults = () => {
         setShowResults(false);
         setCurrentResults(null);
@@ -482,7 +465,6 @@ const UserFailedExams = ({ onNavigateToResults }) => {
         return pages;
     };
 
-    // Show results page if viewing results
     if (showResults && currentResults) {
         return <QuizResultsPage resultData={currentResults} onBack={handleBackFromResults} />;
     }
@@ -572,14 +554,14 @@ const UserFailedExams = ({ onNavigateToResults }) => {
                                                 <div className="relative group inline-block">
                                                     <button
                                                         onClick={() => handleViewClick(exam)}
-                                                        disabled={viewLoading}
+                                                        disabled={loadingStates[exam.questionId]}
                                                         className={`transition-colors ${
-                                                            viewLoading 
+                                                            loadingStates[exam.questionId]
                                                                 ? 'text-gray-400 cursor-not-allowed' 
                                                                 : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
                                                         }`}
                                                     >
-                                                        {viewLoading ? (
+                                                        {loadingStates[exam.questionId] ? (
                                                             <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
                                                         ) : (
                                                             <Eye size={20} />
