@@ -3,7 +3,7 @@ import WelcomeComponent from '../../components/auth/WelcomeComponent';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
 import { toast } from 'react-toastify';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -14,6 +14,7 @@ const LoginPage = () => {
     });
 
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const decodeJWT = (token) => {
         try {
@@ -29,7 +30,6 @@ const LoginPage = () => {
         }
     };
 
-    // Function to check if user has Admin role
     const checkAdminRole = (token) => {
         try {
             const decodedToken = decodeJWT(token);
@@ -63,6 +63,10 @@ const LoginPage = () => {
         });
     };
 
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -92,7 +96,6 @@ const LoginPage = () => {
             if (response.data && response.status === 200) {
                 toast.success('Login successful!');
 
-                // Store tokens
                 if (response.data.data.token) {
                     localStorage.setItem('authToken', response.data.data.token);
                 }
@@ -100,17 +103,13 @@ const LoginPage = () => {
                     localStorage.setItem('refreshToken', response.data.data.refreshToken);
                 }
 
-                // Store user data if available and ensure userId is accessible
                 if (response.data.data.user) {
                     const userData = response.data.data.user;
                     
-                    // Debug log to see the actual structure
                     console.log('Login Response User Data:', userData);
                     
-                    // Store the complete user data
                     localStorage.setItem('userData', JSON.stringify(userData));
                     
-                    // Also store userId separately for easy access if it exists in different formats
                     const userId = userData.userId || userData.id || userData.user_id || userData.ID;
                     if (userId) {
                         localStorage.setItem('userId', userId.toString());
@@ -122,12 +121,10 @@ const LoginPage = () => {
 
                 const token = localStorage.getItem('authToken');
                 
-                // Also try to extract userId from JWT token if not available in user data
                 const decodedToken = decodeJWT(token);
                 if (decodedToken) {
                     console.log('Decoded Token:', decodedToken);
                     
-                    // Check if userId is available in token
                     const tokenUserId = decodedToken.userId || decodedToken.id || decodedToken.user_id || decodedToken.sub;
                     if (tokenUserId && !localStorage.getItem('userId')) {
                         localStorage.setItem('userId', tokenUserId.toString());
@@ -175,10 +172,8 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen flex overflow-hidden">
-            {/* Welcome Section */}
             <WelcomeComponent />
 
-            {/* Login Form */}
             <div className="flex-1 bg-gray-50 flex items-center justify-center" style={{ padding: '64px' }}>
                 <div className="w-full max-w-md">
                     <div className="bg-white rounded-2xl shadow-xl" style={{ padding: '48px 40px' }}>
@@ -187,7 +182,6 @@ const LoginPage = () => {
                         </h1>
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Mail className="w-5 h-5 text-gray-400" />
@@ -210,13 +204,12 @@ const LoginPage = () => {
                                 />
                             </div>
 
-                            {/* Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Lock className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
                                     placeholder="Password"
                                     value={formData.password}
@@ -225,15 +218,27 @@ const LoginPage = () => {
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
-                                        paddingRight: '16px',
+                                        paddingRight: '48px',
                                         paddingTop: '16px',
                                         paddingBottom: '16px',
                                         fontSize: '16px'
                                     }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={togglePasswordVisibility}
+                                    disabled={isLoading}
+                                    className="absolute inset-y-0 right-0 flex items-center bg-transparent border-none cursor-pointer disabled:cursor-not-allowed"
+                                    style={{ paddingRight: '16px' }}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                                    ) : (
+                                        <Eye className="w-5 h-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                                    )}
+                                </button>
                             </div>
 
-                            {/* Forgot Password */}
                             <div className="text-right">
                                 <button
                                     type="button"
@@ -245,7 +250,6 @@ const LoginPage = () => {
                                 </button>
                             </div>
 
-                            {/* Login Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -262,7 +266,6 @@ const LoginPage = () => {
                                 {isLoading ? 'Logging in...' : 'Login'}
                             </button>
 
-                            {/* Register Link */}
                             <div className="text-center">
                                 <span className="text-gray-600" style={{ fontSize: '14px' }}>
                                     Don't have an account?{' '}

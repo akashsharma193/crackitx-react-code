@@ -14,6 +14,8 @@ import CreateStudent from './pages/students/CreateStudent'
 import EditUpcomingExams from './pages/upcoming-exam/EditUpcomingExams'
 import ExamContainer from './components/ExamContainer'
 import PrivacyPolicy from './pages/privacy-policy/PrivacyPolicy'
+import ExamParticipants from './pages/exam-participant/ExamParticipants'
+import ActivationPage from './pages/user-activate/UserActivationPage'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -29,6 +31,8 @@ function App() {
         <Route path="/past-exam-details/:id" element={<PastExamDetails />} />
         <Route path="/past-exam/student-view/:id" element={<PastExamStudentView />} />
         <Route path="/edit-exam/:id" element={<EditExam />} />
+        <Route path="/exam-participants/:id" element={<ExamParticipants />} />
+        <Route path="/activation/:token" element={<ActivationPage />} />
         <Route path="/create-student" element={<CreateStudent />} />
         <Route path="/edit-upcoming-exam" element={<EditUpcomingExams />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} /> 

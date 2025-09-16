@@ -122,8 +122,10 @@ const PastExams = () => {
     }, [debouncedSearchTerm, debouncedFilterTerm]);
 
     const handleViewClick = (exam) => {
-        // Navigate to past exam details page
-        navigate(`/past-exam-details/${exam.id}`);
+        // Navigate to exam participants page with source tab information
+        navigate(`/exam-participants/${exam.id || exam.questionId}`, {
+            state: { sourceTab: 'Exam History' }
+        });
     };
 
     const handlePageChange = (newPage) => {
@@ -307,9 +309,10 @@ const PastExams = () => {
                                                     <Eye
                                                         className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
                                                         size={20}
+                                                        onClick={() => handleViewClick(exam)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        View
+                                                        View Participants
                                                     </div>
                                                 </div>
                                             </td>

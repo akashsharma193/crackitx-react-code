@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, Trash2, Search, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
 
 const DeleteExamDialog = ({ isOpen, onClose, onConfirm, loading }) => {
@@ -54,6 +55,7 @@ const CircularLoader = () => {
 };
 
 const ActiveExams = () => {
+    const navigate = useNavigate();
     const [examData, setExamData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -146,8 +148,10 @@ const ActiveExams = () => {
     }, [searchTerm, filterTerm]);
 
     const handleViewClick = (exam) => {
-        // Navigate to edit exam page - replace with your routing logic
-        console.log('Navigate to view exam:', exam);
+        // Navigate to exam participants page with source tab information
+        navigate(`/exam-participants/${exam.id || exam.questionId}`, {
+            state: { sourceTab: 'Active Exam' }
+        });
     };
 
     const handleToggleVisibility = async (index, exam) => {
@@ -356,9 +360,7 @@ const ActiveExams = () => {
                                     <th className="!px-6 !py-4">Test Conducted By</th>
                                     <th className="!px-6 !py-4">Start Time</th>
                                     <th className="!px-6 !py-4">End Time</th>
-                                    {/* <th className="!px-6 !py-4">Test Visibility</th> */}
                                     <th className="!px-6 !py-4">View</th>
-                                    {/* <th className="!px-6 !py-4">Delete</th> */}
                                 </tr>
                             </thead>
                             <tbody>
@@ -370,29 +372,15 @@ const ActiveExams = () => {
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
-                                            {/* <td className="!px-6 !py-4">
-                                                <label className="inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={exam.isVisible}
-                                                        onChange={() => handleToggleVisibility(index, exam)}
-                                                    />
-                                                    <div className={`relative w-11 h-6 rounded-full peer transition-colors duration-200 ease-in-out ${exam.isVisible ? 'bg-[#7966F1]' : 'bg-gray-200'
-                                                        }`}>
-                                                        <div className={`absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform duration-200 ease-in-out ${exam.isVisible ? 'translate-x-5' : 'translate-x-0'
-                                                            }`} />
-                                                    </div>
-                                                </label>
-                                            </td> */}
                                             <td className="!px-6 !py-4">
                                                 <div className="relative group inline-block">
                                                     <Eye
                                                         className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
                                                         size={20}
+                                                        onClick={() => handleViewClick(exam)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        View
+                                                        View Participants
                                                     </div>
                                                 </div>
                                             </td>
@@ -400,7 +388,7 @@ const ActiveExams = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="6" className="!px-6 !py-8 text-center text-gray-500">
                                             {searchTerm || filterTerm ? 'No exams found matching your criteria' : 'No exams found'}
                                         </td>
                                     </tr>
