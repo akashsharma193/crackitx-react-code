@@ -13,6 +13,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import CreateStudent from './pages/students/CreateStudent'
 import EditUpcomingExams from './pages/upcoming-exam/EditUpcomingExams'
 import ExamContainer from './components/ExamContainer'
+import PrivacyPolicy from './pages/privacy-policy/PrivacyPolicy'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -30,6 +31,7 @@ function App() {
         <Route path="/edit-exam/:id" element={<EditExam />} />
         <Route path="/create-student" element={<CreateStudent />} />
         <Route path="/edit-upcoming-exam" element={<EditUpcomingExams />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} /> 
       </Routes>
 
       {/* Toast Container for notifications */}
