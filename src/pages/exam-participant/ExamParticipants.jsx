@@ -69,14 +69,11 @@ const ExamParticipants = () => {
             fetchParticipants();
         }
 
-        // Determine source tab from location state or navigation history
         const determineSourceTab = () => {
-            // First priority: location state passed during navigation
             if (location.state && location.state.sourceTab) {
                 return location.state.sourceTab;
             }
 
-            // Second priority: check the referrer URL
             const referrer = document.referrer;
             if (referrer) {
                 if (referrer.includes('past-exam') || referrer.includes('exam-history')) {
@@ -85,31 +82,27 @@ const ExamParticipants = () => {
                     return 'Active Exam';
                 }
             }
-
-            // Default fallback
             return 'Active Exam';
         };
 
         const detectedSourceTab = determineSourceTab();
         setSourceTab(detectedSourceTab);
 
-        // Optional: Store in sessionStorage for persistence
         sessionStorage.setItem('examParticipantsSource', detectedSourceTab);
     }, [id, location]);
 
     const handleBack = () => {
-        // Navigate back to home with the correct active tab
         navigate('/home', {
             state: { activeTab: sourceTab },
-            replace: false // Allow back navigation
+            replace: false 
         });
     };
 
-    // Handle sidebar tab changes (if needed)
     const handleSidebarTabChange = (newTab) => {
-        setSourceTab(newTab);
-        // Optionally update sessionStorage
-        sessionStorage.setItem('examParticipantsSource', newTab);
+        navigate('/home', {
+            state: { activeTab: newTab },
+            replace: false
+        });
     };
 
     const getPerformanceColor = (percentage) => {

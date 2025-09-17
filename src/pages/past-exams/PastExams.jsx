@@ -123,7 +123,7 @@ const PastExams = () => {
 
     const handleViewClick = (exam) => {
         // Navigate to exam participants page with source tab information
-        navigate(`/exam-participants/${exam.id || exam.questionId}`, {
+        navigate(`/exam-participants/${exam.questionId}`, {
             state: { sourceTab: 'Exam History' }
         });
     };

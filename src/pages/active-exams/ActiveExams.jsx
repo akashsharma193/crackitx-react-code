@@ -65,13 +65,11 @@ const ActiveExams = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
 
-    // Pagination states
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [pageSize] = useState(10); // Items per page
+    const [pageSize] = useState(10);
 
-    // Fetch data from API with pagination
     const fetchExamData = async (page = 0, search = '', filter = '') => {
         try {
             setLoading(true);
@@ -79,7 +77,6 @@ const ActiveExams = () => {
 
             const filterObj = {};
 
-            // Add search filters if provided
             if (search.trim()) {
                 filterObj.subjectName = search.trim();
             }
@@ -97,7 +94,6 @@ const ActiveExams = () => {
             const response = await apiClient.post('/questionPaper/getExam', requestBody);
 
             if (response.data.success && response.data.data) {
-                // Transform API data to match the component's expected format
                 const transformedData = response.data.data.content.map((item, index) => ({
                     srNo: page * pageSize + index + 1,
                     testName: item.subjectName || 'N/A',
@@ -109,12 +105,11 @@ const ActiveExams = () => {
                     orgCode: item.orgCode,
                     batch: item.batch,
                     userId: item.userId,
-                    id: item.id || item.questionId // Add id for operations
+                    id: item.id || item.questionId
                 }));
 
                 setExamData(transformedData);
 
-                // Fix pagination data extraction based on API response structure
                 const pageData = response.data.data.page;
                 setTotalPages(pageData.totalPages);
                 setTotalElements(pageData.totalElements);
@@ -135,43 +130,33 @@ const ActiveExams = () => {
         fetchExamData(0, searchTerm, filterTerm);
     }, []);
 
-    // Handle search with debouncing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchTerm !== '' || filterTerm !== '') {
                 fetchExamData(0, searchTerm, filterTerm);
-                setCurrentPage(0); // Reset to first page when searching/filtering
+                setCurrentPage(0);
             }
-        }, 500); // 500ms delay for debouncing
+        }, 500);
 
         return () => clearTimeout(timeoutId);
     }, [searchTerm, filterTerm]);
 
     const handleViewClick = (exam) => {
-        // Navigate to exam participants page with source tab information
-        navigate(`/exam-participants/${exam.id || exam.questionId}`, {
+        navigate(`/exam-participants/${exam.questionId}`, {
             state: { sourceTab: 'Active Exam' }
         });
     };
 
     const handleToggleVisibility = async (index, exam) => {
         try {
-            // Update local state immediately for better UX
             setExamData(prevData =>
                 prevData.map((examItem, i) =>
                     i === index ? { ...examItem, isVisible: !examItem.isVisible } : examItem
                 )
             );
 
-            // Here you can add API call to update visibility on server
-            // const response = await apiClient.post('/questionPaper/updateVisibility', {
-            //     id: exam.id,
-            //     isVisible: !exam.isVisible
-            // });
-
             toast.success('Exam visibility updated successfully!');
         } catch (error) {
-            // Revert the change if API call fails
             setExamData(prevData =>
                 prevData.map((examItem, i) =>
                     i === index ? { ...examItem, isVisible: exam.isVisible } : examItem
@@ -192,17 +177,10 @@ const ActiveExams = () => {
         try {
             setDeleteLoading(true);
 
-            // Here you can add the actual delete API call
-            // const response = await apiClient.post('/questionPaper/deleteExam', {
-            //     id: examToDelete.id
-            // });
-
-            // For now, just simulate the deletion
             toast.success('Exam deleted successfully!');
             setShowDeleteDialog(false);
             setExamToDelete(null);
 
-            // Refresh the table data
             await fetchExamData(currentPage, searchTerm, filterTerm);
         } catch (error) {
             console.error('Error deleting exam:', error);
@@ -226,7 +204,6 @@ const ActiveExams = () => {
     const handleClear = () => {
         setSearchTerm('');
         setFilterTerm('');
-        // Fetch data without any filters
         fetchExamData(0, '', '');
         setCurrentPage(0);
     };
@@ -239,7 +216,6 @@ const ActiveExams = () => {
         setFilterTerm(e.target.value);
     };
 
-    // Handle search on Enter key press
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
             fetchExamData(0, searchTerm, filterTerm);
@@ -247,7 +223,6 @@ const ActiveExams = () => {
         }
     };
 
-    // Handle filter on Enter key press
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
             fetchExamData(0, searchTerm, filterTerm);
@@ -255,30 +230,24 @@ const ActiveExams = () => {
         }
     };
 
-    // Calculate pagination display numbers
     const getPageNumbers = () => {
         const pages = [];
         const maxVisiblePages = 5;
 
         if (totalPages <= maxVisiblePages) {
-            // Show all pages if total pages is less than max visible
             for (let i = 0; i < totalPages; i++) {
                 pages.push(i);
             }
         } else {
-            // Show smart pagination
             if (currentPage <= 2) {
-                // Show first 5 pages
                 for (let i = 0; i < maxVisiblePages; i++) {
                     pages.push(i);
                 }
             } else if (currentPage >= totalPages - 3) {
-                // Show last 5 pages
                 for (let i = totalPages - maxVisiblePages; i < totalPages; i++) {
                     pages.push(i);
                 }
             } else {
-                // Show current page and 2 pages before and after
                 for (let i = currentPage - 2; i <= currentPage + 2; i++) {
                     pages.push(i);
                 }
@@ -290,23 +259,18 @@ const ActiveExams = () => {
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
-            {/* Loading State with Circular Loader */}
             {loading && <CircularLoader />}
 
-            {/* Error State */}
             {!loading && error && (
                 <div className="flex items-center justify-center h-64">
                     <div className="text-red-500 text-lg">Error: {error}</div>
                 </div>
             )}
 
-            {/* Content - Only show when not loading and no error */}
             {!loading && !error && (
                 <>
-                    {/* Header */}
                     <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5">
                         <div className="flex items-center gap-4 flex-wrap">
-                            {/* Search */}
                             <div className="relative min-w-[320px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -319,7 +283,6 @@ const ActiveExams = () => {
                                 />
                             </div>
 
-                            {/* Filter */}
                             <div className="relative min-w-[200px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -332,7 +295,6 @@ const ActiveExams = () => {
                                 />
                             </div>
 
-                            {/* Clear Button */}
                             <button
                                 onClick={handleClear}
                                 className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -342,7 +304,6 @@ const ActiveExams = () => {
                             </button>
                         </div>
 
-                        {/* Download Button */}
                         <div className="flex items-center gap-4 mt-4 md:mt-0">
                             <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
                                 <Download size={20} />
@@ -350,7 +311,6 @@ const ActiveExams = () => {
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
@@ -396,7 +356,6 @@ const ActiveExams = () => {
                             </tbody>
                         </table>
 
-                        {/* Pagination - Only show if there's data and more than one page */}
                         {examData.length > 0 && totalPages > 1 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
@@ -454,7 +413,6 @@ const ActiveExams = () => {
                 </>
             )}
 
-            {/* Delete Exam Dialog */}
             <DeleteExamDialog
                 isOpen={showDeleteDialog}
                 onClose={handleDeleteCancel}
