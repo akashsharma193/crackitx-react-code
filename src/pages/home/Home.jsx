@@ -175,7 +175,7 @@ const Home = () => {
     }
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="h-screen flex flex-col overflow-hidden">
             <HeaderComponent />
             <div className='flex flex-1 overflow-hidden'>
                 {isAdmin ? (

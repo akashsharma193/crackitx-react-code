@@ -1,6 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Send, ArrowLeft, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Send, ArrowLeft, AlertCircle, X } from 'lucide-react';
+import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
+
+const SubmitConfirmationDialog = ({ isOpen, onClose, onConfirm, loading, unansweredCount }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center !mx-auto !mb-4">
+                        <AlertCircle className="w-8 h-8 text-yellow-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-800 !mb-3">Submit Quiz?</h2>
+                    <p className="text-gray-600 !mb-2">Are you sure you want to submit your quiz?</p>
+                    {unansweredCount > 0 && (
+                        <p className="text-sm text-red-500 font-medium !mb-4">
+                            You have {unansweredCount} unanswered questions.
+                        </p>
+                    )}
+                    <p className="text-sm text-gray-500 !mb-6">
+                        Once submitted, you cannot make any changes.
+                    </p>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={onClose}
+                            disabled={loading}
+                            className="border border-gray-300 text-gray-700 font-semibold !px-6 !py-2 rounded-md hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            disabled={loading}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {loading && (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            )}
+                            {loading ? 'Submitting...' : 'Submit Quiz'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) => {
     const currentExam = examData;
@@ -17,6 +63,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [quizResults, setQuizResults] = useState(null);
     const [questionStartTimes, setQuestionStartTimes] = useState({});
     const [questionTimeTaken, setQuestionTimeTaken] = useState({});
+    const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
     const timerRef = useRef(null);
     
@@ -34,12 +81,41 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     }, [currentExam]);
 
     useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (!isSubmitted && examStarted) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+
+        const handlePopstate = (e) => {
+            if (!isSubmitted && examStarted) {
+                e.preventDefault();
+                window.history.pushState(null, '', window.location.pathname);
+                setShowSubmitDialog(true);
+            }
+        };
+
+        if (examStarted && !isSubmitted) {
+            window.addEventListener('beforeunload', handleBeforeUnload);
+            window.addEventListener('popstate', handlePopstate);
+            window.history.pushState(null, '', window.location.pathname);
+        }
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopstate);
+        };
+    }, [examStarted, isSubmitted]);
+
+    useEffect(() => {
         if (timeRemaining > 0 && !isSubmitted && examStarted) {
             timerRef.current = setTimeout(() => {
                 setTimeRemaining(timeRemaining - 1);
             }, 1000);
         } else if (timeRemaining === 0 && !isSubmitted && examStarted) {
-            handleSubmitQuiz(true);
+            handleSubmitQuizDirectly();
         }
 
         return () => {
@@ -124,20 +200,109 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         }
     };
 
+    const handleBackClick = () => {
+        setShowSubmitDialog(true);
+    };
+
+    const handleSubmitClick = () => {
+        setShowSubmitDialog(true);
+    };
+
+    const handleSubmitDialogClose = () => {
+        setShowSubmitDialog(false);
+    };
+
+    const handleSubmitDialogConfirm = () => {
+        setShowSubmitDialog(false);
+        handleSubmitQuiz(false);
+    };
+
+    const handleSubmitQuizDirectly = async () => {
+        if (submitting) return;
+
+        toast.warning('Time is up! Quiz submitted automatically.');
+        
+        recordQuestionTime(currentQuestionIndex);
+        setSubmitting(true);
+
+        try {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+            const userId = userData?.userId ||
+                userData?.id ||
+                userData?.user_id ||
+                userData?.ID ||
+                localStorage.getItem('userId') ||
+                currentExam?.userId ||
+                null;
+
+            const answerPaper = questions.map((question, index) => ({
+                question: question.question,
+                options: question.options,
+                correctAnswer: question.correctAnswer,
+                userAnswer: selectedAnswers[index] || null,
+                color: null,
+                timeTaken: questionTimeTaken[index] || 0
+            }));
+
+            const submissionData = {
+                answerPaper,
+                subjectName: currentExam?.subjectName,
+                teacherName: currentExam?.teacherName,
+                orgCode: currentExam?.orgCode,
+                batch: currentExam?.batch,
+                userId: userId,
+                questionId: currentExam?.questionId,
+                examDuration: currentExam?.examDuration,
+                startTime: currentExam?.startTime,
+                endTime: currentExam?.endTime
+            };
+
+            await apiClient.post('/user-activity/saveAnswePaper', submissionData);
+
+            setIsSubmitted(true);
+
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+
+            const correctAnswers = questions.filter((q, index) =>
+                selectedAnswers[index] === q.correctAnswer
+            ).length;
+            const wrongAnswers = questions.filter((q, index) =>
+                selectedAnswers[index] && selectedAnswers[index] !== q.correctAnswer
+            ).length;
+            const skippedAnswers = questions.length - Object.keys(selectedAnswers).length;
+            const score = Math.round((correctAnswers / questions.length) * 100);
+
+            setQuizResults({
+                correctAnswers,
+                wrongAnswers,
+                skippedAnswers,
+                totalQuestions: questions.length,
+                score,
+                questions: questions.map((q, index) => ({
+                    ...q,
+                    userAnswer: selectedAnswers[index] || null,
+                    isCorrect: selectedAnswers[index] === q.correctAnswer,
+                    timeTaken: q.timeTaken || questionTimeTaken[index] || 0
+                }))
+            });
+
+            setShowResultPage(true);
+
+        } catch (error) {
+            console.error('Error submitting quiz:', error);
+            toast.error('Failed to submit quiz. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const handleSubmitQuiz = async (autoSubmit = false) => {
         if (submitting) return;
 
         recordQuestionTime(currentQuestionIndex);
-
-        if (!autoSubmit) {
-            const unansweredCount = questions.length - Object.keys(selectedAnswers).length;
-            if (unansweredCount > 0) {
-                const confirmSubmit = window.confirm(
-                    `You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`
-                );
-                if (!confirmSubmit) return;
-            }
-        }
 
         setSubmitting(true);
 
@@ -268,6 +433,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     }
 
     const currentQuestion = questions[currentQuestionIndex];
+    const unansweredCount = questions.length - Object.keys(selectedAnswers).length;
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
@@ -275,7 +441,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 <div className="flex items-center gap-4">
                     {onBackToExams && (
                         <button
-                            onClick={onBackToExams}
+                            onClick={handleBackClick}
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
@@ -358,33 +524,31 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                                 Previous
                             </button>
 
-                            <div className="flex items-center gap-4">
-                                {!isSubmitted && !hideSubmitButton && (
-                                    <button
-                                        onClick={() => handleSubmitQuiz(false)}
-                                        disabled={submitting}
-                                        className={`flex items-center gap-2 !px-6 !py-2 rounded-lg font-medium transition cursor-pointer ${submitting
-                                            ? 'bg-gray-400 text-white cursor-not-allowed'
-                                            : 'bg-[#7966F1] text-white hover:bg-[#5a4bcc]'
-                                            }`}
-                                    >
-                                        <Send size={16} />
-                                        {submitting ? 'Submitting...' : 'Submit Quiz'}
-                                    </button>
-                                )}
-
+                            {!isSubmitted && !hideSubmitButton && (
                                 <button
-                                    onClick={goToNext}
-                                    disabled={currentQuestionIndex === questions.length - 1}
-                                    className={`flex items-center gap-2 !px-6 !py-2 rounded-lg font-medium transition ${currentQuestionIndex === questions.length - 1
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                    onClick={handleSubmitClick}
+                                    disabled={submitting}
+                                    className={`flex items-center gap-2 !px-6 !py-2 rounded-lg font-medium transition cursor-pointer ${submitting
+                                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                                        : 'bg-[#7966F1] text-white hover:bg-[#5a4bcc]'
                                         }`}
                                 >
-                                    Next
-                                    <ChevronRight size={16} />
+                                    <Send size={16} />
+                                    Submit Quiz
                                 </button>
-                            </div>
+                            )}
+
+                            <button
+                                onClick={goToNext}
+                                disabled={currentQuestionIndex === questions.length - 1}
+                                className={`flex items-center gap-2 !px-6 !py-2 rounded-lg font-medium transition ${currentQuestionIndex === questions.length - 1
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                    }`}
+                            >
+                                Next
+                                <ChevronRight size={16} />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -453,6 +617,14 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                     </div>
                 </div>
             </div>
+
+            <SubmitConfirmationDialog
+                isOpen={showSubmitDialog}
+                onClose={handleSubmitDialogClose}
+                onConfirm={handleSubmitDialogConfirm}
+                loading={submitting}
+                unansweredCount={unansweredCount}
+            />
         </div>
     );
 };

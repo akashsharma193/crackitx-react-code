@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
-// Delete Confirmation Dialog
 const DeleteUserDialog = ({ isOpen, onClose, onConfirm, loading }) => {
     if (!isOpen) return null;
 
@@ -66,12 +65,11 @@ const Students = () => {
     const [filterTerm, setFilterTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [debouncedFilterTerm, setDebouncedFilterTerm] = useState('');
-    const [pageSize] = useState(10); // Items per page
+    const [pageSize] = useState(10);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Debounce search and filter terms
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
@@ -108,7 +106,6 @@ const Students = () => {
             if (response.data.success) {
                 const responseData = response.data.data;
 
-                // Ensure we have valid data structure
                 const content = Array.isArray(responseData.content) ? responseData.content : [];
                 const pageInfo = responseData.page || {};
 
@@ -142,17 +139,20 @@ const Students = () => {
         }
     };
 
-    // Initial data fetch
     useEffect(() => {
         fetchStudents(0, '', '');
     }, []);
 
-    // Fetch data when debounced search/filter terms change
     useEffect(() => {
-        // Reset to first page when search/filter changes
         setCurrentPage(0);
         fetchStudents(0, debouncedSearchTerm, debouncedFilterTerm);
     }, [debouncedSearchTerm, debouncedFilterTerm]);
+
+    const handleViewClick = (student) => {
+        navigate(`/user-details/${student.userId}`, {
+            state: { student: student }
+        });
+    };
 
     const handleEditClick = (student) => {
         navigate(`/edit-user/${student.id}`, {
@@ -183,7 +183,6 @@ const Students = () => {
                 setShowDeleteDialog(false);
                 setUserToDelete(null);
 
-                // Refresh the table data with current page and filters
                 await fetchStudents(currentPage, debouncedSearchTerm, debouncedFilterTerm);
             } else {
                 throw new Error(response.data.message || 'Failed to disable user');
@@ -214,7 +213,6 @@ const Students = () => {
         setDebouncedSearchTerm('');
         setDebouncedFilterTerm('');
         setCurrentPage(0);
-        // Fetch data without any filters
         fetchStudents(0, '', '');
     };
 
@@ -226,7 +224,6 @@ const Students = () => {
         setFilterTerm(e.target.value);
     };
 
-    // Handle search on Enter key press
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
             setDebouncedSearchTerm(searchTerm);
@@ -235,7 +232,6 @@ const Students = () => {
         }
     };
 
-    // Handle filter on Enter key press
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
             setDebouncedFilterTerm(filterTerm);
@@ -244,40 +240,32 @@ const Students = () => {
         }
     };
 
-    // Handle Create Student button click
     const handleCreateStudentClick = () => {
         navigate('/create-student');
     };
 
-    // Calculate pagination display values
     const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 1;
     const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
     const hasFilters = debouncedSearchTerm.trim() || debouncedFilterTerm.trim();
 
-    // Generate pagination buttons
     const generatePaginationButtons = () => {
         const buttons = [];
         const maxVisibleButtons = 5;
 
         if (totalPages <= maxVisibleButtons) {
-            // Show all pages if total pages is less than or equal to max visible
             for (let i = 0; i < totalPages; i++) {
                 buttons.push(i);
             }
         } else {
-            // Show pages with ellipsis logic
             if (currentPage < 3) {
-                // Show first 5 pages
                 for (let i = 0; i < maxVisibleButtons; i++) {
                     buttons.push(i);
                 }
             } else if (currentPage > totalPages - 4) {
-                // Show last 5 pages
                 for (let i = totalPages - maxVisibleButtons; i < totalPages; i++) {
                     buttons.push(i);
                 }
             } else {
-                // Show current page and 2 pages on each side
                 for (let i = currentPage - 2; i <= currentPage + 2; i++) {
                     buttons.push(i);
                 }
@@ -289,16 +277,12 @@ const Students = () => {
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
-            {/* Loading State with Circular Loader */}
             {loading && <CircularLoader />}
 
-            {/* Content - Only show when not loading */}
             {!loading && (
                 <>
-                    {/* Blue Header Bar */}
                     <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 mt-0 shadow-md">
                         <div className="flex items-center gap-4 flex-wrap">
-                            {/* Search Input */}
                             <div className="relative min-w-[320px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -311,7 +295,6 @@ const Students = () => {
                                 />
                             </div>
 
-                            {/* Filter Input */}
                             <div className="relative min-w-[200px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -324,7 +307,6 @@ const Students = () => {
                                 />
                             </div>
 
-                            {/* Clear Button with Icon */}
                             <button
                                 onClick={handleClear}
                                 className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -334,7 +316,6 @@ const Students = () => {
                             </button>
                         </div>
 
-                        {/* Right-Side Buttons */}
                         <div className="flex items-center gap-4 mt-4 md:mt-0">
                             <button
                                 onClick={handleCreateStudentClick}
@@ -348,7 +329,6 @@ const Students = () => {
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
@@ -377,6 +357,7 @@ const Students = () => {
                                                     <Eye
                                                         className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
                                                         size={20}
+                                                        onClick={() => handleViewClick(student)}
                                                     />
                                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                                                         View
@@ -419,7 +400,6 @@ const Students = () => {
                             </tbody>
                         </table>
 
-                        {/* Pagination */}
                         {totalElements > 0 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
@@ -433,7 +413,6 @@ const Students = () => {
 
                                 {totalPages > 1 && (
                                     <div className="flex items-center gap-2">
-                                        {/* Previous Button */}
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 0}
@@ -446,7 +425,6 @@ const Students = () => {
                                             Previous
                                         </button>
 
-                                        {/* Pagination Buttons */}
                                         <div className="flex items-center gap-1">
                                             {generatePaginationButtons().map((pageNum) => (
                                                 <button
@@ -462,7 +440,6 @@ const Students = () => {
                                             ))}
                                         </div>
 
-                                        {/* Next Button */}
                                         <button
                                             onClick={() => handlePageChange(currentPage + 1)}
                                             disabled={currentPage === totalPages - 1}
@@ -482,7 +459,6 @@ const Students = () => {
                 </>
             )}
 
-            {/* Delete User Dialog */}
             <DeleteUserDialog
                 isOpen={showDeleteDialog}
                 onClose={handleDeleteCancel}

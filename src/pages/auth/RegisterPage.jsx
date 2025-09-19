@@ -3,7 +3,7 @@ import WelcomeComponent from '../../components/auth/WelcomeComponent';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
 import { toast } from 'react-toastify';
-import { User, Phone, Mail, Users, Building, Lock, CheckCircle } from 'lucide-react';
+import { User, Phone, Mail, Users, Building, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -19,12 +19,33 @@ const RegisterPage = () => {
     });
 
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleInputChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+        
+        // For phone number field, only allow numeric input
+        if (name === 'number') {
+            const numericValue = value.replace(/\D/g, ''); // Remove all non-digits
+            setFormData({
+                ...formData,
+                [name]: numericValue
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
     };
 
     const validateForm = () => {
@@ -126,7 +147,7 @@ const RegisterPage = () => {
 
             // Check for successful response
             if (response.data && (response.status === 200 || response.status === 201)) {
-                toast.success('Registration successful! Please login to continue.');
+                toast.success('Email is sent Please activate your account');
 
                 // Clear form
                 setFormData({
@@ -271,6 +292,8 @@ const RegisterPage = () => {
                                     onChange={handleInputChange}
                                     disabled={isLoading}
                                     maxLength="10"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
@@ -357,7 +380,7 @@ const RegisterPage = () => {
                                     <Lock className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
                                     placeholder="Password"
                                     value={formData.password}
@@ -366,12 +389,25 @@ const RegisterPage = () => {
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
-                                        paddingRight: '16px',
+                                        paddingRight: '48px',
                                         paddingTop: '16px',
                                         paddingBottom: '16px',
                                         fontSize: '16px'
                                     }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={togglePasswordVisibility}
+                                    disabled={isLoading}
+                                    className="absolute inset-y-0 right-0 flex items-center bg-transparent border-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                                    style={{ paddingRight: '16px' }}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                                    ) : (
+                                        <Eye className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                                    )}
+                                </button>
                             </div>
 
                             {/* Confirm Password Field */}
@@ -380,7 +416,7 @@ const RegisterPage = () => {
                                     <CheckCircle className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showConfirmPassword ? "text" : "password"}
                                     name="confirmPassword"
                                     placeholder="Confirm Password"
                                     value={formData.confirmPassword}
@@ -389,12 +425,25 @@ const RegisterPage = () => {
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
-                                        paddingRight: '16px',
+                                        paddingRight: '48px',
                                         paddingTop: '16px',
                                         paddingBottom: '16px',
                                         fontSize: '16px'
                                     }}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={toggleConfirmPasswordVisibility}
+                                    disabled={isLoading}
+                                    className="absolute inset-y-0 right-0 flex items-center bg-transparent border-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                                    style={{ paddingRight: '16px' }}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                                    ) : (
+                                        <Eye className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                                    )}
+                                </button>
                             </div>
 
                             {/* Register Button */}

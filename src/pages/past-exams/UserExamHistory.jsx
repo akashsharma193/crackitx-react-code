@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Search, X, ChevronLeft, ChevronRight, Eye, ArrowLeft, Clock, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import { Download, Search, X, ChevronLeft, ChevronRight, Eye, ArrowLeft, Clock, CheckCircle, XCircle, MinusCircle, Timer } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -24,6 +24,18 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     const wrongAnswers = answerList.filter(item => item.userAnswer && item.userAnswer !== item.correctAnswer).length;
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
+
+    const formatTime = (timeInMs) => {
+        if (!timeInMs || timeInMs === 0) return 'N/A';
+        const seconds = Math.round(timeInMs / 1000);
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+    };
 
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
@@ -204,7 +216,15 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                         </div>
 
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-800 !mb-4">{item.question}</h3>
+                                            <div className="flex items-start justify-between !mb-4">
+                                                <h3 className="font-semibold text-gray-800 flex-1">{item.question}</h3>
+                                                <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg">
+                                                    <Timer size={14} className="text-blue-600" />
+                                                    <span className="text-sm font-medium text-blue-700">
+                                                        {formatTime(item.timeTaken)}
+                                                    </span>
+                                                </div>
+                                            </div>
 
                                             <div className="space-y-2">
                                                 {item.options.map((option, optionIndex) => {
@@ -658,7 +678,7 @@ const UserExamHistory = () => {
                     </div>
                 </>
             )}
-    </div>
+        </div>
     );
 };
 

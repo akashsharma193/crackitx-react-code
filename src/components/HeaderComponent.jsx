@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import logo from '/src/assets/logo.png';
 import welcomeImage from '/src/assets/images/welcome-image.png'
 import adminImage from '/src/assets/images/profile-image.png'
-import { User, Mail, Phone, LogOut } from 'lucide-react'
+import { User, Mail, Phone, LogOut, Building, Hash } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import LogoutDialog from './LogOutComponent';
 import apiClient from '../api/axiosConfig';
@@ -13,8 +13,21 @@ const HeaderComponent = () => {
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
+    const profileRef = useRef(null);
 
-    // Fetch user profile on component mount
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setShowProfile(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
@@ -58,8 +71,8 @@ const HeaderComponent = () => {
     const handleConfirmLogout = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userSession');
-        localStorage.removeItem('orgCode'); // Remove orgCode on logout
-        localStorage.removeItem('userRole'); // Remove userRole on logout
+        localStorage.removeItem('orgCode');
+        localStorage.removeItem('userRole');
         sessionStorage.clear();
 
         navigate('/', { replace: true });
@@ -70,7 +83,6 @@ const HeaderComponent = () => {
         });
     };
 
-    // Dynamic profile options based on API data
     const profileOptions = [
         {
             icon: <User size={18} className="text-gray-600" />,
@@ -83,6 +95,14 @@ const HeaderComponent = () => {
         {
             icon: <Phone size={18} className="text-gray-600" />,
             label: userProfile?.mobile || 'No phone number'
+        },
+        {
+            icon: <Building size={18} className="text-gray-600" />,
+            label: userProfile?.orgCode || 'No org code'
+        },
+        {
+            icon: <Hash size={18} className="text-gray-600" />,
+            label: userProfile?.batch || 'No batch code'
         },
         {
             icon: <LogOut size={18} className="text-gray-600" />,
@@ -122,39 +142,40 @@ const HeaderComponent = () => {
                         </h2>
                         <img className='h-[50px]' src={welcomeImage} alt="Welcome" />
                     </div>
-                    <img
-                        className='h-[50px] cursor-pointer'
-                        src={adminImage}
-                        alt="Profile"
-                        onClick={() => setShowProfile(prev => !prev)}
-                    />
+                    <div ref={profileRef} className="relative">
+                        <img
+                            className='h-[50px] cursor-pointer'
+                            src={adminImage}
+                            alt="Profile"
+                            onClick={() => setShowProfile(prev => !prev)}
+                        />
+                        {showProfile && (
+                            <div className='z-10 bg-white absolute top-16 right-0 w-[320px] !p-8 rounded-3xl shadow-2xl shadow-gray-300'>
+                                <div className='flex justify-center items-center gap-4 !mb-4'>
+                                    <img className='h-[60px]' src={adminImage} alt="Profile" />
+                                    <div>
+                                        <p>{userProfile?.name || 'User'}</p>
+                                        <p>{userProfile?.email || 'user@gmail.com'}</p>
+                                    </div>
+                                </div>
+                                <hr />
+                                {profileOptions.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className='flex gap-4 !p-2 items-center hover:cursor-pointer hover:bg-gray-100 rounded-lg !mt-2'
+                                        onClick={item.action}
+                                    >
+                                        <div className="flex-shrink-0">
+                                            {item.icon}
+                                        </div>
+                                        <p className="flex-1">{item.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-
-            {showProfile && (
-                <div className='z-10 bg-white absolute top-20 right-0 w-[320px] !p-8 rounded-3xl shadow-2xl shadow-gray-300 !mr-3'>
-                    <div className='flex justify-center items-center gap-4 !mb-4'>
-                        <img className='h-[60px]' src={adminImage} alt="Profile" />
-                        <div>
-                            <p>{userProfile?.name || 'User'}</p>
-                            <p>{userProfile?.email || 'user@gmail.com'}</p>
-                        </div>
-                    </div>
-                    <hr />
-                    {profileOptions.map((item, index) => (
-                        <div
-                            key={index}
-                            className='flex gap-4 !p-2 items-center hover:cursor-pointer hover:bg-gray-100 rounded-lg !mt-2'
-                            onClick={item.action}
-                        >
-                            <div className="flex-shrink-0">
-                                {item.icon}
-                            </div>
-                            <p className="flex-1">{item.label}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
 
             <LogoutDialog
                 isOpen={showLogoutDialog}

@@ -16,6 +16,7 @@ import ExamContainer from './components/ExamContainer'
 import PrivacyPolicy from './pages/privacy-policy/PrivacyPolicy'
 import ExamParticipants from './pages/exam-participant/ExamParticipants'
 import ActivationPage from './pages/user-activate/UserActivationPage'
+import StudentDetails from './pages/students/StudentDetails'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -28,6 +29,7 @@ function App() {
         <Route path='/home' element={<Home />}></Route>
         <Route path='/exams' element={<ExamContainer />}></Route>
         <Route path="/edit-user/:id" element={<EditStudent />} />
+        <Route path="/user-details/:userId" element={<StudentDetails />} />
         <Route path="/past-exam-details/:id" element={<PastExamDetails />} />
         <Route path="/past-exam/student-view/:id" element={<PastExamStudentView />} />
         <Route path="/edit-exam/:id" element={<EditExam />} />
@@ -38,7 +40,6 @@ function App() {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} /> 
       </Routes>
 
-      {/* Toast Container for notifications */}
       <ToastContainer
         position="top-right"
         autoClose={5000}
