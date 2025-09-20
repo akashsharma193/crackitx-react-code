@@ -344,14 +344,13 @@ const LoginPage = () => {
 
                             {/* Forgot Password Link */}
                             <div className="text-right">
-                                <button
-                                    type="button"
-                                    className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                <Link
+                                    to="/forgot-password"
+                                    className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
                                     style={{ fontSize: '14px' }}
-                                    disabled={isLoading}
                                 >
                                     Forgot Password?
-                                </button>
+                                </Link>
                             </div>
 
                             {/* Login Button */}

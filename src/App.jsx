@@ -17,6 +17,7 @@ import PrivacyPolicy from './pages/privacy-policy/PrivacyPolicy'
 import ExamParticipants from './pages/exam-participant/ExamParticipants'
 import ActivationPage from './pages/user-activate/UserActivationPage'
 import StudentDetails from './pages/students/StudentDetails'
+import ForgotPasswordPage from './pages/auth/ForgetPasswordPage'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -25,7 +26,9 @@ function App() {
     <>
       <Routes>
         <Route path='/' element={<LoginPage />}></Route>
+        <Route path='/login' element={<LoginPage />}></Route>
         <Route path='/register' element={<RegisterPage />}></Route>
+        <Route path='/forgot-password' element={<ForgotPasswordPage />}></Route>
         <Route path='/home' element={<Home />}></Route>
         <Route path='/exams' element={<ExamContainer />}></Route>
         <Route path="/edit-user/:id" element={<EditStudent />} />
