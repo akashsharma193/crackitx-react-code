@@ -21,6 +21,13 @@ const RegisterPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [passwordValidation, setPasswordValidation] = useState({
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecial: false,
+        hasMinLength: false
+    });
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -38,6 +45,26 @@ const RegisterPage = () => {
                 [name]: value
             });
         }
+
+        // Real-time password validation
+        if (name === 'password') {
+            validatePassword(value);
+        }
+    };
+
+    const validatePassword = (password) => {
+        const validation = {
+            hasUppercase: /[A-Z]/.test(password),
+            hasLowercase: /[a-z]/.test(password),
+            hasNumber: /\d/.test(password),
+            hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+            hasMinLength: password.length >= 8
+        };
+        setPasswordValidation(validation);
+    };
+
+    const isPasswordValid = () => {
+        return Object.values(passwordValidation).every(condition => condition);
     };
 
     const togglePasswordVisibility = () => {
@@ -96,13 +123,14 @@ const RegisterPage = () => {
             return false;
         }
 
-        if (formData.password !== formData.confirmPassword) {
-            toast.error('Passwords do not match');
+        // Enhanced password validation
+        if (!isPasswordValid()) {
+            toast.error('Password must meet all security requirements');
             return false;
         }
 
-        if (formData.password.length < 6) {
-            toast.error('Password must be at least 6 characters long');
+        if (formData.password !== formData.confirmPassword) {
+            toast.error('Passwords do not match');
             return false;
         }
 
@@ -158,6 +186,15 @@ const RegisterPage = () => {
                     orgCode: '',
                     password: '',
                     confirmPassword: ''
+                });
+
+                // Reset password validation
+                setPasswordValidation({
+                    hasUppercase: false,
+                    hasLowercase: false,
+                    hasNumber: false,
+                    hasSpecial: false,
+                    hasMinLength: false
                 });
 
                 // Navigate after a short delay
@@ -410,6 +447,45 @@ const RegisterPage = () => {
                                 </button>
                             </div>
 
+                            {/* Password Validation Indicators */}
+                            {formData.password && (
+                                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
+                                    <div className="space-y-1">
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasMinLength ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasMinLength ? '✓' : '○'}`}>
+                                                {passwordValidation.hasMinLength ? '✓' : '○'}
+                                            </span>
+                                            At least 8 characters
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasUppercase ? '✓' : '○'}`}>
+                                                {passwordValidation.hasUppercase ? '✓' : '○'}
+                                            </span>
+                                            One uppercase letter (A-Z)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasLowercase ? '✓' : '○'}`}>
+                                                {passwordValidation.hasLowercase ? '✓' : '○'}
+                                            </span>
+                                            One lowercase letter (a-z)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasNumber ? '✓' : '○'}`}>
+                                                {passwordValidation.hasNumber ? '✓' : '○'}
+                                            </span>
+                                            One number (0-9)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasSpecial ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasSpecial ? '✓' : '○'}`}>
+                                                {passwordValidation.hasSpecial ? '✓' : '○'}
+                                            </span>
+                                            One special character (!@#$%^&*)
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Confirm Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
@@ -445,6 +521,13 @@ const RegisterPage = () => {
                                     )}
                                 </button>
                             </div>
+
+                            {/* Password Match Indicator */}
+                            {formData.confirmPassword && (
+                                <div className={`text-xs ${formData.password === formData.confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
+                                    {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                                </div>
+                            )}
 
                             {/* Register Button */}
                             <button

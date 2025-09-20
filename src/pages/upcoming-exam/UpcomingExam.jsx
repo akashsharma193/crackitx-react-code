@@ -20,19 +20,20 @@ const DeleteExamDialog = ({ isOpen, onClose, onConfirm, loading }) => {
                         <button
                             onClick={onClose}
                             disabled={loading}
-                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50"
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={onConfirm}
                             disabled={loading}
-                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[80px]"
                         >
-                            {loading && (
+                            {loading ? (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                'Delete'
                             )}
-                            {loading ? 'Deleting...' : 'Delete'}
                         </button>
                     </div>
                 </div>
@@ -65,13 +66,11 @@ const UpcomingExam = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
 
-    // Pagination states
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [pageSize] = useState(10); // Items per page
+    const [pageSize] = useState(10);
 
-    // Fetch data from API with pagination
     const fetchExamData = async (page = 0, search = '', filter = '') => {
         try {
             setLoading(true);
@@ -79,7 +78,6 @@ const UpcomingExam = () => {
 
             const filterObj = {};
 
-            // Add search filters if provided
             if (search.trim()) {
                 filterObj.subjectName = search.trim();
             }
@@ -97,7 +95,6 @@ const UpcomingExam = () => {
             const response = await apiClient.post('/questionPaper/getUpcomingExam', requestBody);
 
             if (response.data.success && response.data.data) {
-                // Transform API data to match the component's expected format
                 const transformedData = response.data.data.content.map((item, index) => ({
                     srNo: page * pageSize + index + 1,
                     testName: item.subjectName || 'N/A',
@@ -111,13 +108,10 @@ const UpcomingExam = () => {
                     batch: item.batch,
                     userId: item.userId,
                     id: item.id || item.questionId,
-                    // Store original item for editing
                     originalData: item
                 }));
 
                 setExamData(transformedData);
-
-                // FIX: Access pagination data from the 'page' object
                 setTotalPages(response.data.data.page.totalPages);
                 setTotalElements(response.data.data.page.totalElements);
                 setCurrentPage(response.data.data.page.number);
@@ -137,29 +131,24 @@ const UpcomingExam = () => {
         fetchExamData(0, searchTerm, filterTerm);
     }, []);
 
-    // Handle search with debouncing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             if (searchTerm !== '' || filterTerm !== '') {
                 fetchExamData(0, searchTerm, filterTerm);
-                setCurrentPage(0); // Reset to first page when searching/filtering
+                setCurrentPage(0);
             }
-        }, 500); // 500ms delay for debouncing
+        }, 500);
 
         return () => clearTimeout(timeoutId);
     }, [searchTerm, filterTerm]);
 
     const handleViewClick = (exam) => {
-        // Navigate to view exam page - replace with your routing logic
         console.log('Navigate to view exam:', exam);
-        // Example: navigate(`/exam/${exam.id}`);
     };
 
     const handleEditClick = (exam) => {
-        // Navigate to edit exam page with exam data
         console.log('Navigate to edit exam:', exam);
 
-        // Convert datetime strings to the format expected by datetime-local inputs
         const formatDateTimeForInput = (dateString) => {
             if (!dateString) return '';
             const date = new Date(dateString);
@@ -174,7 +163,6 @@ const UpcomingExam = () => {
             return `${year}-${month}-${day}T${hours}:${minutes}`;
         };
 
-        // Prepare exam data for editing
         const examEditData = {
             id: exam.id || exam.questionId,
             subjectName: exam.originalData.subjectName || '',
@@ -189,7 +177,6 @@ const UpcomingExam = () => {
             userId: exam.originalData.userId
         };
 
-        // Navigate to edit page with state
         navigate('/edit-upcoming-exam', {
             state: {
                 examData: examEditData,
@@ -200,22 +187,14 @@ const UpcomingExam = () => {
 
     const handleToggleVisibility = async (index, exam) => {
         try {
-            // Update local state immediately for better UX
             setExamData(prevData =>
                 prevData.map((examItem, i) =>
                     i === index ? { ...examItem, isVisible: !examItem.isVisible } : examItem
                 )
             );
 
-            // Here you can add API call to update visibility on server
-            // const response = await apiClient.post('/questionPaper/updateVisibility', {
-            //     id: exam.id,
-            //     isVisible: !exam.isVisible
-            // });
-
             toast.success('Exam visibility updated successfully!');
         } catch (error) {
-            // Revert the change if API call fails
             setExamData(prevData =>
                 prevData.map((examItem, i) =>
                     i === index ? { ...examItem, isVisible: exam.isVisible } : examItem
@@ -236,21 +215,24 @@ const UpcomingExam = () => {
         try {
             setDeleteLoading(true);
 
-            // Here you can add the actual delete API call
-            // const response = await apiClient.post('/questionPaper/deleteExam', {
-            //     id: examToDelete.id
-            // });
+            const requestBody = {
+                id: examToDelete.id || examToDelete.questionId
+            };
 
-            // For now, just simulate the deletion
-            toast.success('Exam deleted successfully!');
-            setShowDeleteDialog(false);
-            setExamToDelete(null);
+            const response = await apiClient.post('/questionPaper/deleteQuestionPaper', requestBody);
 
-            // Refresh the table data
-            await fetchExamData(currentPage, searchTerm, filterTerm);
+            if (response.data.success) {
+                toast.success('Exam deleted successfully!');
+                setShowDeleteDialog(false);
+                setExamToDelete(null);
+                await fetchExamData(currentPage, searchTerm, filterTerm);
+            } else {
+                toast.error(response.data.message || 'Failed to delete exam');
+            }
         } catch (error) {
             console.error('Error deleting exam:', error);
-            toast.error('Failed to delete exam. Please try again.');
+            const errorMessage = error.response?.data?.message || 'Failed to delete exam. Please try again.';
+            toast.error(errorMessage);
         } finally {
             setDeleteLoading(false);
         }
@@ -270,7 +252,6 @@ const UpcomingExam = () => {
     const handleClear = () => {
         setSearchTerm('');
         setFilterTerm('');
-        // Fetch data without any filters
         fetchExamData(0, '', '');
         setCurrentPage(0);
     };
@@ -283,7 +264,6 @@ const UpcomingExam = () => {
         setFilterTerm(e.target.value);
     };
 
-    // Handle search on Enter key press
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
             fetchExamData(0, searchTerm, filterTerm);
@@ -291,7 +271,6 @@ const UpcomingExam = () => {
         }
     };
 
-    // Handle filter on Enter key press
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
             fetchExamData(0, searchTerm, filterTerm);
@@ -301,23 +280,18 @@ const UpcomingExam = () => {
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
-            {/* Loading State with Circular Loader */}
             {loading && <CircularLoader />}
 
-            {/* Error State */}
             {!loading && error && (
                 <div className="flex items-center justify-center h-64">
                     <div className="text-red-500 text-lg">Error: {error}</div>
                 </div>
             )}
 
-            {/* Content - Only show when not loading and no error */}
             {!loading && !error && (
                 <>
-                    {/* Header */}
                     <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5">
                         <div className="flex items-center gap-4 flex-wrap">
-                            {/* Search */}
                             <div className="relative min-w-[320px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -330,7 +304,6 @@ const UpcomingExam = () => {
                                 />
                             </div>
 
-                            {/* Filter */}
                             <div className="relative min-w-[200px]">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
@@ -343,7 +316,6 @@ const UpcomingExam = () => {
                                 />
                             </div>
 
-                            {/* Clear Button */}
                             <button
                                 onClick={handleClear}
                                 className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -353,7 +325,6 @@ const UpcomingExam = () => {
                             </button>
                         </div>
 
-                        {/* Download Button */}
                         <div className="flex items-center gap-4 mt-4 md:mt-0">
                             <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
                                 <Download size={20} />
@@ -361,7 +332,6 @@ const UpcomingExam = () => {
                         </div>
                     </div>
 
-                    {/* Table */}
                     <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
@@ -371,8 +341,6 @@ const UpcomingExam = () => {
                                     <th className="!px-6 !py-4">Test Conducted By</th>
                                     <th className="!px-6 !py-4">Start Time</th>
                                     <th className="!px-6 !py-4">End Time</th>
-                                    <th className="!px-6 !py-4">Test Visibility</th>
-                                    <th className="!px-6 !py-4">View</th>
                                     <th className="!px-4 !py-4">Edit</th>
                                     <th className="!px-4 !py-4">Delete</th>
                                 </tr>
@@ -386,33 +354,6 @@ const UpcomingExam = () => {
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
-                                            <td className="!px-6 !py-4">
-                                                <label className="inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={exam.isVisible}
-                                                        onChange={() => handleToggleVisibility(index, exam)}
-                                                    />
-                                                    <div className={`relative w-11 h-6 rounded-full peer transition-colors duration-200 ease-in-out ${exam.isVisible ? 'bg-[#7966F1]' : 'bg-gray-200'
-                                                        }`}>
-                                                        <div className={`absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform duration-200 ease-in-out ${exam.isVisible ? 'translate-x-5' : 'translate-x-0'
-                                                            }`} />
-                                                    </div>
-                                                </label>
-                                            </td>
-                                            <td className="!px-6 !py-4">
-                                                <div className="relative group inline-block">
-                                                    <Eye
-                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                        size={20}
-                                                        onClick={() => handleViewClick(exam)}
-                                                    />
-                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        View
-                                                    </div>
-                                                </div>
-                                            </td>
                                             <td className="!px-6 !py-4">
                                                 <div className="relative group inline-block">
                                                     <Edit
@@ -441,7 +382,7 @@ const UpcomingExam = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="9" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="7" className="!px-6 !py-8 text-center text-gray-500">
                                             {searchTerm || filterTerm ? 'No upcoming exams found matching your criteria' : 'No upcoming exams found'}
                                         </td>
                                     </tr>
@@ -449,7 +390,6 @@ const UpcomingExam = () => {
                             </tbody>
                         </table>
 
-                        {/* Pagination - Only show if there's data AND more than 1 page */}
                         {examData.length > 0 && totalPages > 1 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
@@ -520,7 +460,6 @@ const UpcomingExam = () => {
                 </>
             )}
 
-            {/* Delete Exam Dialog */}
             <DeleteExamDialog
                 isOpen={showDeleteDialog}
                 onClose={handleDeleteCancel}

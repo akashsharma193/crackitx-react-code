@@ -15,6 +15,13 @@ const LoginPage = () => {
 
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordValidation, setPasswordValidation] = useState({
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecial: false,
+        hasMinLength: false
+    });
 
     const decodeJWT = (token) => {
         try {
@@ -56,22 +63,64 @@ const LoginPage = () => {
         return deviceId;
     };
 
+    const validatePassword = (password) => {
+        const validation = {
+            hasUppercase: /[A-Z]/.test(password),
+            hasLowercase: /[a-z]/.test(password),
+            hasNumber: /\d/.test(password),
+            hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+            hasMinLength: password.length >= 8
+        };
+        setPasswordValidation(validation);
+    };
+
+    const isPasswordValid = () => {
+        return Object.values(passwordValidation).every(condition => condition);
+    };
+
     const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         });
+
+        // Real-time password validation
+        if (name === 'password') {
+            validatePassword(value);
+        }
     };
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
 
+    const validateForm = () => {
+        if (!formData.email || !formData.password) {
+            toast.error('Please fill in all fields');
+            return false;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            toast.error('Please enter a valid email address');
+            return false;
+        }
+
+        // Enhanced password validation for login
+        if (!isPasswordValid()) {
+            toast.error('Password must meet all security requirements');
+            return false;
+        }
+
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.email || !formData.password) {
-            toast.error('Please fill in all fields');
+        if (!validateForm()) {
             return;
         }
 
@@ -134,6 +183,19 @@ const LoginPage = () => {
                 
                 checkAdminRole(token);
 
+                // Clear form and reset validation
+                setFormData({
+                    email: '',
+                    password: ''
+                });
+                setPasswordValidation({
+                    hasUppercase: false,
+                    hasLowercase: false,
+                    hasNumber: false,
+                    hasSpecial: false,
+                    hasMinLength: false
+                });
+
                 navigate('/home', { replace: true });
             }
 
@@ -182,6 +244,7 @@ const LoginPage = () => {
                         </h1>
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Mail className="w-5 h-5 text-gray-400" />
@@ -204,6 +267,7 @@ const LoginPage = () => {
                                 />
                             </div>
 
+                            {/* Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Lock className="w-5 h-5 text-gray-400" />
@@ -239,6 +303,46 @@ const LoginPage = () => {
                                 </button>
                             </div>
 
+                            {/* Password Validation Indicators - Only show when password is being typed */}
+                            {formData.password && (
+                                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
+                                    <div className="space-y-1">
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasMinLength ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasMinLength ? '✓' : '○'}`}>
+                                                {passwordValidation.hasMinLength ? '✓' : '○'}
+                                            </span>
+                                            At least 8 characters
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasUppercase ? '✓' : '○'}`}>
+                                                {passwordValidation.hasUppercase ? '✓' : '○'}
+                                            </span>
+                                            One uppercase letter (A-Z)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasLowercase ? '✓' : '○'}`}>
+                                                {passwordValidation.hasLowercase ? '✓' : '○'}
+                                            </span>
+                                            One lowercase letter (a-z)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasNumber ? '✓' : '○'}`}>
+                                                {passwordValidation.hasNumber ? '✓' : '○'}
+                                            </span>
+                                            One number (0-9)
+                                        </div>
+                                        <div className={`flex items-center text-xs ${passwordValidation.hasSpecial ? 'text-green-600' : 'text-gray-500'}`}>
+                                            <span className={`mr-2 ${passwordValidation.hasSpecial ? '✓' : '○'}`}>
+                                                {passwordValidation.hasSpecial ? '✓' : '○'}
+                                            </span>
+                                            One special character (!@#$%^&*)
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Forgot Password Link */}
                             <div className="text-right">
                                 <button
                                     type="button"
@@ -250,6 +354,7 @@ const LoginPage = () => {
                                 </button>
                             </div>
 
+                            {/* Login Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -266,6 +371,7 @@ const LoginPage = () => {
                                 {isLoading ? 'Logging in...' : 'Login'}
                             </button>
 
+                            {/* Register Link */}
                             <div className="text-center">
                                 <span className="text-gray-600" style={{ fontSize: '14px' }}>
                                     Don't have an account?{' '}

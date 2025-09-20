@@ -48,6 +48,44 @@ const SubmitConfirmationDialog = ({ isOpen, onClose, onConfirm, loading, unanswe
     );
 };
 
+const TabSwitchWarningDialog = ({ isOpen, onClose, warningCount }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center !mx-auto !mb-4">
+                        <AlertCircle className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-800 !mb-3">Tab Switch Warning!</h2>
+                    <p className="text-gray-600 !mb-2">You switched tabs during the quiz.</p>
+                    <p className="text-sm text-red-500 font-medium !mb-4">
+                        Warning {warningCount}/3: {3 - warningCount} warnings remaining
+                    </p>
+                    {warningCount === 3 ? (
+                        <p className="text-sm text-red-600 font-semibold !mb-6">
+                            Test is submitted due to rules violation!
+                        </p>
+                    ) : (
+                        <p className="text-sm text-gray-500 !mb-6">
+                            Your quiz will be auto-submitted after 3 tab switches.
+                        </p>
+                    )}
+                    {warningCount < 3 && (
+                        <button
+                            onClick={onClose}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                        >
+                            Continue Quiz
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) => {
     const currentExam = examData;
 
@@ -64,6 +102,8 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [questionStartTimes, setQuestionStartTimes] = useState({});
     const [questionTimeTaken, setQuestionTimeTaken] = useState({});
     const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+    const [tabSwitchCount, setTabSwitchCount] = useState(0);
+    const [showTabWarning, setShowTabWarning] = useState(false);
 
     const timerRef = useRef(null);
     
@@ -81,6 +121,36 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     }, [currentExam]);
 
     useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && examStarted && !isSubmitted && !showTabWarning) {
+                const newCount = tabSwitchCount + 1;
+                setTabSwitchCount(newCount);
+                setShowTabWarning(true);
+                
+                if (newCount >= 3) {
+                    setTimeout(() => {
+                        setShowTabWarning(false);
+                        handleSubmitQuizDirectly();
+                    }, 2000);
+                }
+            }
+        };
+
+        const handleFocusChange = () => {
+            if (!document.hasFocus() && examStarted && !isSubmitted && !showTabWarning) {
+                const newCount = tabSwitchCount + 1;
+                setTabSwitchCount(newCount);
+                setShowTabWarning(true);
+                
+                if (newCount >= 3) {
+                    setTimeout(() => {
+                        setShowTabWarning(false);
+                        handleSubmitQuizDirectly();
+                    }, 2000);
+                }
+            }
+        };
+
         const handleBeforeUnload = (e) => {
             if (!isSubmitted && examStarted) {
                 e.preventDefault();
@@ -98,16 +168,20 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         };
 
         if (examStarted && !isSubmitted) {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleFocusChange);
             window.addEventListener('beforeunload', handleBeforeUnload);
             window.addEventListener('popstate', handlePopstate);
             window.history.pushState(null, '', window.location.pathname);
         }
 
         return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleFocusChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('popstate', handlePopstate);
         };
-    }, [examStarted, isSubmitted]);
+    }, [examStarted, isSubmitted, tabSwitchCount, showTabWarning]);
 
     useEffect(() => {
         if (timeRemaining > 0 && !isSubmitted && examStarted) {
@@ -217,10 +291,18 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         handleSubmitQuiz(false);
     };
 
+    const handleTabWarningClose = () => {
+        setShowTabWarning(false);
+    };
+
     const handleSubmitQuizDirectly = async () => {
         if (submitting) return;
 
-        toast.warning('Time is up! Quiz submitted automatically.');
+        if (tabSwitchCount >= 3) {
+            toast.warning('Test is submitted due to rules violation!');
+        } else {
+            toast.warning('Time is up! Quiz submitted automatically.');
+        }
         
         recordQuestionTime(currentQuestionIndex);
         setSubmitting(true);
@@ -424,7 +506,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                             className="flex items-center gap-2 !mx-auto bg-[#7966F1] text-white !px-4 !py-2 rounded-lg hover:bg-[#5a4bcc] transition cursor-pointer"
                         >
                             <ArrowLeft size={16} />
-                            Back to Exams
+                            Back
                         </button>
                     )}
                 </div>
@@ -445,7 +527,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
-                            <span className="text-sm">Back to Exams</span>
+                            <span className="text-sm">Back</span>
                         </button>
                     )}
 
@@ -455,11 +537,20 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                     </div>
                 </div>
 
-                <div className={`flex items-center gap-2 !px-4 !py-2 rounded-lg ${timeRemaining <= 60 ? 'bg-red-500/20 border border-red-300' : 'bg-white/10'}`}>
-                    <Clock size={20} />
-                    <span className={`text-lg font-mono font-bold ${timeRemaining <= 60 ? 'text-red-300' : ''}`}>
-                        {formatTime(timeRemaining)}
-                    </span>
+                <div className="flex items-center gap-4">
+                    {tabSwitchCount > 0 && (
+                        <div className="flex items-center gap-2 bg-red-500/20 border border-red-300 !px-3 !py-2 rounded-lg">
+                            <AlertCircle size={16} />
+                            <span className="text-sm">Tab switches: {tabSwitchCount}/3</span>
+                        </div>
+                    )}
+                    
+                    <div className={`flex items-center gap-2 !px-4 !py-2 rounded-lg ${timeRemaining <= 60 ? 'bg-red-500/20 border border-red-300' : 'bg-white/10'}`}>
+                        <Clock size={20} />
+                        <span className={`text-lg font-mono font-bold ${timeRemaining <= 60 ? 'text-red-300' : ''}`}>
+                            {formatTime(timeRemaining)}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -625,6 +716,12 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 loading={submitting}
                 unansweredCount={unansweredCount}
             />
+
+            <TabSwitchWarningDialog
+                isOpen={showTabWarning}
+                onClose={handleTabWarningClose}
+                warningCount={tabSwitchCount}
+            />
         </div>
     );
 };
@@ -730,7 +827,7 @@ const ResultPage = ({ results, onBackToExams }) => {
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
-                            <span className="text-sm">Back to Exams</span>
+                            <span className="text-sm">Back</span>
                         </button>
                     )}
                     <h1 className="text-xl font-bold">Quiz Results</h1>

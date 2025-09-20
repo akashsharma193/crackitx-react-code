@@ -30,6 +30,10 @@ const UserDashboard = ({ setActiveTab }) => {
     ];
 
     const fetchDashboardData = async () => {
+        console.log('Dashboard - userId:', localStorage.getItem('userId'));
+        console.log('Dashboard - refreshToken:', localStorage.getItem('refreshToken'));
+
+
         try {
             setLoading(true);
             setError(null);
