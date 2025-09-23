@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, User, Trophy, Target } from 'lucide-react';
+import { ArrowLeft, User, Trophy, Target, Eye } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -44,6 +44,9 @@ const ExamParticipants = () => {
                     srNo: index + 1,
                     userId: participant.userId,
                     name: participant.name,
+                    email: participant.email,
+                    mobile: participant.mobile,
+                    batch: participant.batch,
                     marks: participant.marks,
                     totalMarks: participant.totalMarks,
                     percentage: participant.totalMarks > 0
@@ -94,13 +97,28 @@ const ExamParticipants = () => {
     const handleBack = () => {
         navigate('/home', {
             state: { activeTab: sourceTab },
-            replace: false 
+            replace: false
         });
     };
 
     const handleSidebarTabChange = (newTab) => {
         navigate('/home', {
             state: { activeTab: newTab },
+            replace: false
+        });
+    };
+
+    const handleViewClick = (participant) => {
+        navigate(`/user-details/${participant.userId}`, {
+            state: { 
+                student: {
+                    name: participant.name,
+                    email: participant.email,
+                    mobile: participant.mobile,
+                    batch: participant.batch,
+                    userId: participant.userId
+                }
+            },
             replace: false
         });
     };
@@ -129,7 +147,6 @@ const ExamParticipants = () => {
                 />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
-                    {/* Top Bar */}
                     <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5">
                         <div className="flex items-center gap-3">
                             <ArrowLeft className="cursor-pointer" size={20} onClick={handleBack} />
@@ -140,20 +157,16 @@ const ExamParticipants = () => {
                     </div>
 
                     <div className="!p-6">
-                        {/* Loading State */}
                         {loading && <CircularLoader />}
 
-                        {/* Error State */}
                         {!loading && error && (
                             <div className="flex items-center justify-center h-64">
                                 <div className="text-red-500 text-lg">Error: {error}</div>
                             </div>
                         )}
 
-                        {/* Content */}
                         {!loading && !error && (
                             <>
-                                {/* Stats Cards */}
                                 {participants.length > 0 && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 !mb-8">
                                         <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
@@ -201,7 +214,6 @@ const ExamParticipants = () => {
                                     </div>
                                 )}
 
-                                {/* Participants Table */}
                                 <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
                                     <div className="bg-[#7966F1] !px-6 !py-4">
                                         <h2 className="text-xl font-bold text-white">Participants List</h2>
@@ -218,6 +230,7 @@ const ExamParticipants = () => {
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Percentage</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
+                                                    <th className="!px-6 !py-4">View</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -249,11 +262,23 @@ const ExamParticipants = () => {
                                                                         {getPerformanceLabel(parseFloat(participant.percentage))}
                                                                     </span>
                                                                 </td>
+                                                                <td className="!px-6 !py-4">
+                                                                    <div className="relative group inline-block">
+                                                                        <Eye
+                                                                            className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                                            size={20}
+                                                                            onClick={() => handleViewClick(participant)}
+                                                                        />
+                                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                                            View Details
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
                                                             </tr>
                                                         ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan="7" className="!px-6 !py-12 text-center text-gray-500">
+                                                        <td colSpan="8" className="!px-6 !py-12 text-center text-gray-500">
                                                             <div className="flex flex-col items-center gap-3">
                                                                 <User className="text-gray-300" size={48} />
                                                                 <div>

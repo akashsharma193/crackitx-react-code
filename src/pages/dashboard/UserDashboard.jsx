@@ -24,7 +24,7 @@ const UserDashboard = ({ setActiveTab }) => {
         { title: 'All Tests', icon: studentsIcon, count: userDashboardData.totalExamCount, tab: 'All Test' },
         { title: 'Active Exam', icon: activeExamIcon, count: userDashboardData.activeExamCount, tab: 'Active Exam' },
         { title: 'Exam History', icon: examhistoryIcon, count: userDashboardData.pastExamCount, tab: 'Exam History' },
-        { title: 'Unattempted Exam', icon: activeExamIcon, count: userDashboardData.unAttemptedExam, tab: 'Unattempted Exam' },
+        { title: 'Missed Exam', icon: activeExamIcon, count: userDashboardData.unAttemptedExam, tab: 'Missed Exam' },
         { title: 'Passed Exams', icon: resourcesIcon, count: userDashboardData.passedExam, tab: 'Passed Exam' },
         { title: 'Failed Exams', icon: resourcesIcon, count: userDashboardData.failedExam, tab: 'Failed Exam' },
     ];

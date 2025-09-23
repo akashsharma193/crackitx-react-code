@@ -290,7 +290,7 @@ const PastExams = () => {
                                     <th className="!px-6 !py-4">Batch</th>
                                     <th className="!px-6 !py-4">Conducted By</th>
                                     <th className="!px-6 !py-4">Exam Duration</th>
-                                    <th className="!px-6 !py-4">Student Count</th>
+                                    {/* <th className="!px-6 !py-4">Student Count</th> */}
                                     <th className="!px-6 !py-4">View</th>
                                 </tr>
                             </thead>
@@ -303,7 +303,7 @@ const PastExams = () => {
                                             <td className="!px-6 !py-4">{exam.batch}</td>
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.examDuration}</td>
-                                            <td className="!px-6 !py-4">{exam.studentCount}</td>
+                                            {/* <td className="!px-6 !py-4">{exam.studentCount}</td> */}
                                             <td className="!px-6 !py-4">
                                                 <div className="relative group inline-block">
                                                     <Eye

@@ -28,6 +28,23 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
+    const formatTimeSeconds = (seconds) => {
+        if (!seconds || seconds === 0) return '0s';
+        
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+            return `${hours}h ${minutes}m ${remainingSeconds}s`;
+        }
+    };
+
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
         const wrongPercentage = (wrong / total) * 100;
@@ -216,7 +233,13 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                 </div>
 
                                                 <div className="flex-1">
-                                                    <h3 className="font-semibold text-gray-800 !mb-4">{item.question}</h3>
+                                                    <div className="flex items-center justify-between !mb-4">
+                                                        <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 !px-3 !py-1 rounded-full">
+                                                            <Clock size={14} />
+                                                            <span>Time: {formatTimeSeconds(Math.floor(item.timeTaken / 1000))}</span>
+                                                        </div>
+                                                    </div>
 
                                                     <div className="space-y-2">
                                                         {item.options.map((option, optionIndex) => {
@@ -530,9 +553,6 @@ const StudentDetails = () => {
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Start Date</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">End Date</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Total Questions</th>
-                                                    {/* <th className="!px-6 !py-4 font-semibold text-gray-900">Correct Answers</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Incorrect Answers</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Unattempted</th> */}
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">View</th>
@@ -558,9 +578,6 @@ const StudentDetails = () => {
                                                                 </div>
                                                             </td>
                                                             <td className="!px-6 !py-4 text-center text-gray-600 font-semibold">{exam.totalQuestion || 0}</td>
-                                                            {/* <td className="!px-6 !py-4 text-center text-green-600 font-semibold">{exam.correctAnswer || 0}</td>
-                                                            <td className="!px-6 !py-4 text-center text-red-600 font-semibold">{exam.incorrectAnswer || 0}</td>
-                                                            <td className="!px-6 !py-4 text-center text-yellow-600 font-semibold">{exam.unAttempted || 0}</td> */}
                                                             <td className="!px-6 !py-4 text-center text-gray-900 font-bold text-lg">{exam.totalMarks || 0}</td>
                                                             <td className="!px-6 !py-4">
                                                                 <span className={`!px-3 !py-1 rounded-full text-sm font-medium ${getPerformanceColor(exam.correctAnswer, exam.totalQuestion)}`}>
@@ -593,7 +610,7 @@ const StudentDetails = () => {
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan="12" className="!px-6 !py-12 text-center text-gray-500">
+                                                        <td colSpan="9" className="!px-6 !py-12 text-center text-gray-500">
                                                             <div className="flex flex-col items-center gap-3">
                                                                 <BookOpen className="text-gray-300" size={48} />
                                                                 <div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Send, ArrowLeft, AlertCircle, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Send, ArrowLeft, AlertCircle, X, Bookmark, BookmarkX } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -94,6 +94,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [timeRemaining, setTimeRemaining] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [visitedQuestions, setVisitedQuestions] = useState(new Set([0]));
+    const [markedForReview, setMarkedForReview] = useState(new Set());
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [examStarted, setExamStarted] = useState(false);
@@ -106,8 +107,6 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [showTabWarning, setShowTabWarning] = useState(false);
 
     const timerRef = useRef(null);
-    
-    console.log('hideSubmitButton prop:', hideSubmitButton);
     
     useEffect(() => {
         if (currentExam?.questionList) {
@@ -241,6 +240,30 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
         const updatedQuestions = [...questions];
         updatedQuestions[currentQuestionIndex].userAnswer = selectedOption;
+        setQuestions(updatedQuestions);
+    };
+
+    const handleMarkForReview = () => {
+        if (isSubmitted) return;
+        
+        const newMarkedForReview = new Set(markedForReview);
+        if (newMarkedForReview.has(currentQuestionIndex)) {
+            newMarkedForReview.delete(currentQuestionIndex);
+        } else {
+            newMarkedForReview.add(currentQuestionIndex);
+        }
+        setMarkedForReview(newMarkedForReview);
+    };
+
+    const handleClearAnswer = () => {
+        if (isSubmitted) return;
+
+        const updatedAnswers = { ...selectedAnswers };
+        delete updatedAnswers[currentQuestionIndex];
+        setSelectedAnswers(updatedAnswers);
+
+        const updatedQuestions = [...questions];
+        updatedQuestions[currentQuestionIndex].userAnswer = null;
         setQuestions(updatedQuestions);
     };
 
@@ -470,6 +493,12 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const getQuestionStatus = (index) => {
         if (index === currentQuestionIndex) {
             return 'current';
+        } else if (markedForReview.has(index)) {
+            if (selectedAnswers[index] !== undefined) {
+                return 'answered-review';
+            } else {
+                return 'marked-review';
+            }
         } else if (selectedAnswers[index] !== undefined) {
             return 'answered';
         } else if (visitedQuestions.has(index)) {
@@ -485,7 +514,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
     if (!currentExam) {
         return (
-            <div className="flex items-center justify-center h-full">
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-[#7966F1] border-t-transparent rounded-full animate-spin !mx-auto !mb-4"></div>
                     <div className="text-[#7966F1] text-lg font-semibold">Loading Quiz...</div>
@@ -496,7 +525,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
     if (!questions || questions.length === 0) {
         return (
-            <div className="flex items-center justify-center h-full">
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <AlertCircle className="w-12 h-12 text-red-500 !mx-auto !mb-4" />
                     <div className="text-red-500 text-lg font-semibold !mb-4">No questions available for this quiz</div>
@@ -516,9 +545,10 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
     const currentQuestion = questions[currentQuestionIndex];
     const unansweredCount = questions.length - Object.keys(selectedAnswers).length;
+    const isCurrentQuestionMarked = markedForReview.has(currentQuestionIndex);
 
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="fixed inset-0 flex flex-col bg-gray-50">
             <div className="bg-[#7966F1] text-white !px-6 !py-4 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-4">
                     {onBackToExams && (
@@ -561,12 +591,40 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                             <span className="text-sm text-gray-500">
                                 Question {currentQuestionIndex + 1} of {questions.length}
                             </span>
-                            {timeRemaining <= 60 && !isSubmitted && (
-                                <div className="flex items-center gap-2 text-red-500 text-sm">
-                                    <AlertCircle size={16} />
-                                    <span>Time running out!</span>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleMarkForReview}
+                                        disabled={isSubmitted}
+                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+                                            isCurrentQuestionMarked
+                                                ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                        } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    >
+                                        {isCurrentQuestionMarked ? <BookmarkX size={16} /> : <Bookmark size={16} />}
+                                        {isCurrentQuestionMarked ? 'Unmark' : 'Mark for Review'}
+                                    </button>
+                                    <button
+                                        onClick={handleClearAnswer}
+                                        disabled={isSubmitted || !selectedAnswers[currentQuestionIndex]}
+                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+                                            selectedAnswers[currentQuestionIndex]
+                                                ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    >
+                                        <X size={16} />
+                                        Clear
+                                    </button>
                                 </div>
-                            )}
+                                {timeRemaining <= 60 && !isSubmitted && (
+                                    <div className="flex items-center gap-2 text-red-500 text-sm">
+                                        <AlertCircle size={16} />
+                                        <span>Time running out!</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="bg-white rounded-lg !p-6 shadow-md !mb-6">
@@ -662,6 +720,14 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                                     bgColor = 'bg-green-500 border-green-500';
                                     textColor = 'text-white';
                                     break;
+                                case 'answered-review':
+                                    bgColor = 'bg-orange-500 border-orange-500';
+                                    textColor = 'text-white';
+                                    break;
+                                case 'marked-review':
+                                    bgColor = 'bg-yellow-500 border-yellow-500';
+                                    textColor = 'text-white';
+                                    break;
                                 case 'unanswered':
                                     bgColor = 'bg-red-500 border-red-500';
                                     textColor = 'text-white';
@@ -696,6 +762,14 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 bg-green-500 rounded"></div>
                             <span className="text-gray-600">Answered</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                            <span className="text-gray-600">Answered & Marked</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                            <span className="text-gray-600">Marked for Review</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 bg-red-500 rounded"></div>
@@ -818,7 +892,7 @@ const ResultPage = ({ results, onBackToExams }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="fixed inset-0 flex flex-col bg-gray-50">
             <div className="bg-[#7966F1] text-white !px-6 !py-4 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     {onBackToExams && (

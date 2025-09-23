@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, ArrowLeft, Upload } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
@@ -101,8 +102,8 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
 const EditUpcomingExams = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const fileInputRef = useRef(null);
 
-    // Get passed data from previous screen
     const passedExamData = location.state?.examData || null;
     const isEditMode = location.state?.isEdit || false;
     const examId = passedExamData?.id || null;
@@ -134,7 +135,6 @@ const EditUpcomingExams = () => {
 
     const durationOptions = ['5 mins', '10 mins', '15 mins', '20 mins', '25 mins', '30 mins'];
 
-    // Pre-populate form with passed data
     useEffect(() => {
         if (passedExamData && isEditMode) {
             setFormData({
@@ -148,7 +148,6 @@ const EditUpcomingExams = () => {
                 isActive: passedExamData.isActive !== undefined ? passedExamData.isActive : true
             });
 
-            // Pre-populate questions if available
             if (passedExamData.questionList && passedExamData.questionList.length > 0) {
                 const transformedQuestions = passedExamData.questionList.map((q, index) => ({
                     id: index + 1,
@@ -161,6 +160,111 @@ const EditUpcomingExams = () => {
             }
         }
     }, [passedExamData, isEditMode]);
+
+    const downloadSampleExcel = useCallback(() => {
+        const sampleData = [
+            { Question: 'What is the capital of France?', 'Option 1': 'London', 'Option 2': 'Berlin', 'Option 3': 'Paris', 'Option 4': 'Madrid', 'Correct Answer': 'Paris' },
+            { Question: 'Which planet is known as the Red Planet?', 'Option 1': 'Venus', 'Option 2': 'Mars', 'Option 3': 'Jupiter', 'Option 4': 'Saturn', 'Correct Answer': 'Mars' },
+            { Question: 'What is 2 + 2?', 'Option 1': '3', 'Option 2': '4', 'Option 3': '5', 'Option 4': '6', 'Correct Answer': '4' }
+        ];
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+        XLSX.writeFile(wb, 'sample_exam_questions.xlsx');
+        toast.success('Sample Excel file downloaded!');
+    }, []);
+
+    const handleExcelImport = useCallback((event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                if (jsonData.length === 0) {
+                    toast.error('Excel file is empty');
+                    return;
+                }
+
+                const requiredColumns = ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
+                const firstRow = jsonData[0];
+                const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
+
+                if (missingColumns.length > 0) {
+                    toast.error(`Missing required columns: ${missingColumns.join(', ')}`);
+                    return;
+                }
+
+                const importedQuestions = [];
+                let hasErrors = false;
+
+                jsonData.forEach((row, index) => {
+                    const rowNumber = index + 1;
+
+                    if (!row['Question'] || !row['Question'].toString().trim()) {
+                        toast.error(`Row ${rowNumber}: Question is required`);
+                        hasErrors = true;
+                        return;
+                    }
+
+                    const options = [
+                        row['Option 1']?.toString().trim() || '',
+                        row['Option 2']?.toString().trim() || '',
+                        row['Option 3']?.toString().trim() || '',
+                        row['Option 4']?.toString().trim() || ''
+                    ];
+
+                    if (options.some((opt) => !opt)) {
+                        toast.error(`Row ${rowNumber}: All 4 options are required`);
+                        hasErrors = true;
+                        return;
+                    }
+
+                    const correctAnswer = row['Correct Answer']?.toString().trim();
+                    if (!correctAnswer) {
+                        toast.error(`Row ${rowNumber}: Correct answer is required`);
+                        hasErrors = true;
+                        return;
+                    }
+
+                    const correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
+                    if (correctAnswerIndex === -1) {
+                        toast.error(`Row ${rowNumber}: Correct answer must match one of the options exactly`);
+                        hasErrors = true;
+                        return;
+                    }
+
+                    importedQuestions.push({
+                        id: Date.now() + index,
+                        question: row['Question'].toString().trim(),
+                        options: options,
+                        correctAnswer: correctAnswerIndex
+                    });
+                });
+
+                if (hasErrors) return;
+
+                if (importedQuestions.length === 0) {
+                    toast.error('No valid questions found in the Excel file');
+                    return;
+                }
+
+                setQuestions(importedQuestions);
+                setShowQuestions(true);
+                toast.success(`${importedQuestions.length} questions imported successfully!`);
+            } catch (error) {
+                console.error('Error reading Excel file:', error);
+                toast.error('Error reading Excel file. Please check the format and try again.');
+            }
+        };
+        reader.readAsBinaryString(file);
+        event.target.value = '';
+    }, []);
 
     const handleBack = () => {
         navigate('/home', { state: { activeTab: 'Upcoming Exam' } });
@@ -216,7 +320,6 @@ const EditUpcomingExams = () => {
         setShowQuestions(true);
     }, []);
 
-    // Check if start date is more than 24 hours from current time
     const canToggleActive = () => {
         if (!formData.startTime) return false;
         const startDate = new Date(formData.startTime);
@@ -227,7 +330,6 @@ const EditUpcomingExams = () => {
     };
 
     const handleSubmit = useCallback(() => {
-        // Validation
         if (!formData.subjectName.trim()) {
             toast.error('Subject name is required');
             return;
@@ -249,7 +351,6 @@ const EditUpcomingExams = () => {
             return;
         }
 
-        // Validate that end time is after start time
         if (new Date(formData.endTime) <= new Date(formData.startTime)) {
             toast.error('End date and time must be after start date and time');
             return;
@@ -266,7 +367,6 @@ const EditUpcomingExams = () => {
             return;
         }
 
-        // Check if exam ID is available for edit mode
         if (isEditMode && !examId) {
             toast.error('Exam ID is required for updating');
             return;
@@ -293,7 +393,6 @@ const EditUpcomingExams = () => {
         setIsLoading(true);
 
         try {
-            // Prepare questions data
             const validQuestions = questions.filter(q =>
                 q.question.trim() !== '' &&
                 q.options.every(opt => opt.trim() !== '') &&
@@ -306,10 +405,9 @@ const EditUpcomingExams = () => {
                 correctAnswer: q.options[q.correctAnswer].trim()
             }));
 
-            // Prepare exam data
             const examData = {
                 questionList,
-                examDuration: formData.examDuration.replace(' mins', ''), // Remove 'mins' suffix
+                examDuration: formData.examDuration.replace(' mins', ''),
                 subjectName: formData.subjectName.trim(),
                 teacherName: formData.teacherName.trim(),
                 batch: formData.batch.trim(),
@@ -319,26 +417,20 @@ const EditUpcomingExams = () => {
                 orgCode: localStorage.getItem('orgCode') || formData.organizationCode,
             };
 
-            // Add ID for edit mode
             if (isEditMode && examId) {
                 examData.id = examId;
             }
 
             console.log('Sending exam data:', examData);
 
-            // Use different endpoints based on mode
-            const endpoint =
-                '/questionPaper/createQuestionPaper';
-
+            const endpoint = '/questionPaper/createQuestionPaper';
             const response = await apiClient.post(endpoint, examData);
 
             console.log('API Response:', response.data);
 
-            // Success
             toast.success(`Exam ${isEditMode ? 'updated' : 'created'} successfully!`);
             setShowDialog(false);
 
-            // Navigate back to previous screen
             setTimeout(() => {
                 navigate('/home', { state: { activeTab: 'Upcoming Exam' } });
             }, 1500);
@@ -346,18 +438,14 @@ const EditUpcomingExams = () => {
         } catch (error) {
             console.error(`Error ${isEditMode ? 'updating' : 'creating'} exam:`, error);
 
-            // Handle different types of errors
             if (error.response) {
-                // Server responded with error status
                 const errorMessage = error.response.data?.message ||
                     error.response.data?.error ||
                     `Server error: ${error.response.status}`;
                 toast.error(errorMessage);
             } else if (error.request) {
-                // Request was made but no response received
                 toast.error('Network error. Please check your connection and try again.');
             } else {
-                // Something else happened
                 toast.error('An unexpected error occurred. Please try again.');
             }
         } finally {
@@ -365,7 +453,6 @@ const EditUpcomingExams = () => {
         }
     }, [formData, questions, isEditMode, examId, navigate]);
 
-    // Get current date and time in the required format for datetime-local input
     const getCurrentDateTime = () => {
         const now = new Date();
         const year = now.getFullYear();
@@ -391,14 +478,15 @@ const EditUpcomingExams = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="h-screen flex flex-col overflow-hidden">
             <HeaderComponent />
             <div className="flex flex-1 overflow-hidden">
                 <SidebarComponent activeTab="Upcoming Exam" setActiveTab={() => { }} />
 
-                <div className="flex-1 bg-gray-50 overflow-y-auto">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between">
+                {/* Main Content Area with Fixed Header and Scrollable Body */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+                    {/* Fixed Header */}
+                    <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handleBack}
@@ -411,19 +499,23 @@ const EditUpcomingExams = () => {
                             </h1>
                         </div>
                         <div className="flex items-center gap-5">
-                            <Download className="w-5 h-5 text-white cursor-pointer" />
-                            <button className="bg-white/10 border border-white text-white !px-4 !py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all cursor-pointer">
+                            <Download 
+                                className="w-5 h-5 text-white cursor-pointer" 
+                                onClick={downloadSampleExcel} 
+                            />
+                            <button 
+                                onClick={downloadSampleExcel}
+                                className="bg-white/10 border border-white text-white !px-4 !py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all cursor-pointer"
+                            >
                                 Sample Excel
                             </button>
                         </div>
                     </div>
 
-                    {/* Main Content */}
-                    <div className="!p-8">
-                        {/* Form Container */}
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto !p-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8 !mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Subject Name */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Subject Name
@@ -437,7 +529,6 @@ const EditUpcomingExams = () => {
                                     />
                                 </div>
 
-                                {/* Teacher Name */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Teacher Name
@@ -451,7 +542,6 @@ const EditUpcomingExams = () => {
                                     />
                                 </div>
 
-                                {/* Exam Duration */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Exam Duration (minutes)
@@ -484,7 +574,6 @@ const EditUpcomingExams = () => {
                                     </div>
                                 </div>
 
-                                {/* Batch */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Batch
@@ -498,7 +587,6 @@ const EditUpcomingExams = () => {
                                     />
                                 </div>
 
-                                {/* Start Date and Time */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Start Date & Time
@@ -522,7 +610,6 @@ const EditUpcomingExams = () => {
                                     )}
                                 </div>
 
-                                {/* End Date and Time */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         End Date & Time
@@ -547,7 +634,6 @@ const EditUpcomingExams = () => {
                                 </div>
                             </div>
 
-                            {/* Is Active Checkbox - Centered */}
                             <div className="flex justify-center !mt-6">
                                 <div className="flex items-center gap-3">
                                     <input
@@ -556,7 +642,7 @@ const EditUpcomingExams = () => {
                                         checked={formData.isActive}
                                         onChange={(e) => handleInputChange('isActive', e.target.checked)}
                                         disabled={!canToggleActive()}
-                                        onClick={() => setIsActiveDisabled(!canToggleActive())} // Track whether the checkbox is disabled
+                                        onClick={() => setIsActiveDisabled(!canToggleActive())}
                                         className="w-5 h-5 text-[#5E48EF] border-2 border-[#5E48EF] rounded focus:ring-[#5E48EF] focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     />
                                     <label
@@ -573,16 +659,24 @@ const EditUpcomingExams = () => {
                                 </div>
                             </div>
 
-                            {/* Import from Excel Button */}
                             <div className="flex justify-center !mt-8">
-                                <button className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer">
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleExcelImport} 
+                                    accept=".xlsx,.xls" 
+                                    className="hidden" 
+                                />
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                                >
                                     Import from Excel
-                                    <Download className="w-5 h-5" />
+                                    <Upload className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Questions Section */}
                         {showQuestions && (
                             <div className="!mb-6">
                                 {questions.map((question, index) => (
@@ -599,7 +693,6 @@ const EditUpcomingExams = () => {
                             </div>
                         )}
 
-                        {/* Action Buttons */}
                         <div className="flex flex-col items-center gap-4">
                             {showQuestions && (
                                 <button
@@ -633,7 +726,6 @@ const EditUpcomingExams = () => {
                 </div>
             </div>
 
-            {/* Toast Container */}
             <ToastContainer />
 
             {showDialog && (

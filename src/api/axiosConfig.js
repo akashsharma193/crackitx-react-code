@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: 'https://online-examination-secured.onrender.com',
+    baseURL: 'https://tomarbros.in/',
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ apiClient.interceptors.response.use(
         if (response.data && response.data.encPayloadRes) {
             response.data = decodeBase64(response.data.encPayloadRes);
         }
-        
+
         console.log('API Response:', {
             url: response.config.url,
             status: response.status,
@@ -162,7 +162,7 @@ apiClient.interceptors.response.use(
 
             try {
                 console.log('Attempting to refresh token...');
-                
+
                 // Call refresh token API with correct endpoint and encoded payload
                 const refreshResponse = await axios.post(
                     `${apiClient.defaults.baseURL}/user-open/refreshToken`,
@@ -183,7 +183,7 @@ apiClient.interceptors.response.use(
                 console.log('Refresh token response:', refreshResponse.data);
 
                 let responseData = refreshResponse.data;
-                
+
                 // Decode response if encrypted
                 if (responseData.encPayloadRes) {
                     responseData = decodeBase64(responseData.encPayloadRes);
@@ -196,11 +196,11 @@ apiClient.interceptors.response.use(
                     if (newToken) {
                         // Store new tokens
                         localStorage.setItem('authToken', newToken);
-                        
+
                         if (newRefreshToken) {
                             localStorage.setItem('refreshToken', newRefreshToken);
                         }
-                        
+
                         if (newUserId) {
                             localStorage.setItem('userId', newUserId);
                         }
@@ -241,12 +241,12 @@ apiClient.interceptors.response.use(
 
             } catch (refreshError) {
                 console.error('Refresh token error:', refreshError);
-                
+
                 // Process failed queue
                 processQueue(refreshError, null);
 
                 // Handle specific refresh token errors
-                if (refreshError.response?.status === 401 || 
+                if (refreshError.response?.status === 401 ||
                     refreshError.response?.status === 403 ||
                     refreshError.response?.status === 400) {
                     handleLogout('Session expired. Please login again.');
@@ -270,7 +270,7 @@ apiClient.interceptors.response.use(
 // Logout function
 const handleLogout = (message = 'Session expired. Please login again.') => {
     console.log('Logging out user:', message);
-    
+
     // Clear all authentication data
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
@@ -278,10 +278,10 @@ const handleLogout = (message = 'Session expired. Please login again.') => {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userId');
     localStorage.removeItem('deviceId');
-    
+
     // Show message to user (you might want to use a toast notification here)
     alert(message);
-    
+
     // Redirect to login page
     window.location.href = '/';
 };
@@ -291,7 +291,7 @@ export const checkTokenValidity = () => {
     const token = localStorage.getItem('authToken');
     const refreshToken = localStorage.getItem('refreshToken');
     const userId = localStorage.getItem('userId');
-    
+
     console.log('Current auth state:', {
         hasToken: !!token,
         hasRefreshToken: !!refreshToken,
@@ -300,7 +300,7 @@ export const checkTokenValidity = () => {
         refreshToken: refreshToken,
         userId: userId
     });
-    
+
     return {
         isAuthenticated: !!(token && refreshToken && userId),
         token,
