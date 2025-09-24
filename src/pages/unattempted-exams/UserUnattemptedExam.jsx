@@ -127,7 +127,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
-                            <span className="text-sm">Back to Exams</span>
+                            <span className="text-sm">Back</span>
                         </button>
                     )}
                     <div>

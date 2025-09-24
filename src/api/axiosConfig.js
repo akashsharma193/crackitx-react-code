@@ -119,7 +119,7 @@ apiClient.interceptors.response.use(
         }
 
         // Handle 401 Unauthorized errors
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 409 && !originalRequest._retry) {
             // Don't try to refresh token for login requests
             if (originalRequest.url.includes('/user-open/login')) {
                 return Promise.reject(error);

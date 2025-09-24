@@ -7,6 +7,35 @@ import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
 
+const ConfirmationDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center">
+                    <h2 className="text-green-600 text-xl font-bold !mb-3">{title}</h2>
+                    <p className="text-gray-800 !mb-6">{message}</p>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={onClose}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer"
+                        >
+                            {cancelText || 'Cancel'}
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                        >
+                            {confirmText || 'Confirm'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EditExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
     if (!isOpen) return null;
 
@@ -122,6 +151,7 @@ const EditUpcomingExams = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
+    const [showBackDialog, setShowBackDialog] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [questions, setQuestions] = useState([
@@ -254,9 +284,9 @@ const EditUpcomingExams = () => {
                     return;
                 }
 
-                setQuestions(importedQuestions);
+                setQuestions(prev => [...prev, ...importedQuestions]);
                 setShowQuestions(true);
-                toast.success(`${importedQuestions.length} questions imported successfully!`);
+                toast.success(`${importedQuestions.length} questions imported and added successfully!`);
             } catch (error) {
                 console.error('Error reading Excel file:', error);
                 toast.error('Error reading Excel file. Please check the format and try again.');
@@ -267,6 +297,11 @@ const EditUpcomingExams = () => {
     }, []);
 
     const handleBack = () => {
+        setShowBackDialog(true);
+    };
+
+    const confirmBack = () => {
+        setShowBackDialog(false);
         navigate('/home', { state: { activeTab: 'Upcoming Exam' } });
     };
 
@@ -451,7 +486,7 @@ const EditUpcomingExams = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [formData, questions, isEditMode, examId, navigate]);
+    }, [formData, questions, isEditMode, examId, navigate, isActiveDisabled]);
 
     const getCurrentDateTime = () => {
         const now = new Date();
@@ -483,9 +518,7 @@ const EditUpcomingExams = () => {
             <div className="flex flex-1 overflow-hidden">
                 <SidebarComponent activeTab="Upcoming Exam" setActiveTab={() => { }} />
 
-                {/* Main Content Area with Fixed Header and Scrollable Body */}
                 <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-                    {/* Fixed Header */}
                     <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center gap-3">
                             <button
@@ -499,11 +532,11 @@ const EditUpcomingExams = () => {
                             </h1>
                         </div>
                         <div className="flex items-center gap-5">
-                            <Download 
-                                className="w-5 h-5 text-white cursor-pointer" 
-                                onClick={downloadSampleExcel} 
+                            <Download
+                                className="w-5 h-5 text-white cursor-pointer"
+                                onClick={downloadSampleExcel}
                             />
-                            <button 
+                            <button
                                 onClick={downloadSampleExcel}
                                 className="bg-white/10 border border-white text-white !px-4 !py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all cursor-pointer"
                             >
@@ -512,7 +545,6 @@ const EditUpcomingExams = () => {
                         </div>
                     </div>
 
-                    {/* Scrollable Content Area */}
                     <div className="flex-1 overflow-y-auto !p-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8 !mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -630,8 +662,7 @@ const EditUpcomingExams = () => {
                                         <p className="text-xs text-gray-500 !mt-1">
                                             Selected: {formatDisplayDateTime(formData.endTime)}
                                         </p>
-                                    )}
-                                </div>
+                                    )}</div>
                             </div>
 
                             <div className="flex justify-center !mt-6">
@@ -660,14 +691,14 @@ const EditUpcomingExams = () => {
                             </div>
 
                             <div className="flex justify-center !mt-8">
-                                <input 
-                                    type="file" 
-                                    ref={fileInputRef} 
-                                    onChange={handleExcelImport} 
-                                    accept=".xlsx,.xls" 
-                                    className="hidden" 
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleExcelImport}
+                                    accept=".xlsx,.xls"
+                                    className="hidden"
                                 />
-                                <button 
+                                <button
                                     onClick={() => fileInputRef.current?.click()}
                                     className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                                 >
@@ -734,6 +765,18 @@ const EditUpcomingExams = () => {
                     onClose={() => setShowDialog(false)}
                     onConfirm={handleUpdate}
                     isLoading={isLoading}
+                />
+            )}
+
+            {showBackDialog && (
+                <ConfirmationDialog
+                    isOpen={showBackDialog}
+                    onClose={() => setShowBackDialog(false)}
+                    onConfirm={confirmBack}
+                    title="Go Back?"
+                    message="Are you sure you want to go back? Any unsaved changes will be lost."
+                    confirmText="Yes, Go Back"
+                    cancelText="Cancel"
                 />
             )}
         </div>

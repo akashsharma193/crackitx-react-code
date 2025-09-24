@@ -6,11 +6,40 @@ import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
 import apiClient from '../../api/axiosConfig';
 
+const ConfirmationDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center">
+                    <h2 className="text-green-600 text-xl font-bold !mb-3">{title}</h2>
+                    <p className="text-gray-800 !mb-6">{message}</p>
+                    <div className="flex justify-center gap-4">
+                        <button
+                            onClick={onClose}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer"
+                        >
+                            {cancelText || 'Cancel'}
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                        >
+                            {confirmText || 'Confirm'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EditStudent = () => {
     const navigate = useNavigate();
-    const { id } = useParams(); // Get student ID from URL params
+    const { id } = useParams();
     const location = useLocation();
-    const studentData = location.state?.student; // Get student data from navigation state
+    const studentData = location.state?.student;
 
     const [form, setForm] = useState({
         id: '',
@@ -24,8 +53,8 @@ const EditStudent = () => {
 
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [showBackDialog, setShowBackDialog] = useState(false);
 
-    // Initialize form with student data
     useEffect(() => {
         if (studentData) {
             setForm({
@@ -45,7 +74,6 @@ const EditStudent = () => {
         }
     }, [studentData, id, navigate]);
 
-    // Fetch student data by ID (fallback if data not passed through navigation)
     const fetchStudentData = async (studentId) => {
         try {
             setInitialLoading(true);
@@ -83,10 +111,18 @@ const EditStudent = () => {
         setForm({ ...form, [field]: !form[field] });
     };
 
+    const handleBackClick = () => {
+        setShowBackDialog(true);
+    };
+
+    const confirmBack = () => {
+        setShowBackDialog(false);
+        navigate('/home', { state: { activeTab: 'Students' } });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Basic validation
         if (!form.name.trim()) {
             toast.error('Name is required');
             return;
@@ -104,14 +140,12 @@ const EditStudent = () => {
             return;
         }
 
-        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(form.email)) {
             toast.error('Please enter a valid email address');
             return;
         }
 
-        // Mobile validation (10 digits)
         const mobileRegex = /^[0-9]{10}$/;
         if (!mobileRegex.test(form.mobile)) {
             toast.error('Please enter a valid 10-digit mobile number');
@@ -121,7 +155,6 @@ const EditStudent = () => {
         try {
             setLoading(true);
 
-            // Prepare request body with only necessary fields
             const requestBody = {
                 id: form.id,
                 name: form.name.trim(),
@@ -136,7 +169,6 @@ const EditStudent = () => {
 
             if (response.data.success) {
                 toast.success('User updated successfully!');
-                // Navigate back to students page after a short delay
                 setTimeout(() => {
                     navigate('/home', { state: { activeTab: 'Students' } });
                 }, 1500);
@@ -155,7 +187,6 @@ const EditStudent = () => {
         }
     };
 
-    // Show loading spinner while fetching initial data
     if (initialLoading) {
         return (
             <div className="min-h-screen flex flex-col">
@@ -180,24 +211,21 @@ const EditStudent = () => {
                 <SidebarComponent activeTab="Students" setActiveTab={() => { }} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
-                    {/* Top Title Bar */}
                     <div className="flex items-center gap-3 text-white bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-5">
                         <ArrowLeft
                             className="cursor-pointer text-white"
                             size={20}
-                            onClick={() => navigate('/home', { state: { activeTab: 'Students' } })}
+                            onClick={handleBackClick}
                         />
                         <h2 className="text-lg font-semibold">Edit User Details</h2>
                     </div>
 
-                    {/* Centered Card */}
                     <div className="flex justify-center items-center w-full !px-4 !py-6">
                         <form
                             onSubmit={handleSubmit}
                             className="bg-white border border-[#d9d9f3] rounded-xl shadow-md w-full max-w-4xl !px-8 !py-10"
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 !mb-6">
-                                {/* Name */}
                                 <div>
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Name <span className="text-red-500">*</span>
@@ -213,7 +241,6 @@ const EditStudent = () => {
                                     />
                                 </div>
 
-                                {/* Phone with Code */}
                                 <div>
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Phone <span className="text-red-500">*</span>
@@ -239,7 +266,6 @@ const EditStudent = () => {
                                     </div>
                                 </div>
 
-                                {/* Email */}
                                 <div>
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Email <span className="text-red-500">*</span>
@@ -255,7 +281,6 @@ const EditStudent = () => {
                                     />
                                 </div>
 
-                                {/* Batch */}
                                 <div>
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Batch <span className="text-red-500">*</span>
@@ -272,7 +297,6 @@ const EditStudent = () => {
                                 </div>
                             </div>
 
-                            {/* Toggles */}
                             <div className="flex flex-wrap gap-6 !mb-8">
                                 <div className="flex items-center gap-2">
                                     <label className="text-gray-700 font-medium">Is Active?</label>
@@ -294,7 +318,6 @@ const EditStudent = () => {
                                 </div>
                             </div>
 
-                            {/* Submit */}
                             <div className="text-center">
                                 <button
                                     type="submit"
@@ -311,6 +334,16 @@ const EditStudent = () => {
                     </div>
                 </div>
             </div>
+
+            <ConfirmationDialog
+                isOpen={showBackDialog}
+                onClose={() => setShowBackDialog(false)}
+                onConfirm={confirmBack}
+                title="Go Back?"
+                message="Are you sure you want to go back? Any unsaved changes will be lost."
+                confirmText="Yes, Go Back"
+                cancelText="Cancel"
+            />
         </div>
     );
 };

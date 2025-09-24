@@ -189,7 +189,7 @@ const Home = () => {
                         setActiveTab={handleTabChange}
                     />
                 )}
-                <div className={`flex-1 overflow-y-auto ${activeTab === 'Dashboard' && currentView === 'normal' ? '!px-6 !py-8' : ''}`}>
+                <div className="flex-1 overflow-y-auto">
                     {renderContent()}
                 </div>
             </div>

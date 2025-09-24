@@ -33,12 +33,10 @@ const UserDashboard = ({ setActiveTab }) => {
         console.log('Dashboard - userId:', localStorage.getItem('userId'));
         console.log('Dashboard - refreshToken:', localStorage.getItem('refreshToken'));
 
-
         try {
             setLoading(true);
             setError(null);
 
-            // Check if we have the required authentication data
             const authToken = localStorage.getItem('authToken');
             const deviceId = localStorage.getItem('deviceId');
 
@@ -48,11 +46,9 @@ const UserDashboard = ({ setActiveTab }) => {
             if (!authToken) {
                 console.error('No auth token found');
                 setError('Authentication token not found. Please login again.');
-                // Don't navigate here, let the API client handle it
                 return;
             }
 
-            // Make API call - headers will be set by interceptor
             const response = await apiClient.post('/studentReport/student/getCount', {});
 
             console.log('Dashboard API Response:', response.data);
@@ -66,12 +62,9 @@ const UserDashboard = ({ setActiveTab }) => {
         } catch (err) {
             console.error('Error fetching UserDashboard data:', err);
 
-            // Handle specific error cases
             if (err.response?.status === 401) {
-                // Token refresh will be handled by interceptor
                 setError('Authentication failed. Please wait while we refresh your session...');
 
-                // Retry after a short delay to allow token refresh
                 setTimeout(() => {
                     fetchDashboardData();
                 }, 2000);
@@ -90,7 +83,6 @@ const UserDashboard = ({ setActiveTab }) => {
     };
 
     useEffect(() => {
-        // Check if user is authenticated before making API call
         const authToken = localStorage.getItem('authToken');
         if (!authToken) {
             setError('Please login to view dashboard');
@@ -98,7 +90,6 @@ const UserDashboard = ({ setActiveTab }) => {
             return;
         }
 
-        // Add a small delay to ensure the component is mounted properly
         const timer = setTimeout(() => {
             fetchDashboardData();
         }, 100);
@@ -106,7 +97,6 @@ const UserDashboard = ({ setActiveTab }) => {
         return () => clearTimeout(timer);
     }, []);
 
-    // Add a visibility change listener to refetch data when user comes back to the tab
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && !loading) {
@@ -131,8 +121,10 @@ const UserDashboard = ({ setActiveTab }) => {
     if (loading) {
         return (
             <>
-                <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full'>
+                <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-8'>
+                    <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+                </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full !px-6'>
                     {[...Array(6)].map((_, index) => (
                         <div
                             key={index}
@@ -154,8 +146,10 @@ const UserDashboard = ({ setActiveTab }) => {
     if (error) {
         return (
             <>
-                <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-                <div className='text-red-500 text-center p-4'>
+                <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-8'>
+                    <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+                </div>
+                <div className='text-red-500 text-center p-4 !px-6'>
                     <p>{error}</p>
                     <button
                         onClick={fetchDashboardData}
@@ -170,8 +164,10 @@ const UserDashboard = ({ setActiveTab }) => {
 
     return (
         <>
-            <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full'>
+            <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-8'>
+                <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full !px-6'>
                 {userDashboardCards.map((card, index) => (
                     <div
                         key={index}

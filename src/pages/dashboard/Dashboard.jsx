@@ -7,7 +7,7 @@ import resourcesIcon from '/src/assets/icons/e-resources-icon.png';
 import apiClient from '../../api/axiosConfig';
 import { useNavigate } from 'react-router-dom';
 
-const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
+const Dashboard = ({ setActiveTab }) => {
     const [dashboardData, setDashboardData] = useState({
         userCount: 0,
         totalExamCount: 0,
@@ -21,7 +21,6 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
 
     const dashboardCards = [
         { title: 'All Students', icon: studentsIcon, count: dashboardData.userCount, tab: 'Students' },
-        // { title: 'Create Exam', icon: createExamIcon, count: dashboardData.totalExamCount, tab: 'Create Exam' },
         { title: 'Active Exam', icon: activeExamIcon, count: dashboardData.activeExamCount, tab: 'Active Exam' },
         { title: 'Exam History', icon: examhistoryIcon, count: dashboardData.pastExamCount, tab: 'Exam History' },
         { title: 'Upcoming Exam', icon: activeExamIcon, count: dashboardData.upComingExamCount, tab: 'Upcoming Exam' },
@@ -54,8 +53,10 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
     if (loading) {
         return (
             <>
-                <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full'>
+                <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-8 !py-4 !mb-8'>
+                    <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+                </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full !px-6'>
                     {[...Array(5)].map((_, index) => (
                         <div
                             key={index}
@@ -77,8 +78,10 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
     if (error) {
         return (
             <>
-                <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-                <div className='text-red-500 text-center p-4'>
+                <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-8'>
+                    <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+                </div>
+                <div className='text-red-500 text-center p-4 !px-6'>
                     <p>{error}</p>
                     <button
                         onClick={fetchDashboardData}
@@ -93,12 +96,14 @@ const Dashboard = ({ setActiveTab }) => {  // Accept setActiveTab as prop
 
     return (
         <>
-            <h2 className='text-xl text-[#7966F1] font-bold !mb-6'>Dashboard</h2>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full'>
+            <div className='bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-8'>
+                <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
+            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full !px-6'>
                 {dashboardCards.map((card, index) => (
                     <div
                         key={index}
-                        onClick={() => setActiveTab(card.tab)}  // Trigger activeTab change on card click
+                        onClick={() => setActiveTab(card.tab)}
                         className='cursor-pointer max-w-sm rounded-lg flex bg-[#7966F1] !p-4 justify-between items-center text-white text-lg font-medium border-white border-2'
                         style={{ boxShadow: '4px 4px 8px rgba(0, 0, 0, 0.5)' }}
                     >

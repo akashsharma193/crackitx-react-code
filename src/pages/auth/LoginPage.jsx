@@ -80,7 +80,7 @@ const LoginPage = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         setFormData({
             ...formData,
             [name]: value
@@ -154,11 +154,11 @@ const LoginPage = () => {
 
                 if (response.data.data.user) {
                     const userData = response.data.data.user;
-                    
+
                     console.log('Login Response User Data:', userData);
-                    
+
                     localStorage.setItem('userData', JSON.stringify(userData));
-                    
+
                     const userId = userData.userId || userData.id || userData.user_id || userData.ID;
                     if (userId) {
                         localStorage.setItem('userId', userId.toString());
@@ -169,18 +169,18 @@ const LoginPage = () => {
                 }
 
                 const token = localStorage.getItem('authToken');
-                
+
                 const decodedToken = decodeJWT(token);
                 if (decodedToken) {
                     console.log('Decoded Token:', decodedToken);
-                    
+
                     const tokenUserId = decodedToken.userId || decodedToken.id || decodedToken.user_id || decodedToken.sub;
                     if (tokenUserId && !localStorage.getItem('userId')) {
                         localStorage.setItem('userId', tokenUserId.toString());
                         console.log('Stored User ID from token:', tokenUserId);
                     }
                 }
-                
+
                 checkAdminRole(token);
 
                 // Clear form and reset validation
@@ -210,13 +210,13 @@ const LoginPage = () => {
                     'Login failed';
 
                 if (status === 400) {
-                    toast.error(message || 'Bad request. Please check your input.');
+                    toast.error(message);
                 } else if (status === 401) {
-                    toast.error('Invalid email or password');
+                    toast.error(message || 'Invalid email or password');
                 } else if (status === 404) {
-                    toast.error('User not found');
+                    toast.error(message || 'User not found');
                 } else if (status === 422) {
-                    toast.error('Please check your input and try again');
+                    toast.error(message || 'Please check your input and try again');
                 } else if (status >= 500) {
                     toast.error('Server error. Please try again later');
                 } else {

@@ -31,7 +31,7 @@ const RegisterPage = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         // For phone number field, only allow numeric input
         if (name === 'number') {
             const numericValue = value.replace(/\D/g, ''); // Remove all non-digits
@@ -230,13 +230,12 @@ const RegisterPage = () => {
                     errorMessage = data.errors.join(', ');
                 }
 
-                // Handle specific status codes
                 switch (status) {
                     case 400:
-                        toast.error(errorMessage || 'Bad request. Please check your input.');
+                        toast.error(errorMessage);
                         break;
                     case 401:
-                        toast.error('Unauthorized. Please check your credentials.');
+                        toast.error(errorMessage);
                         break;
                     case 403:
                         toast.error('Access forbidden. Please check your organization code.');
@@ -551,7 +550,7 @@ const RegisterPage = () => {
                                 <span className="text-gray-600" style={{ fontSize: '14px' }}>
                                     Already have an account?{' '}
                                 </span>
-                                <Link to='/' 
+                                <Link to='/'
                                     className="text-gray-900 font-semibold hover:text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
                                     style={{ fontSize: '14px' }}
                                 >

@@ -230,7 +230,7 @@ const ExamParticipants = () => {
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Percentage</th>
                                                     <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
-                                                    <th className="!px-6 !py-4">View</th>
+                                                    {/* <th className="!px-6 !py-4">View</th> */}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -262,7 +262,7 @@ const ExamParticipants = () => {
                                                                         {getPerformanceLabel(parseFloat(participant.percentage))}
                                                                     </span>
                                                                 </td>
-                                                                <td className="!px-6 !py-4">
+                                                                {/* <td className="!px-6 !py-4">
                                                                     <div className="relative group inline-block">
                                                                         <Eye
                                                                             className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
@@ -273,7 +273,7 @@ const ExamParticipants = () => {
                                                                             View Details
                                                                         </div>
                                                                     </div>
-                                                                </td>
+                                                                </td> */}
                                                             </tr>
                                                         ))
                                                 ) : (

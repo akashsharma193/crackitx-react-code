@@ -64,6 +64,10 @@ const HeaderComponent = () => {
         fetchUserProfile();
     }, []);
 
+    const handleLogoClick = () => {
+        navigate('/home', { state: { activeTab: 'Dashboard' } });
+    };
+
     const handleLogout = () => {
         setShowLogoutDialog(true);
     };
@@ -84,14 +88,6 @@ const HeaderComponent = () => {
     };
 
     const profileOptions = [
-        // {
-        //     icon: <User size={18} className="text-gray-600" />,
-        //     label: userProfile?.name || 'User'
-        // },
-        // {
-        //     icon: <Mail size={18} className="text-gray-600" />,
-        //     label: userProfile?.email || 'user@gmail.com'
-        // },
         {
             icon: <Phone size={18} className="text-gray-600" />,
             label: userProfile?.mobile || 'No phone number'
@@ -114,7 +110,7 @@ const HeaderComponent = () => {
     if (isLoading) {
         return (
             <div className='flex justify-between items-center !px-8 !py-3 border-b-2 border-b-gray-200'>
-                <img className='w-[50px]' src={logo} alt="Logo" />
+                <img className='w-[50px] cursor-pointer' src={logo} alt="Logo" onClick={handleLogoClick} />
                 <div className='flex gap-20'>
                     <div className='flex items-center gap-4'>
                         <h2 className='font-bold text-lg text-[#7966F1]'>Loading...</h2>
@@ -132,8 +128,8 @@ const HeaderComponent = () => {
 
     return (
         <>
-            <div className='flex justify-between items-center !px-8 !py-3 border-b-2 border-b-gray-200'>
-                <img className='w-[60px]' src={logo} alt="Logo" />
+            <div className='flex justify-between items-center !px-8 border-b-2 border-b-gray-200'>
+                <img className='w-[100px] cursor-pointer' src={logo} alt="Logo" onClick={handleLogoClick} />
 
                 <div className='flex gap-20'>
                     <div className='flex items-center gap-4'>
