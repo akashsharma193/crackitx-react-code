@@ -25,9 +25,9 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
-    const formatTime = (timeInMs) => {
-        if (!timeInMs || timeInMs === 0) return 'N/A';
-        const seconds = Math.round(timeInMs / 1000);
+    const formatTime = (timeInSeconds) => {
+        if (!timeInSeconds || timeInSeconds === 0) return 'N/A';
+        const seconds = Math.round(timeInSeconds);
         if (seconds < 60) {
             return `${seconds}s`;
         } else {
@@ -132,7 +132,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
-                            <span className="text-sm">Back to History</span>
+                            <span className="text-sm">Back</span>
                         </button>
                     )}
                     <div>

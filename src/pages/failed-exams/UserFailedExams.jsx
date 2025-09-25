@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Search, X, Download, ChevronLeft, ChevronRight, ArrowLeft, Clock, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import { Eye, Search, X, Download, ChevronLeft, ChevronRight, ArrowLeft, Clock, CheckCircle, XCircle, MinusCircle, Timer } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -18,12 +18,24 @@ const CircularLoader = () => {
 
 const QuizResultsPage = ({ resultData, onBack }) => {
     const { answerList, subjectName, teacherName, startTime, endTime } = resultData;
-    
+
     const totalQuestions = answerList.length;
     const correctAnswers = answerList.filter(item => item.userAnswer === item.correctAnswer).length;
     const wrongAnswers = answerList.filter(item => item.userAnswer && item.userAnswer !== item.correctAnswer).length;
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
     const score = Math.round((correctAnswers / totalQuestions) * 100);
+
+    const formatTime = (timeInSeconds) => {
+        if (!timeInSeconds || timeInSeconds === 0) return 'N/A';
+        const seconds = Math.round(timeInSeconds);
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+    };
 
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
@@ -190,22 +202,29 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                         {answerList.map((item, index) => {
                             const isCorrect = item.userAnswer === item.correctAnswer;
                             const isSkipped = !item.userAnswer;
-                            
+
                             return (
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                                            isCorrect
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
                                                 ? 'bg-green-500 text-white'
                                                 : isSkipped
-                                                ? 'bg-gray-500 text-white'
-                                                : 'bg-red-500 text-white'
-                                        }`}>
+                                                    ? 'bg-gray-500 text-white'
+                                                    : 'bg-red-500 text-white'
+                                            }`}>
                                             {index + 1}
                                         </div>
 
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-800 !mb-4">{item.question}</h3>
+                                            <div className="flex items-start justify-between !mb-4">
+                                                <h3 className="font-semibold text-gray-800 flex-1">{item.question}</h3>
+                                                <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg">
+                                                    <Timer size={14} className="text-blue-600" />
+                                                    <span className="text-sm font-medium text-blue-700">
+                                                        {formatTime(item.timeTaken)}
+                                                    </span>
+                                                </div>
+                                            </div>
 
                                             <div className="space-y-2">
                                                 {item.options.map((option, optionIndex) => {
@@ -238,7 +257,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                                                     </span>
                                                                     <span className="flex-1">{option}</span>
                                                                 </div>
-                                                                
+
                                                                 <div className="flex items-center gap-2">
                                                                     {isCorrectOption && (
                                                                         <span className="text-xs font-semibold text-green-600 bg-green-200 !px-2 !py-1 rounded flex items-center gap-1">
@@ -374,15 +393,15 @@ const UserFailedExams = ({ onNavigateToResults }) => {
 
         try {
             setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
-            
+
             const response = await apiClient.get(`/user-activity/getAnswerPaper/${exam.questionId}`);
-            
+
             if (response.data.success && response.data.data) {
                 const answerPaperData = response.data.data;
-                
+
                 setCurrentResults(answerPaperData);
                 setShowResults(true);
-                
+
                 if (onNavigateToResults) {
                     onNavigateToResults(answerPaperData);
                 }
@@ -555,11 +574,10 @@ const UserFailedExams = ({ onNavigateToResults }) => {
                                                     <button
                                                         onClick={() => handleViewClick(exam)}
                                                         disabled={loadingStates[exam.questionId]}
-                                                        className={`transition-colors ${
-                                                            loadingStates[exam.questionId]
-                                                                ? 'text-gray-400 cursor-not-allowed' 
+                                                        className={`transition-colors ${loadingStates[exam.questionId]
+                                                                ? 'text-gray-400 cursor-not-allowed'
                                                                 : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {loadingStates[exam.questionId] ? (
                                                             <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
