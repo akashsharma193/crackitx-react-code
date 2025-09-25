@@ -165,7 +165,7 @@ apiClient.interceptors.response.use(
 
                 // Call refresh token API with correct endpoint and encoded payload
                 const refreshResponse = await axios.post(
-                    `${apiClient.defaults.baseURL}/user-open/refreshToken`,
+                    `${apiClient.defaults.baseURL}user-open/refreshToken`,
                     {
                         encPayload: encodeBase64({
                             refreshToken: refreshToken,
