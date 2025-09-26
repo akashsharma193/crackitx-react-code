@@ -29,13 +29,14 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
     const formatTime = (timeInSeconds) => {
-        if (!timeInSeconds || timeInSeconds === 0) return 'N/A';
-        const seconds = Math.round(timeInSeconds);
-        if (seconds < 60) {
-            return `${seconds}s`;
+        if (timeInSeconds === null || timeInSeconds === undefined) return 'N/A';
+        if (timeInSeconds === 0) return '0s';
+
+        if (timeInSeconds < 60) {
+            return `${timeInSeconds}s`;
         } else {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
+            const minutes = Math.floor(timeInSeconds / 60);
+            const remainingSeconds = timeInSeconds % 60;
             return `${minutes}m ${remainingSeconds}s`;
         }
     };
@@ -218,10 +219,10 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                         <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                             <div className="flex items-start gap-4">
                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
-                                                        ? 'bg-green-500 text-white'
-                                                        : isSkipped
-                                                            ? 'bg-gray-500 text-white'
-                                                            : 'bg-red-500 text-white'
+                                                    ? 'bg-green-500 text-white'
+                                                    : isSkipped
+                                                        ? 'bg-gray-500 text-white'
+                                                        : 'bg-red-500 text-white'
                                                     }`}>
                                                     {index + 1}
                                                 </div>
@@ -586,8 +587,8 @@ const StudentDetails = () => {
                                                                         onClick={() => handleViewExamDetails(exam)}
                                                                         disabled={loadingStates[exam.questionId]}
                                                                         className={`transition-colors ${loadingStates[exam.questionId]
-                                                                                ? 'text-gray-400 cursor-not-allowed'
-                                                                                : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
+                                                                            ? 'text-gray-400 cursor-not-allowed'
+                                                                            : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
                                                                             }`}
                                                                     >
                                                                         {loadingStates[exam.questionId] ? (

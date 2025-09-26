@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
@@ -27,10 +27,24 @@ const EResources = () => (
     </div>
 );
 
+const ComponentWrapper = ({ children, isActive }) => (
+    <div 
+        className={`w-full h-full ${isActive ? 'block' : 'hidden'}`}
+        style={{ 
+            position: isActive ? 'relative' : 'absolute',
+            visibility: isActive ? 'visible' : 'hidden'
+        }}
+    >
+        {children}
+    </div>
+);
+
 const Home = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
     const [userRole, setUserRole] = useState(null);
+    const [initializedTabs, setInitializedTabs] = useState(new Set(['Dashboard']));
+    const componentCache = useRef({});
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -45,16 +59,12 @@ const Home = () => {
         };
 
         checkUserRole();
-
         window.addEventListener('storage', checkUserRole);
-
-        return () => {
-            window.removeEventListener('storage', checkUserRole);
-        };
+        return () => window.removeEventListener('storage', checkUserRole);
     }, []);
 
     useEffect(() => {
-        if (location.state && location.state.activeTab) {
+        if (location.state?.activeTab) {
             setActiveTab(location.state.activeTab);
             window.history.replaceState({}, document.title);
         } else {
@@ -62,75 +72,126 @@ const Home = () => {
         }
     }, [location.state]);
 
-    const handleTabChange = (tab) => {
+    const handleTabChange = useCallback((tab) => {
         if (tab === 'Log Out') {
             setShowLogoutDialog(true);
         } else {
             setActiveTab(tab);
             setCurrentView('normal');
             setSelectedExam(null);
+            setInitializedTabs(prev => new Set([...prev, tab]));
         }
-    };
+    }, []);
 
-    const handleNavigateToQuiz = (examData) => {
+    const handleNavigateToQuiz = useCallback((examData) => {
         console.log('Navigating to quiz with data:', examData);
         setSelectedExam(examData);
         setCurrentView('quiz');
-    };
+    }, []);
 
-    const handleBackToExams = () => {
+    const handleBackToExams = useCallback(() => {
         setCurrentView('normal');
         setSelectedExam(null);
-    };
+    }, []);
 
-    const handleQuizSubmit = (results) => {
+    const handleQuizSubmit = useCallback((results) => {
         console.log('Quiz results:', results);
         toast.success(`Quiz completed! Score: ${results.score}%`);
-
         setTimeout(() => {
             handleBackToExams();
         }, 3000);
-    };
+    }, [handleBackToExams]);
 
-    const handleLogoutConfirm = () => {
+    const handleLogoutConfirm = useCallback(() => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('userData');
         localStorage.removeItem('userRole');
         localStorage.removeItem('deviceId');
-
         sessionStorage.clear();
         navigate('/', { replace: true });
-    };
+    }, [navigate]);
 
-    const handleLogoutCancel = () => {
+    const handleLogoutCancel = useCallback(() => {
         setShowLogoutDialog(false);
-    };
+    }, []);
 
     const isAdmin = userRole === 'Admin';
 
-    const renderAdminContent = () => {
-        switch (activeTab) {
-            case 'Dashboard':
-                return <Dashboard setActiveTab={setActiveTab} />;
-            case 'Students':
-                return <Students />;
-            case 'Exam History':
-                return <PastExams />;
-            case 'Create Exam':
-                return <CreateExam />;
-            case 'Active Exam':
-                return <ActiveExams />;
-            case 'Upcoming Exam':
-                return <UpcomingExam />;
-            case 'E-Resources':
-                return <EResources />;
-            default:
-                return <div className='p-6'>No Content</div>;
+    const createComponent = useCallback((tabName) => {
+        if (componentCache.current[tabName]) {
+            return componentCache.current[tabName];
         }
-    };
 
-    const renderUserContent = () => {
+        let component;
+        if (isAdmin) {
+            switch (tabName) {
+                case 'Dashboard':
+                    component = <Dashboard setActiveTab={setActiveTab} />;
+                    break;
+                case 'Students':
+                    component = <Students />;
+                    break;
+                case 'Exam History':
+                    component = <PastExams />;
+                    break;
+                case 'Create Exam':
+                    component = <CreateExam />;
+                    break;
+                case 'Active Exam':
+                    component = <ActiveExams />;
+                    break;
+                case 'Upcoming Exam':
+                    component = <UpcomingExam />;
+                    break;
+                case 'E-Resources':
+                    component = <EResources />;
+                    break;
+                default:
+                    component = <div className='p-6'>No Content</div>;
+            }
+        } else {
+            switch (tabName) {
+                case 'Dashboard':
+                    component = <UserDashboard setActiveTab={setActiveTab} />;
+                    break;
+                case 'All Test':
+                    component = <AllTests />;
+                    break;
+                case 'Active Exam':
+                    component = <UserActiveExams onNavigateToQuiz={handleNavigateToQuiz} />;
+                    break;
+                case 'Exam History':
+                    component = <UserExamHistory />;
+                    break;
+                case 'Missed Exam':
+                    component = <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;
+                    break;
+                case 'Passed Exam':
+                    component = <UserPassedExams />;
+                    break;
+                case 'Failed Exam':
+                    component = <UserFailedExams />;
+                    break;
+                default:
+                    component = <div className='p-6'>No Content</div>;
+            }
+        }
+
+        componentCache.current[tabName] = component;
+        return component;
+    }, [isAdmin, handleNavigateToQuiz]);
+
+    const clearCache = useCallback(() => {
+        componentCache.current = {};
+        setInitializedTabs(new Set([activeTab]));
+    }, [activeTab]);
+
+    useEffect(() => {
+        clearCache();
+    }, [userRole, clearCache]);
+
+    const renderContent = () => {
         if (currentView === 'quiz') {
             return (
                 <QuizPage
@@ -142,28 +203,19 @@ const Home = () => {
             );
         }
 
-        switch (activeTab) {
-            case 'Dashboard':
-                return <UserDashboard setActiveTab={setActiveTab} />;
-            case 'All Test':
-                return <AllTests />;
-            case 'Active Exam':
-                return <UserActiveExams onNavigateToQuiz={handleNavigateToQuiz} />;
-            case 'Exam History':
-                return <UserExamHistory />;
-            case 'Missed Exam':
-                return <UserUnattemptedExams onNavigateToQuiz={handleNavigateToQuiz} />;
-            case 'Passed Exam':
-                return <UserPassedExams />;
-            case 'Failed Exam':
-                return <UserFailedExams />;
-            default:
-                return <div className='p-6'>No Content</div>;
-        }
-    };
+        const tabs = isAdmin 
+            ? ['Dashboard', 'Students', 'Create Exam', 'Active Exam', 'Exam History', 'Upcoming Exam', 'E-Resources']
+            : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
 
-    const renderContent = () => {
-        return isAdmin ? renderAdminContent() : renderUserContent();
+        return (
+            <div className="relative w-full h-full">
+                {tabs.map(tab => (
+                    <ComponentWrapper key={tab} isActive={activeTab === tab}>
+                        {initializedTabs.has(tab) ? createComponent(tab) : null}
+                    </ComponentWrapper>
+                ))}
+            </div>
+        );
     };
 
     if (userRole === null) {
@@ -189,7 +241,7 @@ const Home = () => {
                         setActiveTab={handleTabChange}
                     />
                 )}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto relative">
                     {renderContent()}
                 </div>
             </div>

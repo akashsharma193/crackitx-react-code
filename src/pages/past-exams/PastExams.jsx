@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Download, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -19,33 +19,19 @@ const CircularLoader = () => {
 
 const PastExams = () => {
     const navigate = useNavigate();
+    const isInitialMount = useRef(true);
 
-    // State management
     const [examData, setExamData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [debouncedFilterTerm, setDebouncedFilterTerm] = useState('');
 
-    // Pagination states
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [pageSize] = useState(10); // Items per page
+    const [pageSize] = useState(10);
 
-    // Debounce search and filter terms
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-            setDebouncedFilterTerm(filterTerm);
-        }, 500);
-
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, filterTerm]);
-
-    // Fetch data from API with pagination using getPastExam
     const fetchPastExamData = async (page = 0, search = '', filter = '') => {
         try {
             setLoading(true);
@@ -53,7 +39,6 @@ const PastExams = () => {
 
             const filterObj = {};
 
-            // Add search filters if provided
             if (search.trim()) {
                 filterObj.subjectName = search.trim();
             }
@@ -72,13 +57,12 @@ const PastExams = () => {
             const response = await apiClient.post('/questionPaper/getPastExam', requestBody);
 
             if (response.data.success && response.data.data) {
-                // Transform API data to match the component's expected format
                 const transformedData = response.data.data.content.map((item, index) => ({
                     srNo: page * pageSize + index + 1,
                     testName: item.subjectName || 'N/A',
                     batch: item.batch || 'N/A',
                     conductedBy: item.teacherName || 'N/A',
-                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A', // Fixed: was item.duration
+                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A',
                     studentCount: item.totalStudents || item.studentCount || 0,
                     startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
                     endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A',
@@ -92,7 +76,6 @@ const PastExams = () => {
 
                 setExamData(transformedData);
 
-                // FIX: Access pagination data from the 'page' object
                 setTotalPages(response.data.data.page.totalPages);
                 setTotalElements(response.data.data.page.totalElements);
                 setCurrentPage(response.data.data.page.number);
@@ -109,20 +92,21 @@ const PastExams = () => {
         }
     };
 
-    // Initial data fetch
     useEffect(() => {
-        fetchPastExamData(0, '', '');
-    }, []);
+        if (isInitialMount.current) {
+            fetchPastExamData(0, '', '');
+            isInitialMount.current = false;
+        } else {
+            const timeoutId = setTimeout(() => {
+                fetchPastExamData(0, searchTerm, filterTerm);
+                setCurrentPage(0);
+            }, 500);
 
-    // Fetch data when debounced search/filter terms change
-    useEffect(() => {
-        // Reset to first page when search/filter changes
-        setCurrentPage(0);
-        fetchPastExamData(0, debouncedSearchTerm, debouncedFilterTerm);
-    }, [debouncedSearchTerm, debouncedFilterTerm]);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [searchTerm, filterTerm]);
 
     const handleViewClick = (exam) => {
-        // Navigate to exam participants page with source tab information
         navigate(`/exam-participants/${exam.questionId}`, {
             state: { sourceTab: 'Exam History' }
         });
@@ -130,18 +114,14 @@ const PastExams = () => {
 
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
-            setCurrentPage(newPage);
-            fetchPastExamData(newPage, debouncedSearchTerm, debouncedFilterTerm);
+            fetchPastExamData(newPage, searchTerm, filterTerm);
         }
     };
 
     const handleClear = () => {
         setSearchTerm('');
         setFilterTerm('');
-        setDebouncedSearchTerm('');
-        setDebouncedFilterTerm('');
         setCurrentPage(0);
-        // Fetch data without any filters
         fetchPastExamData(0, '', '');
     };
 
@@ -153,59 +133,47 @@ const PastExams = () => {
         setFilterTerm(e.target.value);
     };
 
-    // Handle search on Enter key press
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
-            setDebouncedSearchTerm(searchTerm);
             setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
     };
 
-    // Handle filter on Enter key press
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
-            setDebouncedFilterTerm(filterTerm);
             setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
     };
 
     const handleDownload = () => {
-        // Add download functionality for past exams
         console.log('Download Exam History data');
         toast.info('Download functionality coming soon!');
     };
 
-    // Calculate pagination display values
     const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 1;
     const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
-    const hasFilters = debouncedSearchTerm.trim() || debouncedFilterTerm.trim();
+    const hasFilters = searchTerm.trim() || filterTerm.trim();
 
-    // Generate pagination buttons - Same logic as Students component
     const generatePaginationButtons = () => {
         const buttons = [];
         const maxVisibleButtons = 5;
 
         if (totalPages <= maxVisibleButtons) {
-            // Show all pages if total pages is less than or equal to max visible
             for (let i = 0; i < totalPages; i++) {
                 buttons.push(i);
             }
         } else {
-            // Show pages with ellipsis logic
             if (currentPage < 3) {
-                // Show first 5 pages
                 for (let i = 0; i < maxVisibleButtons; i++) {
                     buttons.push(i);
                 }
             } else if (currentPage > totalPages - 4) {
-                // Show last 5 pages
                 for (let i = totalPages - maxVisibleButtons; i < totalPages; i++) {
                     buttons.push(i);
                 }
             } else {
-                // Show current page and 2 pages on each side
                 for (let i = currentPage - 2; i <= currentPage + 2; i++) {
                     buttons.push(i);
                 }
@@ -216,72 +184,63 @@ const PastExams = () => {
     };
 
     return (
-        <div className="flex-1 !py-0 overflow-y-auto">
-            {/* Loading State with Circular Loader */}
-            {loading && <CircularLoader />}
-
-            {/* Error State */}
-            {!loading && error && (
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-red-500 text-lg">Error: {error}</div>
-                </div>
-            )}
-
-            {/* Content - Only show when not loading and no error */}
-            {!loading && !error && (
-                <>
-                    {/* Header Bar */}
-                    <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 mt-0">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            {/* Search */}
-                            <div className="relative min-w-[320px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by subject name..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    onKeyPress={handleSearchKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            {/* Filter */}
-                            <div className="relative min-w-[200px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Filter by teacher name..."
-                                    value={filterTerm}
-                                    onChange={handleFilterChange}
-                                    onKeyPress={handleFilterKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            {/* Clear Button */}
-                            <button
-                                onClick={handleClear}
-                                className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                            >
-                                <X size={16} className="text-gray-500" />
-                                Clear
-                            </button>
-                        </div>
-
-                        {/* Right Buttons */}
-                        <div className="flex items-center gap-4 mt-4 md:mt-0">
-                            <button
-                                onClick={handleDownload}
-                                className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer"
-                            >
-                                <Download size={20} />
-                            </button>
-                        </div>
+        <div className="h-full flex flex-col">
+            <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 flex-shrink-0">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="relative min-w-[320px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by subject name..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            onKeyPress={handleSearchKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
                     </div>
 
-                    {/* Table */}
-                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
+                    <div className="relative min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Filter by teacher name..."
+                            value={filterTerm}
+                            onChange={handleFilterChange}
+                            onKeyPress={handleFilterKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleClear}
+                        className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                        <X size={16} className="text-gray-500" />
+                        Clear
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <button
+                        onClick={handleDownload}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer"
+                    >
+                        <Download size={20} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto !p-8">
+                {loading && <CircularLoader />}
+
+                {!loading && error && (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-red-500 text-lg">Error: {error}</div>
+                    </div>
+                )}
+
+                {!loading && !error && (
+                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1]">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
                                 <tr>
@@ -290,7 +249,6 @@ const PastExams = () => {
                                     <th className="!px-6 !py-4">Batch</th>
                                     <th className="!px-6 !py-4">Conducted By</th>
                                     <th className="!px-6 !py-4">Exam Duration</th>
-                                    {/* <th className="!px-6 !py-4">Student Count</th> */}
                                     <th className="!px-6 !py-4">View</th>
                                 </tr>
                             </thead>
@@ -303,7 +261,6 @@ const PastExams = () => {
                                             <td className="!px-6 !py-4">{exam.batch}</td>
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.examDuration}</td>
-                                            {/* <td className="!px-6 !py-4">{exam.studentCount}</td> */}
                                             <td className="!px-6 !py-4">
                                                 <div className="relative group inline-block">
                                                     <Eye
@@ -320,7 +277,7 @@ const PastExams = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="7" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="6" className="!px-6 !py-8 text-center text-gray-500">
                                             {hasFilters ? 'No past exams found matching your criteria' : 'No past exams found'}
                                         </td>
                                     </tr>
@@ -328,7 +285,6 @@ const PastExams = () => {
                             </tbody>
                         </table>
 
-                        {/* Enhanced Pagination - Same as Students component */}
                         {totalElements > 0 && (
                             <div className="flex items-center justify-between !px-6 !py-4 border-t">
                                 <div className="text-sm text-gray-600">
@@ -342,7 +298,6 @@ const PastExams = () => {
 
                                 {totalPages > 1 && (
                                     <div className="flex items-center gap-2">
-                                        {/* Previous Button */}
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 0}
@@ -355,7 +310,6 @@ const PastExams = () => {
                                             Previous
                                         </button>
 
-                                        {/* Pagination Buttons */}
                                         <div className="flex items-center gap-1">
                                             {generatePaginationButtons().map((pageNum) => (
                                                 <button
@@ -371,7 +325,6 @@ const PastExams = () => {
                                             ))}
                                         </div>
 
-                                        {/* Next Button */}
                                         <button
                                             onClick={() => handlePageChange(currentPage + 1)}
                                             disabled={currentPage === totalPages - 1}
@@ -388,8 +341,8 @@ const PastExams = () => {
                             </div>
                         )}
                     </div>
-                </>
-            )}
+                )}
+            </div>
         </div>
     );
 };

@@ -107,7 +107,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const [showTabWarning, setShowTabWarning] = useState(false);
 
     const timerRef = useRef(null);
-    
+
     useEffect(() => {
         if (currentExam?.questionList) {
             setQuestions(currentExam.questionList);
@@ -125,7 +125,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 const newCount = tabSwitchCount + 1;
                 setTabSwitchCount(newCount);
                 setShowTabWarning(true);
-                
+
                 if (newCount >= 3) {
                     setTimeout(() => {
                         setShowTabWarning(false);
@@ -140,7 +140,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                 const newCount = tabSwitchCount + 1;
                 setTabSwitchCount(newCount);
                 setShowTabWarning(true);
-                
+
                 if (newCount >= 3) {
                     setTimeout(() => {
                         setShowTabWarning(false);
@@ -204,25 +204,25 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-    const formatTimeDisplay = (milliseconds) => {
-        if (!milliseconds) return '0s';
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
+    const formatTimeDisplay = (seconds) => {
+        if (!seconds || seconds < 1) return '0s';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
         if (minutes > 0) {
-            return `${minutes}m ${seconds}s`;
+            return `${minutes}m ${remainingSeconds}s`;
         }
-        return `${seconds}s`;
+        return `${remainingSeconds}s`;
     };
 
     const recordQuestionTime = (questionIndex) => {
         const currentTime = Date.now();
         const startTime = questionStartTimes[questionIndex];
         if (startTime && !questionTimeTaken[questionIndex]) {
-            const timeTaken = currentTime - startTime;
+            const timeTakenMs = currentTime - startTime;
+            const timeTakenSeconds = Math.round(timeTakenMs / 1000);
             setQuestionTimeTaken(prev => ({
                 ...prev,
-                [questionIndex]: timeTaken
+                [questionIndex]: timeTakenSeconds
             }));
         }
     };
@@ -245,7 +245,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 
     const handleMarkForReview = () => {
         if (isSubmitted) return;
-        
+
         const newMarkedForReview = new Set(markedForReview);
         if (newMarkedForReview.has(currentQuestionIndex)) {
             newMarkedForReview.delete(currentQuestionIndex);
@@ -270,10 +270,10 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
     const goToQuestion = (questionIndex) => {
         if (questionIndex >= 0 && questionIndex < questions.length) {
             recordQuestionTime(currentQuestionIndex);
-            
+
             setCurrentQuestionIndex(questionIndex);
             setVisitedQuestions(prev => new Set([...prev, questionIndex]));
-            
+
             if (!questionStartTimes[questionIndex]) {
                 setQuestionStartTimes(prev => ({
                     ...prev,
@@ -326,7 +326,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
         } else {
             toast.warning('Time is up! Quiz submitted automatically.');
         }
-        
+
         recordQuestionTime(currentQuestionIndex);
         setSubmitting(true);
 
@@ -390,7 +390,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                     ...q,
                     userAnswer: selectedAnswers[index] || null,
                     isCorrect: selectedAnswers[index] === q.correctAnswer,
-                    timeTaken: q.timeTaken || questionTimeTaken[index] || 0
+                    timeTaken: questionTimeTaken[index] || 0
                 }))
             });
 
@@ -476,7 +476,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                     ...q,
                     userAnswer: selectedAnswers[index] || null,
                     isCorrect: selectedAnswers[index] === q.correctAnswer,
-                    timeTaken: q.timeTaken || questionTimeTaken[index] || 0
+                    timeTaken: questionTimeTaken[index] || 0
                 }))
             });
 
@@ -574,7 +574,7 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                             <span className="text-sm">Tab switches: {tabSwitchCount}/3</span>
                         </div>
                     )}
-                    
+
                     <div className={`flex items-center gap-2 !px-4 !py-2 rounded-lg ${timeRemaining <= 60 ? 'bg-red-500/20 border border-red-300' : 'bg-white/10'}`}>
                         <Clock size={20} />
                         <span className={`text-lg font-mono font-bold ${timeRemaining <= 60 ? 'text-red-300' : ''}`}>
@@ -596,11 +596,10 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                                     <button
                                         onClick={handleMarkForReview}
                                         disabled={isSubmitted}
-                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-                                            isCurrentQuestionMarked
+                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${isCurrentQuestionMarked
                                                 ? 'bg-orange-100 text-orange-700 border border-orange-300'
                                                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                        } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                            } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
                                     >
                                         {isCurrentQuestionMarked ? <BookmarkX size={16} /> : <Bookmark size={16} />}
                                         {isCurrentQuestionMarked ? 'Unmark' : 'Mark for Review'}
@@ -608,11 +607,10 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
                                     <button
                                         onClick={handleClearAnswer}
                                         disabled={isSubmitted || !selectedAnswers[currentQuestionIndex]}
-                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-                                            selectedAnswers[currentQuestionIndex]
+                                        className={`flex items-center gap-2 !px-3 !py-2 rounded-lg text-sm font-medium transition cursor-pointer ${selectedAnswers[currentQuestionIndex]
                                                 ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                            } ${isSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
                                     >
                                         <X size={16} />
                                         Clear
@@ -801,15 +799,14 @@ const QuizPage = ({ examData, onSubmitQuiz, onBackToExams, hideSubmitButton }) =
 };
 
 const ResultPage = ({ results, onBackToExams }) => {
-    const formatTimeDisplay = (milliseconds) => {
-        if (!milliseconds) return '0s';
-        const totalSeconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
+    const formatTimeDisplay = (seconds) => {
+        if (!seconds || seconds < 1) return '0s';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
         if (minutes > 0) {
-            return `${minutes}m ${seconds}s`;
+            return `${minutes}m ${remainingSeconds}s`;
         }
-        return `${seconds}s`;
+        return `${remainingSeconds}s`;
     };
 
     const PieChart = ({ correct, wrong, skipped, total }) => {

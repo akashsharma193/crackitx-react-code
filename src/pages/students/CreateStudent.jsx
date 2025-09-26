@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -18,6 +18,7 @@ const CreateStudent = () => {
     });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
+    const [showPassword, setShowPassword] = useState(false);
 
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -69,6 +70,10 @@ const CreateStudent = () => {
 
     const handleBack = () => {
         navigate(-1);
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
     };
 
     const handleInputChange = (e) => {
@@ -144,17 +149,37 @@ const CreateStudent = () => {
                 }, 1500);
             }
         } catch (error) {
+            console.error('Error creating student:', error);
+
             if (error.response) {
-                const errorMessage = error.response.data?.message ||
-                    error.response.data?.error ||
+                const status = error.response.status;
+                const errorData = error.response.data;
+                
+                const errorMessage = errorData?.message ||
+                    errorData?.error ||
+                    errorData?.detail ||
                     'Failed to create student';
-                toast.error(errorMessage);
+
+                if (status === 400) {
+                    toast.error(errorMessage);
+                } else if (status === 401) {
+                    toast.error(errorMessage || 'Unauthorized access');
+                } else if (status === 404) {
+                    toast.error(errorMessage || 'Resource not found');
+                } else if (status === 409) {
+                    toast.error(errorMessage || 'Conflict - Resource already exists');
+                } else if (status === 422) {
+                    toast.error(errorMessage || 'Validation error - Please check your input');
+                } else if (status >= 500) {
+                    toast.error('Server error. Please try again later');
+                } else {
+                    toast.error(errorMessage);
+                }
             } else if (error.request) {
                 toast.error('Network error. Please check your connection and try again.');
             } else {
                 toast.error('An unexpected error occurred. Please try again.');
             }
-            console.error('Error creating student:', error);
         } finally {
             setLoading(false);
         }
@@ -272,18 +297,32 @@ const CreateStudent = () => {
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Password <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleInputChange}
-                                        className={`w-full border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.password
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
-                                            }`}
-                                        placeholder="Enter password"
-                                        disabled={loading}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleInputChange}
+                                            className={`w-full border rounded-md !px-4 !py-2 !pr-12 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.password
+                                                    ? 'border-red-500 focus:ring-red-500'
+                                                    : 'border-[#7966F1] focus:ring-[#7966F1]'
+                                                }`}
+                                            placeholder="Enter password"
+                                            disabled={loading}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={togglePasswordVisibility}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                            disabled={loading}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff size={18} />
+                                            ) : (
+                                                <Eye size={18} />
+                                            )}
+                                        </button>
+                                    </div>
                                     {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                                 </div>
 

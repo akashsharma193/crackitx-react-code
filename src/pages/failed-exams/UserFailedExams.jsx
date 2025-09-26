@@ -26,7 +26,8 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
     const formatTime = (timeInSeconds) => {
-        if (!timeInSeconds || timeInSeconds === 0) return 'N/A';
+        if (timeInSeconds === 0) return '0s';
+        if (!timeInSeconds) return 'N/A';
         const seconds = Math.round(timeInSeconds);
         if (seconds < 60) {
             return `${seconds}s`;
@@ -123,7 +124,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="h-full flex flex-col bg-gray-50">
             <div className="bg-[#7966F1] text-white !px-6 !py-4 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     {onBack && (
@@ -207,10 +208,10 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
-                                                ? 'bg-green-500 text-white'
-                                                : isSkipped
-                                                    ? 'bg-gray-500 text-white'
-                                                    : 'bg-red-500 text-white'
+                                            ? 'bg-green-500 text-white'
+                                            : isSkipped
+                                                ? 'bg-gray-500 text-white'
+                                                : 'bg-red-500 text-white'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -489,60 +490,60 @@ const UserFailedExams = ({ onNavigateToResults }) => {
     }
 
     return (
-        <div className="flex-1 !py-0 overflow-y-auto">
-            {loading && <CircularLoader />}
-
-            {!loading && error && (
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-red-500 text-lg">Error: {error}</div>
-                </div>
-            )}
-
-            {!loading && !error && (
-                <>
-                    <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="relative min-w-[320px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by subject name..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    onKeyPress={handleSearchKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <div className="relative min-w-[200px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Filter by teacher name..."
-                                    value={filterTerm}
-                                    onChange={handleFilterChange}
-                                    onKeyPress={handleFilterKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleClear}
-                                className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                            >
-                                <X size={16} className="text-gray-500" />
-                                Clear
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-4 md:mt-0">
-                            <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
-                                <Download size={20} />
-                            </button>
-                        </div>
+        <div className="h-full flex flex-col">
+            <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 flex-shrink-0">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="relative min-w-[320px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by subject name..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            onKeyPress={handleSearchKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
+                    <div className="relative min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Filter by teacher name..."
+                            value={filterTerm}
+                            onChange={handleFilterChange}
+                            onKeyPress={handleFilterKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleClear}
+                        className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                        <X size={16} className="text-gray-500" />
+                        Clear
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
+                        <Download size={20} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto !p-8">
+                {loading && <CircularLoader />}
+
+                {!loading && error && (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-red-500 text-lg">Error: {error}</div>
+                    </div>
+                )}
+
+                {!loading && !error && (
+                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1]">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
                                 <tr>
@@ -575,8 +576,8 @@ const UserFailedExams = ({ onNavigateToResults }) => {
                                                         onClick={() => handleViewClick(exam)}
                                                         disabled={loadingStates[exam.questionId]}
                                                         className={`transition-colors ${loadingStates[exam.questionId]
-                                                                ? 'text-gray-400 cursor-not-allowed'
-                                                                : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
+                                                            ? 'text-gray-400 cursor-not-allowed'
+                                                            : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
                                                             }`}
                                                     >
                                                         {loadingStates[exam.questionId] ? (
@@ -656,8 +657,8 @@ const UserFailedExams = ({ onNavigateToResults }) => {
                             </div>
                         )}
                     </div>
-                </>
-            )}
+                )}
+            </div>
         </div>
     );
 };

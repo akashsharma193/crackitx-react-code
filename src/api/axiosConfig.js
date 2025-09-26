@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+const pendingRequests = new Map();
+
+const generateRequestKey = (config) => {
+    const { method, url, data, params } = config;
+    return `${method}:${url}:${JSON.stringify(data || {})}:${JSON.stringify(params || {})}`;
+};
+
 const apiClient = axios.create({
     baseURL: 'https://tomarbros.in/',
     timeout: 30000,
@@ -31,29 +38,31 @@ const decodeBase64 = (encodedData) => {
     return JSON.parse(atob(encodedData));
 };
 
-// Request Interceptor
 apiClient.interceptors.request.use(
     (config) => {
+        const requestKey = generateRequestKey(config);
+        
+        if (pendingRequests.has(requestKey)) {
+            console.log('Duplicate request detected, returning existing promise:', requestKey);
+            return pendingRequests.get(requestKey);
+        }
+
         const token = localStorage.getItem('authToken');
         const deviceId = localStorage.getItem('deviceId');
 
-        // Add Authorization header for all requests except login/register endpoints
         if (!config.url.includes('/user-open/')) {
             if (token) {
                 config.headers['Authorization'] = `Bearer ${token}`;
             }
         }
 
-        // Add deviceId header if available
         if (deviceId) {
             config.headers['deviceId'] = deviceId;
         }
 
-        // Set required headers
         config.headers['encDisabled'] = 'false';
         config.headers['Content-Type'] = 'application/json';
 
-        // Handle GET and DELETE requests (add empty payload if no data)
         if (config.method === 'get' || config.method === 'delete') {
             if (!config.data) {
                 config.data = {
@@ -62,7 +71,6 @@ apiClient.interceptors.request.use(
             }
         }
 
-        // Only encode if not already encoded and not marked as processed
         if (config.data && !config.data.encPayload && !config._skipEncoding) {
             console.log('Encoding request data:', config.data);
             config.data = {
@@ -77,9 +85,11 @@ apiClient.interceptors.request.use(
             url: config.url,
             method: config.method,
             headers: config.headers,
-            data: config.data
+            data: config.data,
+            requestKey
         });
 
+        config._requestKey = requestKey;
         return config;
     },
     (error) => {
@@ -88,10 +98,13 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Response Interceptor
 apiClient.interceptors.response.use(
     (response) => {
-        // Decode encrypted response if present
+        const requestKey = response.config._requestKey;
+        if (requestKey) {
+            pendingRequests.delete(requestKey);
+        }
+
         if (response.data && response.data.encPayloadRes) {
             response.data = decodeBase64(response.data.encPayloadRes);
         }
@@ -99,45 +112,47 @@ apiClient.interceptors.response.use(
         console.log('API Response:', {
             url: response.config.url,
             status: response.status,
-            data: response.data
+            data: response.data,
+            requestKey
         });
 
         return response;
     },
     async (error) => {
         const originalRequest = error.config;
+        const requestKey = originalRequest?._requestKey;
+
+        if (requestKey) {
+            pendingRequests.delete(requestKey);
+        }
 
         console.error('API Error:', {
             url: originalRequest?.url,
             status: error.response?.status,
-            message: error.message
+            message: error.message,
+            requestKey
         });
 
-        // Decode encrypted error response if present
         if (error.response?.data?.encPayloadRes) {
             error.response.data = decodeBase64(error.response.data.encPayloadRes);
         }
 
-        // Handle 401 Unauthorized errors
         if (error.response?.status === 409 && !originalRequest._retry) {
-            // Don't try to refresh token for login requests
             if (originalRequest.url.includes('/user-open/login')) {
                 return Promise.reject(error);
             }
 
-            // If already refreshing, queue the request
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 }).then(token => {
-                    // Create fresh request with new token but preserve original data
                     const freshRequest = {
                         ...originalRequest,
                         headers: {
                             ...originalRequest.headers,
                             'Authorization': `Bearer ${token}`
                         },
-                        _skipEncoding: true // Mark to skip encoding since data is already encoded
+                        _skipEncoding: true
                     };
                     delete freshRequest._retry;
                     return apiClient(freshRequest);
@@ -146,14 +161,12 @@ apiClient.interceptors.response.use(
                 });
             }
 
-            // Mark request as retried and start refresh process
             originalRequest._retry = true;
             isRefreshing = true;
 
             const refreshToken = localStorage.getItem('refreshToken');
             const userId = localStorage.getItem('userId');
 
-            // If no refresh token or userId, logout immediately
             if (!refreshToken || !userId) {
                 console.log('No refresh token or userId found, logging out...');
                 handleLogout('Session expired. Please login again.');
@@ -163,7 +176,6 @@ apiClient.interceptors.response.use(
             try {
                 console.log('Attempting to refresh token...');
 
-                // Call refresh token API with correct endpoint and encoded payload
                 const refreshResponse = await axios.post(
                     `${apiClient.defaults.baseURL}user-open/refreshToken`,
                     {
@@ -184,17 +196,14 @@ apiClient.interceptors.response.use(
 
                 let responseData = refreshResponse.data;
 
-                // Decode response if encrypted
                 if (responseData.encPayloadRes) {
                     responseData = decodeBase64(responseData.encPayloadRes);
                 }
 
-                // Check if refresh was successful
                 if (responseData && responseData.success && responseData.data) {
                     const { token: newToken, refreshToken: newRefreshToken, userId: newUserId } = responseData.data;
 
                     if (newToken) {
-                        // Store new tokens
                         localStorage.setItem('authToken', newToken);
 
                         if (newRefreshToken) {
@@ -207,17 +216,15 @@ apiClient.interceptors.response.use(
 
                         console.log('Token refreshed successfully');
 
-                        // Create fresh request with new token and skip encoding
                         const retryRequest = {
                             ...originalRequest,
                             headers: {
                                 ...originalRequest.headers,
                                 'Authorization': `Bearer ${newToken}`
                             },
-                            _skipEncoding: true // Important: Skip encoding since data is already encoded
+                            _skipEncoding: true
                         };
 
-                        // Remove the _retry flag to avoid infinite loops
                         delete retryRequest._retry;
 
                         console.log('Retrying original request after token refresh:', {
@@ -227,10 +234,8 @@ apiClient.interceptors.response.use(
                             skipEncoding: retryRequest._skipEncoding
                         });
 
-                        // Process queued requests
                         processQueue(null, newToken);
 
-                        // Retry original request
                         return apiClient(retryRequest);
                     } else {
                         throw new Error('No access token in refresh response');
@@ -242,10 +247,8 @@ apiClient.interceptors.response.use(
             } catch (refreshError) {
                 console.error('Refresh token error:', refreshError);
 
-                // Process failed queue
                 processQueue(refreshError, null);
 
-                // Handle specific refresh token errors
                 if (refreshError.response?.status === 401 ||
                     refreshError.response?.status === 403 ||
                     refreshError.response?.status === 400) {
@@ -262,16 +265,15 @@ apiClient.interceptors.response.use(
             }
         }
 
-        // For all other errors, just reject
         return Promise.reject(error);
     }
 );
 
-// Logout function
 const handleLogout = (message = 'Session expired. Please login again.') => {
     console.log('Logging out user:', message);
 
-    // Clear all authentication data
+    pendingRequests.clear();
+
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userData');
@@ -279,14 +281,11 @@ const handleLogout = (message = 'Session expired. Please login again.') => {
     localStorage.removeItem('userId');
     localStorage.removeItem('deviceId');
 
-    // Show message to user (you might want to use a toast notification here)
     alert(message);
 
-    // Redirect to login page
     window.location.href = '/';
 };
 
-// Optional: Add a function to manually check token validity
 export const checkTokenValidity = () => {
     const token = localStorage.getItem('authToken');
     const refreshToken = localStorage.getItem('refreshToken');
@@ -307,6 +306,10 @@ export const checkTokenValidity = () => {
         refreshToken,
         userId
     };
+};
+
+export const clearPendingRequests = () => {
+    pendingRequests.clear();
 };
 
 export default apiClient;

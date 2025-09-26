@@ -26,7 +26,8 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     const score = Math.round((correctAnswers / totalQuestions) * 100);
 
     const formatTime = (timeInSeconds) => {
-        if (!timeInSeconds || timeInSeconds === 0) return 'N/A';
+        if (timeInSeconds === 0) return '0s';
+        if (!timeInSeconds) return 'N/A';
         const seconds = Math.round(timeInSeconds);
         if (seconds < 60) {
             return `${seconds}s`;
@@ -123,7 +124,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="h-full flex flex-col bg-gray-50">
             <div className="bg-[#7966F1] text-white !px-6 !py-4 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     {onBack && (
@@ -302,8 +303,6 @@ const UserExamHistory = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [debouncedFilterTerm, setDebouncedFilterTerm] = useState('');
 
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -313,15 +312,6 @@ const UserExamHistory = () => {
     const [loadingStates, setLoadingStates] = useState({});
     const [showResults, setShowResults] = useState(false);
     const [currentResults, setCurrentResults] = useState(null);
-
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-            setDebouncedFilterTerm(filterTerm);
-        }, 500);
-
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, filterTerm]);
 
     const fetchCompletedTestData = async (page = 0, search = '', filter = '') => {
         try {
@@ -352,7 +342,7 @@ const UserExamHistory = () => {
                     testName: item.subjectName || 'N/A',
                     batch: item.batch || 'N/A',
                     conductedBy: item.teacherName || 'N/A',
-                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A',
+                    examDuration: 'N/A',
                     startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
                     endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A',
                     questionId: item.questionId,
@@ -360,7 +350,7 @@ const UserExamHistory = () => {
                     userId: item.userId,
                     id: item.id || item.questionId,
                     status: 'Completed',
-                    totalQuestions: item.questionList ? item.questionList.length : 0,
+                    totalQuestions: item.totalQuestion || 0,
                     fullData: item
                 }));
 
@@ -388,6 +378,10 @@ const UserExamHistory = () => {
         }
 
         const loadingKey = exam.questionId;
+
+        if (loadingStates[loadingKey]) {
+            return;
+        }
 
         try {
             setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
@@ -420,22 +414,23 @@ const UserExamHistory = () => {
     }, []);
 
     useEffect(() => {
-        setCurrentPage(0);
-        fetchCompletedTestData(0, debouncedSearchTerm, debouncedFilterTerm);
-    }, [debouncedSearchTerm, debouncedFilterTerm]);
+        const timeoutId = setTimeout(() => {
+            fetchCompletedTestData(0, searchTerm, filterTerm);
+            setCurrentPage(0);
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, filterTerm]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
-            setCurrentPage(newPage);
-            fetchCompletedTestData(newPage, debouncedSearchTerm, debouncedFilterTerm);
+            fetchCompletedTestData(newPage, searchTerm, filterTerm);
         }
     };
 
     const handleClear = () => {
         setSearchTerm('');
         setFilterTerm('');
-        setDebouncedSearchTerm('');
-        setDebouncedFilterTerm('');
         setCurrentPage(0);
         fetchCompletedTestData(0, '', '');
     };
@@ -450,7 +445,6 @@ const UserExamHistory = () => {
 
     const handleSearchKeyPress = (e) => {
         if (e.key === 'Enter') {
-            setDebouncedSearchTerm(searchTerm);
             setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
@@ -458,7 +452,6 @@ const UserExamHistory = () => {
 
     const handleFilterKeyPress = (e) => {
         if (e.key === 'Enter') {
-            setDebouncedFilterTerm(filterTerm);
             setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
@@ -472,7 +465,7 @@ const UserExamHistory = () => {
     const actualDataCount = examData.length;
     const startIndex = actualDataCount > 0 ? (currentPage * pageSize) + 1 : 0;
     const endIndex = actualDataCount > 0 ? (currentPage * pageSize) + actualDataCount : 0;
-    const hasFilters = debouncedSearchTerm.trim() || debouncedFilterTerm.trim();
+    const hasFilters = searchTerm.trim() || filterTerm.trim();
 
     const generatePaginationButtons = () => {
         const buttons = [];
@@ -506,63 +499,63 @@ const UserExamHistory = () => {
     }
 
     return (
-        <div className="flex-1 !py-0 overflow-y-auto">
-            {loading && <CircularLoader />}
-
-            {!loading && error && (
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-red-500 text-lg">Error: {error}</div>
-                </div>
-            )}
-
-            {!loading && !error && (
-                <>
-                    <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 mt-0">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="relative min-w-[320px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by subject name..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    onKeyPress={handleSearchKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <div className="relative min-w-[200px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Filter by teacher name..."
-                                    value={filterTerm}
-                                    onChange={handleFilterChange}
-                                    onKeyPress={handleFilterKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleClear}
-                                className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                            >
-                                <X size={16} className="text-gray-500" />
-                                Clear
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-4 md:mt-0">
-                            <button
-                                onClick={handleDownload}
-                                className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer"
-                            >
-                                <Download size={20} />
-                            </button>
-                        </div>
+        <div className="h-full flex flex-col">
+            <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 flex-shrink-0">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="relative min-w-[320px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by subject name..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            onKeyPress={handleSearchKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
+                    <div className="relative min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Filter by teacher name..."
+                            value={filterTerm}
+                            onChange={handleFilterChange}
+                            onKeyPress={handleFilterKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleClear}
+                        className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                        <X size={16} className="text-gray-500" />
+                        Clear
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <button
+                        onClick={handleDownload}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer"
+                    >
+                        <Download size={20} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto !p-8">
+                {loading && <CircularLoader />}
+
+                {!loading && error && (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-red-500 text-lg">Error: {error}</div>
+                    </div>
+                )}
+
+                {!loading && !error && (
+                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1]">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">
                                 <tr>
@@ -676,8 +669,8 @@ const UserExamHistory = () => {
                             </div>
                         )}
                     </div>
-                </>
-            )}
+                )}
+            </div>
         </div>
     );
 };
