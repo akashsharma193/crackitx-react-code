@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import dashboardIcon from '/src/assets/icons/dashboard-icon.png';
 import studentsIcon from '/src/assets/icons/students-icon.png';
 import examhistoryIcon from '/src/assets/icons/exam-history-icon.png';
@@ -18,8 +18,31 @@ const sidebarItems = [
 ];
 
 const UserSidebarComponent = ({ activeTab, setActiveTab }) => {
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            .user-sidebar-scroll::-webkit-scrollbar {
+                width: 4px;
+            }
+            .user-sidebar-scroll::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .user-sidebar-scroll::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 2px;
+            }
+            .user-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.5);
+            }
+        `;
+        if (!document.head.querySelector('#user-sidebar-scrollbar-styles')) {
+            style.id = 'user-sidebar-scrollbar-styles';
+            document.head.appendChild(style);
+        }
+    }, []);
+
     return (
-        <div className='w-64 bg-[url(/src/assets/images/wavy-background-image.png)] text-white font-semibold flex-shrink-0'>
+        <div className='w-64 bg-[url(/src/assets/images/wavy-background-image.png)] text-white font-semibold flex-shrink-0 h-full overflow-y-auto user-sidebar-scroll'>
             {sidebarItems.map((item, index) => (
                 <React.Fragment key={index}>
                     <div
@@ -27,7 +50,6 @@ const UserSidebarComponent = ({ activeTab, setActiveTab }) => {
                         ${activeTab === item.label ? 'text-white' : ''}`}
                         onClick={() => setActiveTab(item.label)}
                     >
-                        {/* Active indicator bar */}
                         {activeTab === item.label && (
                             <div className="absolute left-0 top-0 h-full w-2 bg-white rounded-r-md" />
                         )}
