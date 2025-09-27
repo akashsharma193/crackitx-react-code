@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Download, Search, X, ChevronLeft, ChevronRight, Eye, ArrowLeft, Clock, CheckCircle, XCircle, MinusCircle, Timer } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
@@ -313,10 +313,21 @@ const UserExamHistory = () => {
     const [showResults, setShowResults] = useState(false);
     const [currentResults, setCurrentResults] = useState(null);
 
-    const fetchCompletedTestData = async (page = 0, search = '', filter = '') => {
+    const searchTimeoutRef = useRef(null);
+    const abortControllerRef = useRef(null);
+    const isInitialLoadRef = useRef(true);
+
+    const fetchCompletedTestData = useCallback(async (page = 0, search = '', filter = '') => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+
         try {
             setLoading(true);
             setError(null);
+            toast.dismiss();
 
             const filterObj = {};
 
@@ -334,7 +345,9 @@ const UserExamHistory = () => {
                 filter: filterObj
             };
 
-            const response = await apiClient.post('/user-activity/getAllCompletedTest', requestBody);
+            const response = await apiClient.post('/user-activity/getAllCompletedTest', requestBody, {
+                signal: abortControllerRef.current.signal
+            });
 
             if (response.data.success && response.data.data) {
                 const transformedData = response.data.data.content.map((item, index) => ({
@@ -362,16 +375,22 @@ const UserExamHistory = () => {
                 throw new Error(response.data.message || 'Failed to fetch completed test data');
             }
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return;
+            }
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch completed test data';
             setError(errorMessage);
             console.error('Error fetching completed test data:', err);
-            toast.error('Failed to fetch completed test data');
+            
+            if (!abortControllerRef.current?.signal?.aborted && examData.length === 0) {
+                toast.error('Failed to fetch completed test data');
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, [pageSize, examData.length]);
 
-    const handleViewClick = async (exam) => {
+    const handleViewClick = useCallback(async (exam) => {
         if (!exam.questionId) {
             toast.error('Question ID not found for this exam');
             return;
@@ -402,72 +421,86 @@ const UserExamHistory = () => {
         } finally {
             setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
         }
-    };
+    }, [loadingStates]);
 
-    const handleBackFromResults = () => {
+    const handleBackFromResults = useCallback(() => {
         setShowResults(false);
         setCurrentResults(null);
-    };
-
-    useEffect(() => {
-        fetchCompletedTestData(0, '', '');
     }, []);
 
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            fetchCompletedTestData(0, searchTerm, filterTerm);
-            setCurrentPage(0);
-        }, 500);
+        if (isInitialLoadRef.current) {
+            fetchCompletedTestData(0, '', '');
+            isInitialLoadRef.current = false;
+        }
+    }, [fetchCompletedTestData]);
 
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, filterTerm]);
+    useEffect(() => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
 
-    const handlePageChange = (newPage) => {
+        if (!isInitialLoadRef.current) {
+            searchTimeoutRef.current = setTimeout(() => {
+                fetchCompletedTestData(0, searchTerm, filterTerm);
+                setCurrentPage(0);
+            }, 500);
+        }
+
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, [searchTerm, filterTerm, fetchCompletedTestData]);
+
+    const handlePageChange = useCallback((newPage) => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
             fetchCompletedTestData(newPage, searchTerm, filterTerm);
         }
-    };
+    }, [totalPages, currentPage, searchTerm, filterTerm, fetchCompletedTestData]);
 
-    const handleClear = () => {
+    const handleClear = useCallback(() => {
         setSearchTerm('');
         setFilterTerm('');
         setCurrentPage(0);
         fetchCompletedTestData(0, '', '');
-    };
+    }, [fetchCompletedTestData]);
 
-    const handleSearchChange = (e) => {
+    const handleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
-    };
+    }, []);
 
-    const handleFilterChange = (e) => {
+    const handleFilterChange = useCallback((e) => {
         setFilterTerm(e.target.value);
-    };
+    }, []);
 
-    const handleSearchKeyPress = (e) => {
+    const handleSearchKeyPress = useCallback((e) => {
         if (e.key === 'Enter') {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
             setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
-    };
+    }, [searchTerm, filterTerm, fetchCompletedTestData]);
 
-    const handleFilterKeyPress = (e) => {
+    const handleFilterKeyPress = useCallback((e) => {
         if (e.key === 'Enter') {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
             setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
-    };
+    }, [searchTerm, filterTerm, fetchCompletedTestData]);
 
-    const handleDownload = () => {
+    const handleDownload = useCallback(() => {
         console.log('Download Completed Tests data');
         toast.info('Download functionality coming soon!');
-    };
+    }, []);
 
-    const actualDataCount = examData.length;
-    const startIndex = actualDataCount > 0 ? (currentPage * pageSize) + 1 : 0;
-    const endIndex = actualDataCount > 0 ? (currentPage * pageSize) + actualDataCount : 0;
-    const hasFilters = searchTerm.trim() || filterTerm.trim();
-
-    const generatePaginationButtons = () => {
+    const generatePaginationButtons = useCallback(() => {
         const buttons = [];
         const maxVisibleButtons = 5;
 
@@ -492,7 +525,23 @@ const UserExamHistory = () => {
         }
 
         return buttons;
-    };
+    }, [currentPage, totalPages]);
+
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const actualDataCount = examData.length;
+    const startIndex = actualDataCount > 0 ? (currentPage * pageSize) + 1 : 0;
+    const endIndex = actualDataCount > 0 ? (currentPage * pageSize) + actualDataCount : 0;
+    const hasFilters = searchTerm.trim() || filterTerm.trim();
 
     if (showResults && currentResults) {
         return <QuizResultsPage resultData={currentResults} onBack={handleBackFromResults} />;
@@ -563,7 +612,7 @@ const UserExamHistory = () => {
                                     <th className="!px-6 !py-4">Test Name</th>
                                     <th className="!px-6 !py-4">Batch</th>
                                     <th className="!px-6 !py-4">Conducted By</th>
-                                    <th className="!px-6 !py-4">Duration</th>
+                                    {/* <th className="!px-6 !py-4">Duration</th> */}
                                     <th className="!px-6 !py-4">Start Time</th>
                                     <th className="!px-6 !py-4">End Time</th>
                                     <th className="!px-6 !py-4">Total Questions</th>
@@ -578,7 +627,7 @@ const UserExamHistory = () => {
                                             <td className="!px-6 !py-4">{exam.testName}</td>
                                             <td className="!px-6 !py-4">{exam.batch}</td>
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
-                                            <td className="!px-6 !py-4">{exam.examDuration}</td>
+                                            {/* <td className="!px-6 !py-4">{exam.examDuration}</td> */}
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
                                             <td className="!px-6 !py-4">{exam.totalQuestions}</td>

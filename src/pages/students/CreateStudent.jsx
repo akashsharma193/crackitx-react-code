@@ -152,29 +152,15 @@ const CreateStudent = () => {
             console.error('Error creating student:', error);
 
             if (error.response) {
-                const status = error.response.status;
                 const errorData = error.response.data;
                 
-                const errorMessage = errorData?.message ||
-                    errorData?.error ||
-                    errorData?.detail ||
-                    'Failed to create student';
+                const errorMessage = errorData?.message || 
+                    errorData?.error || 
+                    errorData?.detail || 
+                    'An error occurred while creating the student';
 
-                if (status === 400) {
-                    toast.error(errorMessage);
-                } else if (status === 401) {
-                    toast.error(errorMessage || 'Unauthorized access');
-                } else if (status === 404) {
-                    toast.error(errorMessage || 'Resource not found');
-                } else if (status === 409) {
-                    toast.error(errorMessage || 'Conflict - Resource already exists');
-                } else if (status === 422) {
-                    toast.error(errorMessage || 'Validation error - Please check your input');
-                } else if (status >= 500) {
-                    toast.error('Server error. Please try again later');
-                } else {
-                    toast.error(errorMessage);
-                }
+                console.log('API Error Response:', errorData);
+                toast.error(errorMessage);
             } else if (error.request) {
                 toast.error('Network error. Please check your connection and try again.');
             } else {

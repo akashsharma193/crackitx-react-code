@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, Download, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -19,7 +19,9 @@ const CircularLoader = () => {
 
 const PastExams = () => {
     const navigate = useNavigate();
-    const isInitialMount = useRef(true);
+    const isInitialLoadRef = useRef(true);
+    const searchTimeoutRef = useRef(null);
+    const abortControllerRef = useRef(null);
 
     const [examData, setExamData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -32,10 +34,19 @@ const PastExams = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [pageSize] = useState(10);
 
-    const fetchPastExamData = async (page = 0, search = '', filter = '') => {
+    const fetchPastExamData = useCallback(async (page = 0, search = '', filter = '') => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+
         try {
             setLoading(true);
             setError(null);
+            
+            // Clear any existing error toasts
+            toast.dismiss();
 
             const filterObj = {};
 
@@ -54,7 +65,9 @@ const PastExams = () => {
             };
 
             console.log('Fetching Exam History with body:', requestBody);
-            const response = await apiClient.post('/questionPaper/getPastExam', requestBody);
+            const response = await apiClient.post('/questionPaper/getPastExam', requestBody, {
+                signal: abortControllerRef.current.signal
+            });
 
             if (response.data.success && response.data.data) {
                 const transformedData = response.data.data.content.map((item, index) => ({
@@ -83,80 +96,101 @@ const PastExams = () => {
                 throw new Error(response.data.message || 'Failed to fetch past exam data');
             }
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return;
+            }
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch past exam data';
             setError(errorMessage);
             console.error('Error fetching past exam data:', err);
-            toast.error('Failed to fetch past exam data');
+            
+            // Only show toast error if it's not a cancelled request and we don't have data
+            if (!abortControllerRef.current?.signal?.aborted && examData.length === 0) {
+                toast.error('Failed to fetch past exam data');
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, [pageSize]);
 
     useEffect(() => {
-        if (isInitialMount.current) {
+        if (isInitialLoadRef.current) {
             fetchPastExamData(0, '', '');
-            isInitialMount.current = false;
-        } else {
-            const timeoutId = setTimeout(() => {
+            isInitialLoadRef.current = false;
+        }
+    }, [fetchPastExamData]);
+
+    useEffect(() => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        if (!isInitialLoadRef.current) {
+            searchTimeoutRef.current = setTimeout(() => {
                 fetchPastExamData(0, searchTerm, filterTerm);
                 setCurrentPage(0);
             }, 500);
-
-            return () => clearTimeout(timeoutId);
         }
-    }, [searchTerm, filterTerm]);
 
-    const handleViewClick = (exam) => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, [searchTerm, filterTerm, fetchPastExamData]);
+
+    const handleViewClick = useCallback((exam) => {
         navigate(`/exam-participants/${exam.questionId}`, {
             state: { sourceTab: 'Exam History' }
         });
-    };
+    }, [navigate]);
 
-    const handlePageChange = (newPage) => {
+    const handlePageChange = useCallback((newPage) => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
             fetchPastExamData(newPage, searchTerm, filterTerm);
         }
-    };
+    }, [totalPages, currentPage, searchTerm, filterTerm, fetchPastExamData]);
 
-    const handleClear = () => {
+    const handleClear = useCallback(() => {
         setSearchTerm('');
         setFilterTerm('');
         setCurrentPage(0);
         fetchPastExamData(0, '', '');
-    };
+    }, [fetchPastExamData]);
 
-    const handleSearchChange = (e) => {
+    const handleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
-    };
+    }, []);
 
-    const handleFilterChange = (e) => {
+    const handleFilterChange = useCallback((e) => {
         setFilterTerm(e.target.value);
-    };
+    }, []);
 
-    const handleSearchKeyPress = (e) => {
+    const handleSearchKeyPress = useCallback((e) => {
         if (e.key === 'Enter') {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
             setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
-    };
+    }, [searchTerm, filterTerm, fetchPastExamData]);
 
-    const handleFilterKeyPress = (e) => {
+    const handleFilterKeyPress = useCallback((e) => {
         if (e.key === 'Enter') {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
             setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
-    };
+    }, [searchTerm, filterTerm, fetchPastExamData]);
 
-    const handleDownload = () => {
+    const handleDownload = useCallback(() => {
         console.log('Download Exam History data');
         toast.info('Download functionality coming soon!');
-    };
+    }, []);
 
-    const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 1;
-    const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
-    const hasFilters = searchTerm.trim() || filterTerm.trim();
-
-    const generatePaginationButtons = () => {
+    const generatePaginationButtons = useCallback(() => {
         const buttons = [];
         const maxVisibleButtons = 5;
 
@@ -181,7 +215,22 @@ const PastExams = () => {
         }
 
         return buttons;
-    };
+    }, [currentPage, totalPages]);
+
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 1;
+    const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
+    const hasFilters = searchTerm.trim() || filterTerm.trim();
 
     return (
         <div className="h-full flex flex-col">
@@ -249,6 +298,8 @@ const PastExams = () => {
                                     <th className="!px-6 !py-4">Batch</th>
                                     <th className="!px-6 !py-4">Conducted By</th>
                                     <th className="!px-6 !py-4">Exam Duration</th>
+                                    <th className="!px-6 !py-4">Start Time</th>
+                                    <th className="!px-6 !py-4">End Time</th>
                                     <th className="!px-6 !py-4">View</th>
                                 </tr>
                             </thead>
@@ -261,6 +312,8 @@ const PastExams = () => {
                                             <td className="!px-6 !py-4">{exam.batch}</td>
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
                                             <td className="!px-6 !py-4">{exam.examDuration}</td>
+                                            <td className="!px-6 !py-4">{exam.startTime}</td>
+                                            <td className="!px-6 !py-4">{exam.endTime}</td>
                                             <td className="!px-6 !py-4">
                                                 <div className="relative group inline-block">
                                                     <Eye
@@ -277,7 +330,7 @@ const PastExams = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
                                             {hasFilters ? 'No past exams found matching your criteria' : 'No past exams found'}
                                         </td>
                                     </tr>
