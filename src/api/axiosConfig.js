@@ -11,7 +11,9 @@ const apiClient = axios.create({
     baseURL: 'https://tomarbros.in/',
     timeout: 30000,
     headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json; charset=utf-8',
+        'Accept-Charset': 'utf-8',
         'encDisabled': 'false'
     }
 });
@@ -31,11 +33,27 @@ const processQueue = (error, token = null) => {
 };
 
 const encodeBase64 = (data) => {
-    return btoa(JSON.stringify(data));
+    // Use proper Unicode encoding for base64
+    const jsonString = JSON.stringify(data);
+    // Convert to UTF-8 bytes first, then to base64
+    return btoa(unescape(encodeURIComponent(jsonString)));
 };
 
 const decodeBase64 = (encodedData) => {
-    return JSON.parse(atob(encodedData));
+    try {
+        // Decode from base64 to UTF-8 bytes, then parse
+        const jsonString = decodeURIComponent(escape(atob(encodedData)));
+        return JSON.parse(jsonString);
+    } catch (error) {
+        console.error('Error decoding base64 data:', error);
+        // Fallback to original method if new method fails
+        try {
+            return JSON.parse(atob(encodedData));
+        } catch (fallbackError) {
+            console.error('Fallback decode also failed:', fallbackError);
+            throw fallbackError;
+        }
+    }
 };
 
 apiClient.interceptors.request.use(
@@ -61,7 +79,9 @@ apiClient.interceptors.request.use(
         }
 
         config.headers['encDisabled'] = 'false';
-        config.headers['Content-Type'] = 'application/json';
+        config.headers['Content-Type'] = 'application/json; charset=utf-8';
+        config.headers['Accept'] = 'application/json; charset=utf-8';
+        config.headers['Accept-Charset'] = 'utf-8';
 
         if (config.method === 'get' || config.method === 'delete') {
             if (!config.data) {
@@ -150,7 +170,10 @@ apiClient.interceptors.response.use(
                         ...originalRequest,
                         headers: {
                             ...originalRequest.headers,
-                            'Authorization': `Bearer ${token}`
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json; charset=utf-8',
+                            'Accept': 'application/json; charset=utf-8',
+                            'Accept-Charset': 'utf-8'
                         },
                         _skipEncoding: true
                     };
@@ -186,7 +209,9 @@ apiClient.interceptors.response.use(
                     },
                     {
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/json; charset=utf-8',
+                            'Accept': 'application/json; charset=utf-8',
+                            'Accept-Charset': 'utf-8',
                             'encDisabled': 'false'
                         }
                     }
@@ -220,7 +245,10 @@ apiClient.interceptors.response.use(
                             ...originalRequest,
                             headers: {
                                 ...originalRequest.headers,
-                                'Authorization': `Bearer ${newToken}`
+                                'Authorization': `Bearer ${newToken}`,
+                                'Content-Type': 'application/json; charset=utf-8',
+                                'Accept': 'application/json; charset=utf-8',
+                                'Accept-Charset': 'utf-8'
                             },
                             _skipEncoding: true
                         };

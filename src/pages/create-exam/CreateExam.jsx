@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -31,6 +31,112 @@ const CreateExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
                             {isLoading ? 'Creating...' : 'Create'}
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ImportAIDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
+    const [aiFormData, setAiFormData] = useState({
+        subject: '',
+        critical: 'HIGH',
+        questionCount: '10',
+        language: 'Marathi'
+    });
+
+    const criticalOptions = ['LOW', 'MEDIUM', 'HIGH'];
+
+    const handleAIInputChange = (field, value) => {
+        setAiFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = () => {
+        if (!aiFormData.subject.trim()) {
+            toast.error('Subject is required');
+            return;
+        }
+        onConfirm(aiFormData);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center !mb-6">
+                    <h2 className="text-[#7966F1] text-xl font-bold !mb-3">Import from AI</h2>
+                    <p className="text-gray-600">Generate questions using AI</p>
+                </div>
+
+                <div className="space-y-8">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Subject</label>
+                        <input
+                            type="text"
+                            value={aiFormData.subject}
+                            onChange={(e) => handleAIInputChange('subject', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="Enter subject name"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Critical Level</label>
+                        <div className="relative">
+                            <select
+                                value={aiFormData.critical}
+                                onChange={(e) => handleAIInputChange('critical', e.target.value)}
+                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 appearance-none cursor-pointer"
+                            >
+                                {criticalOptions.map(option => (
+                                    <option key={option} value={option}>{option}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Question Count</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="50"
+                            value={aiFormData.questionCount}
+                            onChange={(e) => handleAIInputChange('questionCount', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="Number of questions"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Language</label>
+                        <input
+                            type="text"
+                            value={aiFormData.language}
+                            onChange={(e) => handleAIInputChange('language', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="Language"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-center gap-4 !mt-8">
+                    <button
+                        onClick={onClose}
+                        disabled={isLoading}
+                        className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? 'Generating...' : 'Submit'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -174,7 +280,9 @@ const CreateExam = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
+    const [showAIDialog, setShowAIDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isAILoading, setIsAILoading] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [questions, setQuestions] = useState([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
     const fileInputRef = useRef(null);
@@ -211,6 +319,12 @@ const CreateExam = () => {
 
     const handleAddQuestions = useCallback(() => {
         setShowQuestions(true);
+    }, []);
+
+    const handleResetQuestions = useCallback(() => {
+        setQuestions([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+        setShowQuestions(false);
+        toast.success('Questions reset successfully!');
     }, []);
 
     const downloadSampleExcel = useCallback(() => {
@@ -301,6 +415,61 @@ const CreateExam = () => {
         };
         reader.readAsBinaryString(file);
         event.target.value = '';
+    }, []);
+
+    const handleAIImport = useCallback(async (aiData) => {
+        setIsAILoading(true);
+        try {
+            const response = await apiClient.post('/questionGenerator/createQuestion', {
+                subject: aiData.subject,
+                critical: aiData.critical,
+                questionCount: aiData.questionCount,
+                language: aiData.language
+            });
+
+            if (response.data && response.data.success && response.data.data) {
+                const aiQuestions = response.data.data.map((item, index) => {
+                    const correctAnswerIndex = item.options.findIndex(opt => opt === item.correctAnswer);
+                    return {
+                        id: Date.now() + index,
+                        question: item.question,
+                        options: item.options,
+                        correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                    };
+                });
+
+                setQuestions((prevQuestions) => {
+                    const hasEmptyQuestion = prevQuestions.length === 1 && 
+                        prevQuestions[0].question === '' && 
+                        prevQuestions[0].options.every(opt => opt === '') && 
+                        prevQuestions[0].correctAnswer === null;
+                    
+                    if (hasEmptyQuestion) {
+                        return aiQuestions;
+                    } else {
+                        return [...prevQuestions, ...aiQuestions];
+                    }
+                });
+
+                setShowQuestions(true);
+                setShowAIDialog(false);
+                toast.success(`${aiQuestions.length} questions generated and added successfully!`);
+            } else {
+                toast.error('Failed to generate questions from AI');
+            }
+        } catch (error) {
+            console.error('Error generating AI questions:', error);
+            if (error.response) {
+                const errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
+                toast.error(errorMessage);
+            } else if (error.request) {
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setIsAILoading(false);
+        }
     }, []);
 
     const canToggleActive = () => {
@@ -540,7 +709,7 @@ const CreateExam = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-center !mt-8">
+                    <div className="flex justify-center gap-4 !mt-8">
                         <input type="file" ref={fileInputRef} onChange={handleExcelImport} accept=".xlsx,.xls" className="hidden" />
                         <button
                             onClick={() => fileInputRef.current?.click()}
@@ -548,6 +717,20 @@ const CreateExam = () => {
                         >
                             Import from Excel
                             <Upload className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => setShowAIDialog(true)}
+                            className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#FF6B6B] hover:to-[#FF8E53] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                        >
+                            Import from AI
+                            <Bot className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={handleResetQuestions}
+                            className="bg-gradient-to-r from-[#6C757D] to-[#495057] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#6C757D] hover:to-[#495057] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                        >
+                            Reset
+                            <RefreshCw className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
@@ -601,6 +784,15 @@ const CreateExam = () => {
 
             {showDialog && (
                 <CreateExamDialog isOpen={showDialog} onClose={() => setShowDialog(false)} onConfirm={handleCreate} isLoading={isLoading} />
+            )}
+
+            {showAIDialog && (
+                <ImportAIDialog
+                    isOpen={showAIDialog}
+                    onClose={() => setShowAIDialog(false)}
+                    onConfirm={handleAIImport}
+                    isLoading={isAILoading}
+                />
             )}
         </div>
     );
