@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -137,6 +137,234 @@ const ImportAIDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
                     >
                         {isLoading ? 'Generating...' : 'Submit'}
                     </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
+    const [bankFormData, setBankFormData] = useState({
+        subject: '',
+        critical: '',
+        language: ''
+    });
+    const [questionList, setQuestionList] = useState([]);
+    const [selectedQuestions, setSelectedQuestions] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    const handleBankInputChange = (field, value) => {
+        setBankFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSearch = async () => {
+        if (!bankFormData.subject.trim()) {
+            toast.error('Subject is required');
+            return;
+        }
+        
+        setIsSearching(true);
+        try {
+            const requestBody = {
+                pageSize: 0,
+                pageNumber: 0,
+                filter: {
+                    subject: bankFormData.subject.trim()
+                }
+            };
+
+            if (bankFormData.critical) {
+                requestBody.filter.criticality = bankFormData.critical;
+            }
+
+            if (bankFormData.language) {
+                requestBody.filter.language = bankFormData.language;
+            }
+
+            console.log('Request body being sent:', JSON.stringify(requestBody, null, 2));
+
+            const response = await apiClient.post('questionGenerator/getQuestionList', requestBody);
+
+            console.log('API Response received:', response);
+            console.log('Response data:', response.data);
+            console.log('Response data content:', response.data?.data?.content);
+
+            if (response.data && response.data.success && response.data.data.content) {
+                setQuestionList(response.data.data.content);
+                setSelectedQuestions([]);
+                if (response.data.data.content.length === 0) {
+                    toast.info('No questions found for the given criteria');
+                }
+            } else {
+                toast.error('Failed to fetch questions from question bank');
+                setQuestionList([]);
+            }
+        } catch (error) {
+            console.error('Error fetching question bank:', error);
+            if (error.response) {
+                const errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
+                toast.error(errorMessage);
+            } else if (error.request) {
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+            setQuestionList([]);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleQuestionSelect = (questionId) => {
+        setSelectedQuestions(prev => {
+            if (prev.includes(questionId)) {
+                return prev.filter(id => id !== questionId);
+            } else {
+                return [...prev, questionId];
+            }
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedQuestions.length === questionList.length) {
+            setSelectedQuestions([]);
+        } else {
+            setSelectedQuestions(questionList.map(q => q.id));
+        }
+    };
+
+    const handleAddSelected = () => {
+        if (selectedQuestions.length === 0) {
+            toast.error('Please select at least one question');
+            return;
+        }
+        
+        const selectedQuestionData = questionList.filter(q => selectedQuestions.includes(q.id));
+        onConfirm(selectedQuestionData);
+    };
+
+    const resetDialog = () => {
+        setBankFormData({ subject: '', critical: '', language: '' });
+        setQuestionList([]);
+        setSelectedQuestions([]);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-4xl w-full mx-4 border border-gray-200 max-h-[90vh] overflow-y-auto">
+                <div className="text-center !mb-6">
+                    <h2 className="text-[#7966F1] text-xl font-bold !mb-3">Import from Question Bank</h2>
+                    <p className="text-gray-600">Select questions from existing question bank</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 !mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Subject <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            value={bankFormData.subject}
+                            onChange={(e) => handleBankInputChange('subject', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="Enter subject name"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Critical Level (Optional)</label>
+                        <input
+                            type="text"
+                            value={bankFormData.critical}
+                            onChange={(e) => handleBankInputChange('critical', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="e.g., HIGH, MEDIUM, LOW"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-600 !mb-2">Language (Optional)</label>
+                        <input
+                            type="text"
+                            value={bankFormData.language}
+                            onChange={(e) => handleBankInputChange('language', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                            placeholder="e.g., English, Marathi"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-center !mb-6">
+                    <button
+                        onClick={handleSearch}
+                        disabled={isSearching}
+                        className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-8 !py-3 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                        {isSearching ? 'Searching...' : 'Search Questions'}
+                        <Search className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {questionList.length > 0 && (
+                    <>
+                        <hr className="border-gray-200 !my-6" />
+                        
+                        <div className="flex items-center justify-between !mb-4">
+                            <h3 className="text-lg font-medium text-gray-800">Available Questions ({questionList.length})</h3>
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-gray-600">Selected: {selectedQuestions.length}</span>
+                                <button
+                                    onClick={handleSelectAll}
+                                    className="text-[#7966F1] font-medium text-sm hover:underline cursor-pointer"
+                                >
+                                    {selectedQuestions.length === questionList.length ? 'Deselect All' : 'Select All'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg !p-4 !mb-6">
+                            {questionList.map((question, index) => (
+                                <div key={question.id || index} className="flex items-start gap-3 !p-3 border-b border-gray-100 last:border-b-0">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedQuestions.includes(question.id || index)}
+                                        onChange={() => handleQuestionSelect(question.id || index)}
+                                        className="w-5 h-5 text-[#7966F1] border-2 border-[#7966F1] rounded focus:ring-[#7966F1] focus:ring-2 cursor-pointer !mt-1"
+                                    />
+                                    <div className="flex-1">
+                                        <p className="text-gray-800 font-medium !mb-2">{question.question}</p>
+                                        {question.critical && (
+                                            <span className="inline-block bg-gray-100 text-gray-600 text-xs !px-2 !py-1 rounded">
+                                                {question.critical}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                <div className="flex justify-center gap-4">
+                    <button
+                        onClick={() => {
+                            resetDialog();
+                            onClose();
+                        }}
+                        disabled={isLoading}
+                        className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    {questionList.length > 0 && (
+                        <button
+                            onClick={handleAddSelected}
+                            disabled={isLoading || selectedQuestions.length === 0}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? 'Adding...' : `Add Selected (${selectedQuestions.length})`}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -281,8 +509,10 @@ const CreateExam = () => {
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [showAIDialog, setShowAIDialog] = useState(false);
+    const [showQuestionBankDialog, setShowQuestionBankDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isAILoading, setIsAILoading] = useState(false);
+    const [isQuestionBankLoading, setIsQuestionBankLoading] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [questions, setQuestions] = useState([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
     const fileInputRef = useRef(null);
@@ -405,7 +635,20 @@ const CreateExam = () => {
                     toast.error('No valid questions found in the Excel file');
                     return;
                 }
-                setQuestions(importedQuestions);
+                
+                setQuestions((prevQuestions) => {
+                    const hasEmptyQuestion = prevQuestions.length === 1 && 
+                        prevQuestions[0].question === '' && 
+                        prevQuestions[0].options.every(opt => opt === '') && 
+                        prevQuestions[0].correctAnswer === null;
+                    
+                    if (hasEmptyQuestion) {
+                        return importedQuestions;
+                    } else {
+                        return [...prevQuestions, ...importedQuestions];
+                    }
+                });
+                
                 setShowQuestions(true);
                 toast.success(`${importedQuestions.length} questions imported successfully!`);
             } catch (error) {
@@ -469,6 +712,43 @@ const CreateExam = () => {
             }
         } finally {
             setIsAILoading(false);
+        }
+    }, []);
+
+    const handleQuestionBankImport = useCallback(async (selectedQuestionData) => {
+        setIsQuestionBankLoading(true);
+        try {
+            const bankQuestions = selectedQuestionData.map((item, index) => {
+                const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                return {
+                    id: Date.now() + index,
+                    question: item.question,
+                    options: item.options || ['', '', '', ''],
+                    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                };
+            });
+
+            setQuestions((prevQuestions) => {
+                const hasEmptyQuestion = prevQuestions.length === 1 && 
+                    prevQuestions[0].question === '' && 
+                    prevQuestions[0].options.every(opt => opt === '') && 
+                    prevQuestions[0].correctAnswer === null;
+                
+                if (hasEmptyQuestion) {
+                    return bankQuestions;
+                } else {
+                    return [...prevQuestions, ...bankQuestions];
+                }
+            });
+
+            setShowQuestions(true);
+            setShowQuestionBankDialog(false);
+            toast.success(`${bankQuestions.length} questions imported from question bank successfully!`);
+        } catch (error) {
+            console.error('Error importing questions from bank:', error);
+            toast.error('An error occurred while importing questions from question bank.');
+        } finally {
+            setIsQuestionBankLoading(false);
         }
     }, []);
 
@@ -726,6 +1006,13 @@ const CreateExam = () => {
                             <Bot className="w-5 h-5" />
                         </button>
                         <button
+                            onClick={() => setShowQuestionBankDialog(true)}
+                            className="bg-gradient-to-r from-[#28A745] to-[#20C997] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#28A745] hover:to-[#20C997] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                        >
+                            Import from Question Bank
+                            <Database className="w-5 h-5" />
+                        </button>
+                        <button
                             onClick={handleResetQuestions}
                             className="bg-gradient-to-r from-[#6C757D] to-[#495057] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#6C757D] hover:to-[#495057] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                         >
@@ -792,6 +1079,15 @@ const CreateExam = () => {
                     onClose={() => setShowAIDialog(false)}
                     onConfirm={handleAIImport}
                     isLoading={isAILoading}
+                />
+            )}
+
+            {showQuestionBankDialog && (
+                <ImportQuestionBankDialog
+                    isOpen={showQuestionBankDialog}
+                    onClose={() => setShowQuestionBankDialog(false)}
+                    onConfirm={handleQuestionBankImport}
+                    isLoading={isQuestionBankLoading}
                 />
             )}
         </div>
