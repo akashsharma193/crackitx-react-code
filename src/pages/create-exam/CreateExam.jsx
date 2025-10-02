@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -150,24 +150,29 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
         language: ''
     });
     const [questionList, setQuestionList] = useState([]);
-    const [selectedQuestions, setSelectedQuestions] = useState([]);
+    const [allSelectedQuestions, setAllSelectedQuestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [pageSize] = useState(10);
+    const [allQuestionsMap, setAllQuestionsMap] = useState(new Map());
 
     const handleBankInputChange = (field, value) => {
         setBankFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSearch = async () => {
+    const handleSearch = async (page = 0) => {
         if (!bankFormData.subject.trim()) {
             toast.error('Subject is required');
             return;
         }
-        
+
         setIsSearching(true);
         try {
             const requestBody = {
-                pageSize: 0,
-                pageNumber: 0,
+                pageSize: pageSize,
+                pageNumber: page,
                 filter: {
                     subject: bankFormData.subject.trim()
                 }
@@ -190,9 +195,27 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
             console.log('Response data content:', response.data?.data?.content);
 
             if (response.data && response.data.success && response.data.data.content) {
-                setQuestionList(response.data.data.content);
-                setSelectedQuestions([]);
-                if (response.data.data.content.length === 0) {
+                const newQuestions = response.data.data.content;
+                setQuestionList(newQuestions);
+                setTotalPages(response.data.data.page.totalPages);
+                setTotalElements(response.data.data.page.totalElements);
+                setCurrentPage(response.data.data.page.number);
+
+                setAllQuestionsMap(prev => {
+                    const newMap = new Map(prev);
+                    newQuestions.forEach(q => {
+                        if (!newMap.has(q.id)) {
+                            newMap.set(q.id, q);
+                        }
+                    });
+                    return newMap;
+                });
+
+                if (page === 0) {
+                    setAllSelectedQuestions([]);
+                }
+
+                if (newQuestions.length === 0 && page === 0) {
                     toast.info('No questions found for the given criteria');
                 }
             } else {
@@ -215,8 +238,41 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
         }
     };
 
+    const handlePageChange = (newPage) => {
+        if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
+            handleSearch(newPage);
+        }
+    };
+
+    const generatePaginationButtons = () => {
+        const buttons = [];
+        const maxVisibleButtons = 5;
+
+        if (totalPages <= maxVisibleButtons) {
+            for (let i = 0; i < totalPages; i++) {
+                buttons.push(i);
+            }
+        } else {
+            if (currentPage < 3) {
+                for (let i = 0; i < maxVisibleButtons; i++) {
+                    buttons.push(i);
+                }
+            } else if (currentPage > totalPages - 4) {
+                for (let i = totalPages - maxVisibleButtons; i < totalPages; i++) {
+                    buttons.push(i);
+                }
+            } else {
+                for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+                    buttons.push(i);
+                }
+            }
+        }
+
+        return buttons;
+    };
+
     const handleQuestionSelect = (questionId) => {
-        setSelectedQuestions(prev => {
+        setAllSelectedQuestions(prev => {
             if (prev.includes(questionId)) {
                 return prev.filter(id => id !== questionId);
             } else {
@@ -226,30 +282,46 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
     };
 
     const handleSelectAll = () => {
-        if (selectedQuestions.length === questionList.length) {
-            setSelectedQuestions([]);
+        const currentPageQuestionIds = questionList.map(q => q.id);
+        const allCurrentSelected = currentPageQuestionIds.every(id => allSelectedQuestions.includes(id));
+
+        if (allCurrentSelected) {
+            setAllSelectedQuestions(prev => prev.filter(id => !currentPageQuestionIds.includes(id)));
         } else {
-            setSelectedQuestions(questionList.map(q => q.id));
+            setAllSelectedQuestions(prev => {
+                const newSelections = currentPageQuestionIds.filter(id => !prev.includes(id));
+                return [...prev, ...newSelections];
+            });
         }
     };
 
     const handleAddSelected = () => {
-        if (selectedQuestions.length === 0) {
+        if (allSelectedQuestions.length === 0) {
             toast.error('Please select at least one question');
             return;
         }
-        
-        const selectedQuestionData = questionList.filter(q => selectedQuestions.includes(q.id));
+
+        const selectedQuestionData = allSelectedQuestions.map(id => allQuestionsMap.get(id)).filter(q => q !== undefined);
         onConfirm(selectedQuestionData);
     };
 
     const resetDialog = () => {
         setBankFormData({ subject: '', critical: '', language: '' });
         setQuestionList([]);
-        setSelectedQuestions([]);
+        setAllSelectedQuestions([]);
+        setCurrentPage(0);
+        setTotalPages(0);
+        setTotalElements(0);
+        setAllQuestionsMap(new Map());
     };
 
     if (!isOpen) return null;
+
+    const startIndex = totalElements > 0 ? (currentPage * pageSize) + 1 : 0;
+    const endIndex = totalElements > 0 ? Math.min((currentPage + 1) * pageSize, totalElements) : 0;
+    const currentPageQuestionIds = questionList.map(q => q.id);
+    const currentPageSelectedCount = currentPageQuestionIds.filter(id => allSelectedQuestions.includes(id)).length;
+    const allCurrentPageSelected = currentPageQuestionIds.length > 0 && currentPageQuestionIds.every(id => allSelectedQuestions.includes(id));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
@@ -296,7 +368,7 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
 
                 <div className="flex justify-center !mb-6">
                     <button
-                        onClick={handleSearch}
+                        onClick={() => handleSearch(0)}
                         disabled={isSearching}
                         className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-8 !py-3 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
@@ -308,26 +380,27 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                 {questionList.length > 0 && (
                     <>
                         <hr className="border-gray-200 !my-6" />
-                        
+
                         <div className="flex items-center justify-between !mb-4">
-                            <h3 className="text-lg font-medium text-gray-800">Available Questions ({questionList.length})</h3>
+                            <h3 className="text-lg font-medium text-gray-800">Available Questions</h3>
                             <div className="flex items-center gap-4">
-                                <span className="text-sm text-gray-600">Selected: {selectedQuestions.length}</span>
+                                <span className="text-sm text-gray-600">Total Selected: {allSelectedQuestions.length}</span>
+                                <span className="text-sm text-gray-500">({currentPageSelectedCount} on this page)</span>
                                 <button
                                     onClick={handleSelectAll}
                                     className="text-[#7966F1] font-medium text-sm hover:underline cursor-pointer"
                                 >
-                                    {selectedQuestions.length === questionList.length ? 'Deselect All' : 'Select All'}
+                                    {allCurrentPageSelected ? 'Deselect All on Page' : 'Select All on Page'}
                                 </button>
                             </div>
                         </div>
 
-                        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg !p-4 !mb-6">
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg !p-4 !mb-4">
                             {questionList.map((question, index) => (
                                 <div key={question.id || index} className="flex items-start gap-3 !p-3 border-b border-gray-100 last:border-b-0">
                                     <input
                                         type="checkbox"
-                                        checked={selectedQuestions.includes(question.id || index)}
+                                        checked={allSelectedQuestions.includes(question.id || index)}
                                         onChange={() => handleQuestionSelect(question.id || index)}
                                         className="w-5 h-5 text-[#7966F1] border-2 border-[#7966F1] rounded focus:ring-[#7966F1] focus:ring-2 cursor-pointer !mt-1"
                                     />
@@ -342,6 +415,55 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                                 </div>
                             ))}
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between !mb-6 !px-4">
+                                <div className="text-sm text-gray-600">
+                                    Showing {startIndex} to {endIndex} of {totalElements} questions
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 0}
+                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            }`}
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Previous
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {generatePaginationButtons().map((pageNum) => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
+                                                        ? 'bg-[#7966F1] text-white'
+                                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                    }`}
+                                            >
+                                                {pageNum + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages - 1}
+                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            }`}
+                                    >
+                                        Next
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -359,10 +481,10 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                     {questionList.length > 0 && (
                         <button
                             onClick={handleAddSelected}
-                            disabled={isLoading || selectedQuestions.length === 0}
+                            disabled={isLoading || allSelectedQuestions.length === 0}
                             className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? 'Adding...' : `Add Selected (${selectedQuestions.length})`}
+                            {isLoading ? 'Adding...' : `Add Selected (${allSelectedQuestions.length})`}
                         </button>
                     )}
                 </div>
@@ -516,7 +638,7 @@ const CreateExam = () => {
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [questions, setQuestions] = useState([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
     const fileInputRef = useRef(null);
-    const durationOptions = ['5 mins', '10 mins', '15 mins', '20 mins', '25 mins', '30 mins'];
+    const durationOptions = ['5 mins', '10 mins', '15 mins', '20mins', '20 mins', '25 mins', '30 mins'];
 
     const handleInputChange = useCallback((field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -635,20 +757,20 @@ const CreateExam = () => {
                     toast.error('No valid questions found in the Excel file');
                     return;
                 }
-                
+
                 setQuestions((prevQuestions) => {
-                    const hasEmptyQuestion = prevQuestions.length === 1 && 
-                        prevQuestions[0].question === '' && 
-                        prevQuestions[0].options.every(opt => opt === '') && 
+                    const hasEmptyQuestion = prevQuestions.length === 1 &&
+                        prevQuestions[0].question === '' &&
+                        prevQuestions[0].options.every(opt => opt === '') &&
                         prevQuestions[0].correctAnswer === null;
-                    
+
                     if (hasEmptyQuestion) {
                         return importedQuestions;
                     } else {
                         return [...prevQuestions, ...importedQuestions];
                     }
                 });
-                
+
                 setShowQuestions(true);
                 toast.success(`${importedQuestions.length} questions imported successfully!`);
             } catch (error) {
@@ -682,11 +804,11 @@ const CreateExam = () => {
                 });
 
                 setQuestions((prevQuestions) => {
-                    const hasEmptyQuestion = prevQuestions.length === 1 && 
-                        prevQuestions[0].question === '' && 
-                        prevQuestions[0].options.every(opt => opt === '') && 
+                    const hasEmptyQuestion = prevQuestions.length === 1 &&
+                        prevQuestions[0].question === '' &&
+                        prevQuestions[0].options.every(opt => opt === '') &&
                         prevQuestions[0].correctAnswer === null;
-                    
+
                     if (hasEmptyQuestion) {
                         return aiQuestions;
                     } else {
@@ -729,11 +851,11 @@ const CreateExam = () => {
             });
 
             setQuestions((prevQuestions) => {
-                const hasEmptyQuestion = prevQuestions.length === 1 && 
-                    prevQuestions[0].question === '' && 
-                    prevQuestions[0].options.every(opt => opt === '') && 
+                const hasEmptyQuestion = prevQuestions.length === 1 &&
+                    prevQuestions[0].question === '' &&
+                    prevQuestions[0].options.every(opt => opt === '') &&
                     prevQuestions[0].correctAnswer === null;
-                
+
                 if (hasEmptyQuestion) {
                     return bankQuestions;
                 } else {
