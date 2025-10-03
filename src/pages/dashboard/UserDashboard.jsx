@@ -12,6 +12,7 @@ const UserDashboard = ({ setActiveTab }) => {
         totalExamCount: 0,
         activeExamCount: 0,
         pastExamCount: 0,
+        upComingExamCount: 0,
         passedExam: 0,
         failedExam: 0,
         unAttemptedExam: 0
@@ -23,6 +24,7 @@ const UserDashboard = ({ setActiveTab }) => {
     const userDashboardCards = [
         { title: 'All Tests', icon: studentsIcon, count: userDashboardData.totalExamCount, tab: 'All Test' },
         { title: 'Active Exam', icon: activeExamIcon, count: userDashboardData.activeExamCount, tab: 'Active Exam' },
+        { title: 'Upcoming Exam', icon: activeExamIcon, count: userDashboardData.upComingExamCount, tab: 'Upcoming Exam' },
         { title: 'Exam History', icon: examhistoryIcon, count: userDashboardData.pastExamCount, tab: 'Exam History' },
         { title: 'Missed Exam', icon: activeExamIcon, count: userDashboardData.unAttemptedExam, tab: 'Missed Exam' },
         { title: 'Passed Exams', icon: resourcesIcon, count: userDashboardData.passedExam, tab: 'Passed Exam' },
@@ -125,7 +127,7 @@ const UserDashboard = ({ setActiveTab }) => {
                     <h2 className='text-2xl text-white font-bold'>Dashboard</h2>
                 </div>
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-full !px-6'>
-                    {[...Array(6)].map((_, index) => (
+                    {[...Array(7)].map((_, index) => (
                         <div
                             key={index}
                             className='cursor-pointer max-w-sm rounded-lg flex bg-gray-200 animate-pulse !p-4 justify-between items-center text-white text-lg font-medium border-white border-2'

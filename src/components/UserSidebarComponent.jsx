@@ -11,6 +11,7 @@ const sidebarItems = [
     { label: 'All Test', icon: studentsIcon },
     { label: 'Active Exam', icon: activeExamIcon },
     { label: 'Exam History', icon: examhistoryIcon },
+    { label: 'Upcoming Exam', icon: activeExamIcon },
     { label: 'Missed Exam', icon: activeExamIcon },
     { label: 'Passed Exam', icon: resourcesIcon },
     { label: 'Failed Exam', icon: resourcesIcon },
