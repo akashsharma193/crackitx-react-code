@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -31,6 +31,30 @@ const CreateExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
                             {isLoading ? 'Creating...' : 'Create'}
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AIGeneratingDialog = ({ isOpen, onCancel, remainingTime }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
+                <div className="text-center">
+                    <div className="flex justify-center !mb-4">
+                        <div className="w-16 h-16 border-4 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h2 className="text-[#7966F1] text-xl font-bold !mb-3">Generating Questions</h2>
+                    <p className="text-gray-800 !mb-2">We are generating the question list, please wait.</p>
+                    <p className="text-sm text-gray-600 !mb-6">This will take 2-5 minutes</p>
+                    <button
+                        onClick={onCancel}
+                        className="border border-red-500 text-red-500 font-semibold !px-6 !py-2 rounded-md hover:bg-red-50 transition cursor-pointer"
+                    >
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>
@@ -186,13 +210,7 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                 requestBody.filter.language = bankFormData.language;
             }
 
-            console.log('Request body being sent:', JSON.stringify(requestBody, null, 2));
-
             const response = await apiClient.post('questionGenerator/getQuestionList', requestBody);
-
-            console.log('API Response received:', response);
-            console.log('Response data:', response.data);
-            console.log('Response data content:', response.data?.data?.content);
 
             if (response.data && response.data.success && response.data.data.content) {
                 const newQuestions = response.data.data.content;
@@ -427,8 +445,8 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                                         onClick={() => handlePageChange(currentPage - 1)}
                                         disabled={currentPage === 0}
                                         className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
                                             }`}
                                     >
                                         <ChevronLeft size={16} />
@@ -441,8 +459,8 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
-                                                        ? 'bg-[#7966F1] text-white'
-                                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                    ? 'bg-[#7966F1] text-white'
+                                                    : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
                                                     }`}
                                             >
                                                 {pageNum + 1}
@@ -454,8 +472,8 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
                                         onClick={() => handlePageChange(currentPage + 1)}
                                         disabled={currentPage === totalPages - 1}
                                         className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
                                             }`}
                                     >
                                         Next
@@ -624,21 +642,25 @@ const CreateExam = () => {
         batch: '',
         startTime: '',
         endTime: '',
-        examDuration: '30 mins',
+        examDuration: '',
         isActive: true
     });
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [showAIDialog, setShowAIDialog] = useState(false);
     const [showQuestionBankDialog, setShowQuestionBankDialog] = useState(false);
+    const [showAIGeneratingDialog, setShowAIGeneratingDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isAILoading, setIsAILoading] = useState(false);
     const [isQuestionBankLoading, setIsQuestionBankLoading] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
     const [questions, setQuestions] = useState([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+    const [pollingAttempts, setPollingAttempts] = useState(0);
+    const [aiReferenceKey, setAiReferenceKey] = useState(null);
     const fileInputRef = useRef(null);
-    const durationOptions = ['5 mins', '10 mins', '15 mins', '20mins', '20 mins', '25 mins', '30 mins'];
+    const pollingIntervalRef = useRef(null);
+    // const durationOptions = ['5 mins', '10 mins', '15 mins', '20mins', '20 mins', '25 mins', '30 mins'];
 
     const handleInputChange = useCallback((field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -782,10 +804,88 @@ const CreateExam = () => {
         event.target.value = '';
     }, []);
 
+    const pollQuestionStatus = useCallback(async (referenceKey, currentAttempt) => {
+        try {
+            const response = await apiClient.get(`questionGenerator/statusCheckQuestionRequest/${referenceKey}`);
+
+            if (response.data && response.data.success) {
+                if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+                    if (pollingIntervalRef.current) {
+                        clearInterval(pollingIntervalRef.current);
+                        pollingIntervalRef.current = null;
+                    }
+
+                    const aiQuestions = response.data.data.map((item, index) => {
+                        const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                        return {
+                            id: Date.now() + index,
+                            question: item.question,
+                            options: item.options || ['', '', '', ''],
+                            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                        };
+                    });
+
+                    setQuestions((prevQuestions) => {
+                        const hasEmptyQuestion = prevQuestions.length === 1 &&
+                            prevQuestions[0].question === '' &&
+                            prevQuestions[0].options.every(opt => opt === '') &&
+                            prevQuestions[0].correctAnswer === null;
+
+                        if (hasEmptyQuestion) {
+                            return aiQuestions;
+                        } else {
+                            return [...prevQuestions, ...aiQuestions];
+                        }
+                    });
+
+                    setShowQuestions(true);
+                    setShowAIGeneratingDialog(false);
+                    setShowAIDialog(false);
+                    setIsAILoading(false);
+                    setPollingAttempts(0);
+                    setAiReferenceKey(null);
+                    toast.success(`${aiQuestions.length} questions generated and added successfully!`);
+                } else {
+                    if (currentAttempt >= 20) {
+                        if (pollingIntervalRef.current) {
+                            clearInterval(pollingIntervalRef.current);
+                            pollingIntervalRef.current = null;
+                        }
+                        setShowAIGeneratingDialog(false);
+                        setIsAILoading(false);
+                        setPollingAttempts(0);
+                        setAiReferenceKey(null);
+                        toast.error('Question generation timed out. Please try again.');
+                    }
+                }
+            } else {
+                toast.error('Failed to check question generation status');
+            }
+        } catch (error) {
+            console.error('Error polling question status:', error);
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+            setShowAIGeneratingDialog(false);
+            setIsAILoading(false);
+            setPollingAttempts(0);
+            setAiReferenceKey(null);
+            if (error.response) {
+                const errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
+                toast.error(errorMessage);
+            } else if (error.request) {
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                toast.error('An unexpected error occurred while checking status.');
+            }
+        }
+    }, []);
+
     const handleAIImport = useCallback(async (aiData) => {
         setIsAILoading(true);
         try {
-            const response = await apiClient.post('/questionGenerator/createQuestion', {
+            const response = await apiClient.post('questionGenerator/requestCreateQuestion', {
                 subject: aiData.subject,
                 critical: aiData.critical,
                 questionCount: aiData.questionCount,
@@ -793,37 +893,26 @@ const CreateExam = () => {
             });
 
             if (response.data && response.data.success && response.data.data) {
-                const aiQuestions = response.data.data.map((item, index) => {
-                    const correctAnswerIndex = item.options.findIndex(opt => opt === item.correctAnswer);
-                    return {
-                        id: Date.now() + index,
-                        question: item.question,
-                        options: item.options,
-                        correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
-                    };
-                });
-
-                setQuestions((prevQuestions) => {
-                    const hasEmptyQuestion = prevQuestions.length === 1 &&
-                        prevQuestions[0].question === '' &&
-                        prevQuestions[0].options.every(opt => opt === '') &&
-                        prevQuestions[0].correctAnswer === null;
-
-                    if (hasEmptyQuestion) {
-                        return aiQuestions;
-                    } else {
-                        return [...prevQuestions, ...aiQuestions];
-                    }
-                });
-
-                setShowQuestions(true);
+                const referenceKey = response.data.data;
+                setAiReferenceKey(referenceKey);
                 setShowAIDialog(false);
-                toast.success(`${aiQuestions.length} questions generated and added successfully!`);
+                setShowAIGeneratingDialog(true);
+                setPollingAttempts(0);
+
+                let attemptCount = 0;
+                pollingIntervalRef.current = setInterval(() => {
+                    attemptCount++;
+                    setPollingAttempts(attemptCount);
+                    pollQuestionStatus(referenceKey, attemptCount);
+                }, 30000);
+
             } else {
-                toast.error('Failed to generate questions from AI');
+                toast.error('Failed to initiate question generation');
+                setIsAILoading(false);
             }
         } catch (error) {
-            console.error('Error generating AI questions:', error);
+            console.error('Error initiating AI question generation:', error);
+            setIsAILoading(false);
             if (error.response) {
                 const errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
                 toast.error(errorMessage);
@@ -832,9 +921,19 @@ const CreateExam = () => {
             } else {
                 toast.error('An unexpected error occurred. Please try again.');
             }
-        } finally {
-            setIsAILoading(false);
         }
+    }, [pollQuestionStatus]);
+
+    const handleCancelAIGeneration = useCallback(() => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+        setShowAIGeneratingDialog(false);
+        setIsAILoading(false);
+        setPollingAttempts(0);
+        setAiReferenceKey(null);
+        toast.info('Question generation cancelled');
     }, []);
 
     const handleQuestionBankImport = useCallback(async (selectedQuestionData) => {
@@ -990,6 +1089,14 @@ const CreateExam = () => {
         }
     }, [formData, questions, isActiveDisabled]);
 
+    const getRemainingTime = useMemo(() => {
+        if (pollingAttempts === 0) return '2-5 minutes';
+        const elapsedMinutes = (pollingAttempts * 30) / 60;
+        const remainingMinutes = Math.max(0, 5 - elapsedMinutes);
+        if (remainingMinutes < 1) return 'Less than 1 minute';
+        return `${Math.ceil(remainingMinutes)} minute${Math.ceil(remainingMinutes) > 1 ? 's' : ''}`;
+    }, [pollingAttempts]);
+
     const minStart = nowLocalMinutes();
     const minEnd = formData.startTime || minStart;
 
@@ -1033,7 +1140,7 @@ const CreateExam = () => {
                             />
                         </div>
 
-                        <div>
+                        {/* <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">Exam Duration (minutes)</label>
                             <div className="relative">
                                 <button
@@ -1060,6 +1167,18 @@ const CreateExam = () => {
                                     </div>
                                 )}
                             </div>
+                        </div> */}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">Exam Duration (in minutes)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={formData.examDuration}
+                                onChange={(e) => handleInputChange('examDuration', e.target.value)}
+                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                placeholder="Enter duration"
+                            />
                         </div>
 
                         <div>
@@ -1201,6 +1320,14 @@ const CreateExam = () => {
                     onClose={() => setShowAIDialog(false)}
                     onConfirm={handleAIImport}
                     isLoading={isAILoading}
+                />
+            )}
+
+            {showAIGeneratingDialog && (
+                <AIGeneratingDialog
+                    isOpen={showAIGeneratingDialog}
+                    onCancel={handleCancelAIGeneration}
+                    remainingTime={getRemainingTime}
                 />
             )}
 

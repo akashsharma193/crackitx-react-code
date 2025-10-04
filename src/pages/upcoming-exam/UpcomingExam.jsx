@@ -168,7 +168,7 @@ const UpcomingExam = () => {
             subjectName: exam.originalData.subjectName || '',
             teacherName: exam.originalData.teacherName || '',
             batch: exam.originalData.batch || '',
-            examDuration: exam.originalData.examDuration ? `${exam.originalData.examDuration} mins` : '30 mins',
+            examDuration: exam.originalData.examDuration || 30,
             startTime: formatDateTimeForInput(exam.originalData.startTime),
             endTime: formatDateTimeForInput(exam.originalData.endTime),
             isActive: exam.originalData.isActive !== undefined ? exam.originalData.isActive : true,
