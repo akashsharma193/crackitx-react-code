@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
@@ -21,6 +21,7 @@ import UserPassedExams from '../passed-exams/UserPassedExams';
 import UserFailedExams from '../failed-exams/UserFailedExams';
 import AllTests from '../all-test/AllTest';
 import UserUpcomingExam from '../upcoming-exam/UserUpcomingExam';
+import Ranking from '../ranking/Ranking';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -136,6 +137,9 @@ const Home = () => {
                 case 'Exam History':
                     component = <PastExams />;
                     break;
+                case 'Ranking':
+                    component = <Ranking />;
+                    break;
                 case 'Create Exam':
                     component = <CreateExam />;
                     break;
@@ -208,7 +212,7 @@ const Home = () => {
         }
 
         const tabs = isAdmin 
-            ? ['Dashboard', 'Students', 'Create Exam', 'Active Exam', 'Exam History', 'Upcoming Exam', 'E-Resources']
+            ? ['Dashboard', 'Students', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources']
             : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
 
         return (

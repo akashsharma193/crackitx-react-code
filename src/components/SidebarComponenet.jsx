@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
+import { Trophy } from 'lucide-react';
 import dashboardIcon from '/src/assets/icons/dashboard-icon.png';
 import studentsIcon from '/src/assets/icons/students-icon.png';
 import examhistoryIcon from '/src/assets/icons/exam-history-icon.png';
@@ -13,6 +14,7 @@ const sidebarItems = [
     { label: 'Create Exam', icon: createExamIcon },
     { label: 'Active Exam', icon: activeExamIcon },
     { label: 'Exam History', icon: examhistoryIcon },
+    { label: 'Ranking', icon: 'lucide', lucideIcon: Trophy },
     { label: 'Upcoming Exam', icon: activeExamIcon },
     { label: 'E-Resources', icon: resourcesIcon },
     { label: 'Log Out', icon: logOutIcon },
@@ -59,7 +61,11 @@ const SidebarComponent = React.memo(({ activeTab, setActiveTab }) => {
                         {activeTab === item.label && (
                             <div className="absolute left-0 top-0 h-full w-2 bg-white rounded-r-md" />
                         )}
-                        <img className='w-[30px]' src={item.icon} alt={item.label} />
+                        {item.icon === 'lucide' ? (
+                            <item.lucideIcon className='w-[30px] h-[30px] opacity-80' />
+                        ) : (
+                            <img className='w-[30px]' src={item.icon} alt={item.label} />
+                        )}
                         {item.label}
                     </div>
                     <hr />
