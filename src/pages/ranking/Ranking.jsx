@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Search, Trophy, Medal, Award } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Search, Trophy, Medal, Award, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -22,6 +22,7 @@ const Ranking = () => {
     const [rankingData, setRankingData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [studentSearch, setStudentSearch] = useState('');
 
     const getRankIcon = (rank) => {
         switch (rank) {
@@ -48,6 +49,18 @@ const Ranking = () => {
                 return 'bg-[#7966F1] text-white';
         }
     };
+
+    const filteredRankingData = useMemo(() => {
+        if (!studentSearch.trim()) {
+            return rankingData;
+        }
+
+        const searchTerm = studentSearch.toLowerCase().trim();
+        return rankingData.filter(student => 
+            student.name.toLowerCase().includes(searchTerm) ||
+            student.email.toLowerCase().includes(searchTerm)
+        );
+    }, [rankingData, studentSearch]);
 
     const fetchRankings = useCallback(async () => {
         if (!batchCode.trim()) {
@@ -78,6 +91,7 @@ const Ranking = () => {
                     .sort((a, b) => b.marks - a.marks);
 
                 setRankingData(sortedData);
+                setStudentSearch('');
 
                 if (sortedData.length === 0) {
                     toast.info('No ranking data found for the given criteria');
@@ -104,6 +118,10 @@ const Ranking = () => {
             fetchRankings();
         }
     }, [fetchRankings]);
+
+    const clearStudentSearch = () => {
+        setStudentSearch('');
+    };
 
     return (
         <div className="h-full flex flex-col">
@@ -153,18 +171,47 @@ const Ranking = () => {
                 {!loading && rankingData.length > 0 && (
                     <div className="space-y-6">
                         <div className="bg-white rounded-lg shadow-md !p-6 border border-[#7966F1]">
-                            <h2 className="text-2xl font-bold text-[#7966F1] flex items-center gap-2">
-                                <Trophy className="text-[#7966F1]" size={28} />
-                                Leaderboard Rankings
-                            </h2>
-                            <div className="text-gray-600 mb-4">
-                                Total Students: <span className="font-semibold text-[#7966F1]">{rankingData.length}</span>
-                                {questionId && (
-                                    <span className="ml-4">
-                                        Question ID: <span className="font-semibold text-[#7966F1]">{questionId}</span>
-                                    </span>
-                                )}
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[#7966F1] flex items-center gap-2">
+                                        <Trophy className="text-[#7966F1]" size={28} />
+                                        Leaderboard Rankings
+                                    </h2>
+                                    <div className="text-gray-600 mt-2">
+                                        Total Students: <span className="font-semibold text-[#7966F1]">{rankingData.length}</span>
+                                        {questionId && (
+                                            <span className="ml-4">
+                                                Question ID: <span className="font-semibold text-[#7966F1]">{questionId}</span>
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="relative min-w-[320px]">
+                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#7966F1]" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Filter by name or email..."
+                                        value={studentSearch}
+                                        onChange={(e) => setStudentSearch(e.target.value)}
+                                        className="!pl-11 !pr-10 !py-2.5 rounded-md bg-white text-gray-700 placeholder:text-gray-400 border-2 border-[#7966F1] outline-none w-full focus:border-[#5a4ec9] transition-colors"
+                                    />
+                                    {studentSearch && (
+                                        <button
+                                            onClick={clearStudentSearch}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#7966F1] transition-colors"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
+
+                            {studentSearch && (
+                                <div className="!mt-4 text-sm text-gray-600 bg-purple-50 !px-4 !py-2 rounded-md border border-purple-200">
+                                    Showing <span className="font-semibold text-[#7966F1]">{filteredRankingData.length}</span> of <span className="font-semibold">{rankingData.length}</span> students
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white rounded-lg shadow-md overflow-hidden border border-[#7966F1] !mt-4">
@@ -181,48 +228,65 @@ const Ranking = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rankingData.map((student, index) => (
-                                            <tr 
-                                                key={student.userId} 
-                                                className={`border-t transition-all ${
-                                                    index < 3 ? 'bg-gradient-to-r from-purple-50 to-white hover:from-purple-100 hover:to-white' : 'hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                <td className="!px-6 !py-4">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        {getRankIcon(student.rank)}
-                                                        <span className={`font-bold text-lg !px-3 !py-1 rounded-full ${getRankBadgeColor(student.rank)}`}>
-                                                            #{student.rank}
+                                        {filteredRankingData.length > 0 ? (
+                                            filteredRankingData.map((student, index) => (
+                                                <tr 
+                                                    key={student.userId} 
+                                                    className={`border-t transition-all ${
+                                                        student.rank <= 3 ? 'bg-gradient-to-r from-purple-50 to-white hover:from-purple-100 hover:to-white' : 'hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <td className="!px-6 !py-4">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {getRankIcon(student.rank)}
+                                                            <span className={`font-bold text-lg !px-3 !py-1 rounded-full ${getRankBadgeColor(student.rank)}`}>
+                                                                #{student.rank}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="!px-6 !py-4 font-semibold text-gray-800">
+                                                        {student.name}
+                                                    </td>
+                                                    <td className="!px-6 !py-4 text-gray-600">
+                                                        {student.email}
+                                                    </td>
+                                                    <td className="!px-6 !py-4 text-center">
+                                                        <span className="font-bold text-[#7966F1] text-lg">
+                                                            {student.marks}
                                                         </span>
+                                                    </td>
+                                                    <td className="!px-6 !py-4 text-center text-gray-600">
+                                                        {student.totalMarks}
+                                                    </td>
+                                                    <td className="!px-6 !py-4 text-center">
+                                                        <span className={`font-semibold !px-3 !py-1 rounded-full ${
+                                                            parseFloat(student.percentage) >= 75 
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : parseFloat(student.percentage) >= 50
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                            {student.percentage}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="6" className="!px-6 !py-12 text-center">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <Search className="text-gray-300" size={48} />
+                                                        <p className="text-gray-500 text-lg">No students found matching "{studentSearch}"</p>
+                                                        <button
+                                                            onClick={clearStudentSearch}
+                                                            className="text-[#7966F1] hover:underline font-semibold"
+                                                        >
+                                                            Clear filter
+                                                        </button>
                                                     </div>
                                                 </td>
-                                                <td className="!px-6 !py-4 font-semibold text-gray-800">
-                                                    {student.name}
-                                                </td>
-                                                <td className="!px-6 !py-4 text-gray-600">
-                                                    {student.email}
-                                                </td>
-                                                <td className="!px-6 !py-4 text-center">
-                                                    <span className="font-bold text-[#7966F1] text-lg">
-                                                        {student.marks}
-                                                    </span>
-                                                </td>
-                                                <td className="!px-6 !py-4 text-center text-gray-600">
-                                                    {student.totalMarks}
-                                                </td>
-                                                <td className="!px-6 !py-4 text-center">
-                                                    <span className={`font-semibold !px-3 !py-1 rounded-full ${
-                                                        parseFloat(student.percentage) >= 75 
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : parseFloat(student.percentage) >= 50
-                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                            : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                        {student.percentage}%
-                                                    </span>
-                                                </td>
                                             </tr>
-                                        ))}
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
