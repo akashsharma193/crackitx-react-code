@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -51,9 +51,21 @@ const EditStudent = () => {
         isAdmin: false,
     });
 
+    const [batches, setBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [showBackDialog, setShowBackDialog] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
+    const batchDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const orgCode = localStorage.getItem('orgCode');
+        if (orgCode) {
+            fetchBatches(orgCode);
+        }
+    }, []);
 
     useEffect(() => {
         if (studentData) {
@@ -66,6 +78,7 @@ const EditStudent = () => {
                 isActive: studentData.isActive || false,
                 isAdmin: studentData.isAdmin || false,
             });
+            setBatchSearchTerm(studentData.batch || '');
             setInitialLoading(false);
         } else if (id) {
             fetchStudentData(id);
@@ -73,6 +86,34 @@ const EditStudent = () => {
             navigate('/home', { state: { activeTab: 'Students' } });
         }
     }, [studentData, id, navigate]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
 
     const fetchStudentData = async (studentId) => {
         try {
@@ -90,6 +131,7 @@ const EditStudent = () => {
                     isActive: data.isActive || false,
                     isAdmin: data.isAdmin || false,
                 });
+                setBatchSearchTerm(data.batch || '');
             } else {
                 toast.error('Failed to fetch student data');
                 navigate('/home', { state: { activeTab: 'Students' } });
@@ -102,6 +144,17 @@ const EditStudent = () => {
             setInitialLoading(false);
         }
     };
+
+    const handleBatchSelect = (batch) => {
+        setForm(prev => ({ ...prev, batch: batch.name }));
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+    };
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -285,15 +338,44 @@ const EditStudent = () => {
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Batch <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        name="batch"
-                                        value={form.batch}
-                                        onChange={handleChange}
-                                        className="w-full border border-[#7966F1] rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-[#7966F1] focus:ring-opacity-50"
-                                        placeholder="Enter batch name"
-                                        required
-                                    />
+                                    <div className="relative" ref={batchDropdownRef}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search Batch"
+                                            value={batchSearchTerm}
+                                            onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                            onFocus={() => setBatchDropdownOpen(true)}
+                                            disabled={loading || isLoadingBatches}
+                                            className="w-full border border-[#7966F1] rounded-md !px-4 !py-2 !pr-10 !h-[42px] outline-none focus:ring-2 focus:ring-[#7966F1] focus:ring-opacity-50"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        {batchDropdownOpen && (
+                                            <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                                {isLoadingBatches ? (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        Loading batches...
+                                                    </div>
+                                                ) : filteredBatches.length > 0 ? (
+                                                    filteredBatches.map((batch) => (
+                                                        <div
+                                                            key={batch.id}
+                                                            onClick={() => handleBatchSelect(batch)}
+                                                            className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                        >
+                                                            <div className="font-medium text-gray-900">{batch.name}</div>
+                                                            <div className="text-sm text-gray-500">{batch.description}</div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        No batches found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
