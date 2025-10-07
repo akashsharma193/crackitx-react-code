@@ -179,12 +179,9 @@ const CreateBatch = () => {
                                             name="organization"
                                             value={formData.organization}
                                             onChange={handleInputChange}
-                                            className={`w-full border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.organization
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
-                                                }`}
+                                            className="w-full border border-[#7966F1] rounded-md !px-4 !py-2 !h-[42px] text-gray-700 bg-gray-100 cursor-not-allowed"
                                             placeholder="Enter organization name"
-                                            disabled={loading}
+                                            disabled={true}
                                         />
                                         {errors.organization && <p className="text-red-500 text-xs !mt-1">{errors.organization}</p>}
                                     </div>
