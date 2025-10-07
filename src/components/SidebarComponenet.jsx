@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, FolderPlus } from 'lucide-react';
 import dashboardIcon from '/src/assets/icons/dashboard-icon.png';
 import studentsIcon from '/src/assets/icons/students-icon.png';
 import examhistoryIcon from '/src/assets/icons/exam-history-icon.png';
@@ -11,6 +11,7 @@ import logOutIcon from '/src/assets/icons/logout-icon.png';
 const sidebarItems = [
     { label: 'Dashboard', icon: dashboardIcon },
     { label: 'Students', icon: studentsIcon },
+    { label: 'Create Batch', icon: 'lucide', lucideIcon: FolderPlus },
     { label: 'Create Exam', icon: createExamIcon },
     { label: 'Active Exam', icon: activeExamIcon },
     { label: 'Exam History', icon: examhistoryIcon },

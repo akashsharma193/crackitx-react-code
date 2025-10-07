@@ -8,6 +8,7 @@ import Dashboard from '../dashboard/Dashboard';
 import ActiveExams from '../active-exams/ActiveExams';
 import LogoutDialog from '../../components/LogOutComponent';
 import CreateExam from '../create-exam/CreateExam';
+import CreateBatch from '../create-batch/CreateBatch';
 import UpcomingExam from '../upcoming-exam/UpcomingExam';
 import UserDashboard from '../dashboard/UserDashboard';
 import UserSidebarComponent from '../../components/UserSidebarComponent';
@@ -134,6 +135,9 @@ const Home = () => {
                 case 'Students':
                     component = <Students />;
                     break;
+                case 'Create Batch':
+                    component = <CreateBatch />;
+                    break;
                 case 'Exam History':
                     component = <PastExams />;
                     break;
@@ -212,7 +216,7 @@ const Home = () => {
         }
 
         const tabs = isAdmin 
-            ? ['Dashboard', 'Students', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources']
+            ? ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources']
             : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
 
         return (
