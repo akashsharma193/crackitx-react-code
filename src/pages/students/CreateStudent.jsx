@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -16,9 +16,66 @@ const CreateStudent = () => {
         password: '',
         isAdmin: false
     });
+    const [batches, setBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
+    const batchDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const orgCode = localStorage.getItem('orgCode');
+        if (orgCode) {
+            fetchBatches(orgCode);
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
+
+    const handleBatchSelect = (batch) => {
+        setFormData(prev => ({ ...prev, batch: batch.name }));
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+        if (errors.batch) {
+            setErrors(prev => ({
+                ...prev,
+                batch: ''
+            }));
+        }
+    };
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
 
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,6 +200,7 @@ const CreateStudent = () => {
                     password: '',
                     isAdmin: false
                 });
+                setBatchSearchTerm('');
 
                 setTimeout(() => {
                     navigate(-1);
@@ -153,10 +211,10 @@ const CreateStudent = () => {
 
             if (error.response) {
                 const errorData = error.response.data;
-                
-                const errorMessage = errorData?.message || 
-                    errorData?.error || 
-                    errorData?.detail || 
+
+                const errorMessage = errorData?.message ||
+                    errorData?.error ||
+                    errorData?.detail ||
                     'An error occurred while creating the student';
 
                 console.log('API Error Response:', errorData);
@@ -204,13 +262,13 @@ const CreateStudent = () => {
                                         value={formData.name}
                                         onChange={handleInputChange}
                                         className={`w-full border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.name
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
+                                            ? 'border-red-500 focus:ring-red-500'
+                                            : 'border-[#7966F1] focus:ring-[#7966F1]'
                                             }`}
                                         placeholder="Enter full name"
                                         disabled={loading}
                                     />
-                                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                    {errors.name && <p className="text-red-500 text-xs !mt-1">{errors.name}</p>}
                                 </div>
 
                                 <div>
@@ -223,8 +281,8 @@ const CreateStudent = () => {
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         className={`w-full border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.email
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
+                                            ? 'border-red-500 focus:ring-red-500'
+                                            : 'border-[#7966F1] focus:ring-[#7966F1]'
                                             }`}
                                         placeholder="Enter email address"
                                         disabled={loading}
@@ -250,32 +308,61 @@ const CreateStudent = () => {
                                             value={formData.mobile}
                                             onChange={handleInputChange}
                                             className={`flex-1 border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.mobile
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : 'border-[#7966F1] focus:ring-[#7966F1]'
+                                                ? 'border-red-500 focus:ring-red-500'
+                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
                                                 }`}
                                             placeholder="Phone Number"
                                             disabled={loading}
                                         />
                                     </div>
-                                    {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+                                    {errors.mobile && <p className="text-red-500 text-xs !mt-1">{errors.mobile}</p>}
                                 </div>
 
                                 <div>
                                     <label className="block text-sm text-gray-700 !mb-1 font-medium">
                                         Batch <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        name="batch"
-                                        value={formData.batch}
-                                        onChange={handleInputChange}
-                                        className={`w-full border rounded-md !px-4 !py-2 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.batch
+                                    <div className="relative" ref={batchDropdownRef}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search Batch"
+                                            value={batchSearchTerm}
+                                            onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                            onFocus={() => setBatchDropdownOpen(true)}
+                                            disabled={loading || isLoadingBatches}
+                                            className={`w-full border rounded-md !px-4 !py-2 !pr-10 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.batch
                                                 ? 'border-red-500 focus:ring-red-500'
                                                 : 'border-[#7966F1] focus:ring-[#7966F1]'
-                                            }`}
-                                        placeholder="Enter batch name"
-                                        disabled={loading}
-                                    />
+                                                }`}
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        {batchDropdownOpen && (
+                                            <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                                {isLoadingBatches ? (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        Loading batches...
+                                                    </div>
+                                                ) : filteredBatches.length > 0 ? (
+                                                    filteredBatches.map((batch) => (
+                                                        <div
+                                                            key={batch.id}
+                                                            onClick={() => handleBatchSelect(batch)}
+                                                            className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                        >
+                                                            <div className="font-medium text-gray-900">{batch.name}</div>
+                                                            <div className="text-sm text-gray-500">{batch.description}</div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        No batches found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                     {errors.batch && <p className="text-red-500 text-xs mt-1">{errors.batch}</p>}
                                 </div>
 
@@ -290,8 +377,8 @@ const CreateStudent = () => {
                                             value={formData.password}
                                             onChange={handleInputChange}
                                             className={`w-full border rounded-md !px-4 !py-2 !pr-12 !h-[42px] outline-none focus:ring-2 focus:ring-opacity-50 ${errors.password
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : 'border-[#7966F1] focus:ring-[#7966F1]'
+                                                ? 'border-red-500 focus:ring-red-500'
+                                                : 'border-[#7966F1] focus:ring-[#7966F1]'
                                                 }`}
                                             placeholder="Enter password"
                                             disabled={loading}

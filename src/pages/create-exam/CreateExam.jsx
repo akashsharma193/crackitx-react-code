@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
@@ -605,8 +605,7 @@ const DateTimePicker = ({ label, value, onChange, minDateTime }) => {
                 </div>
                 <div className="relative">
                     <input
-                        type="time"
-                        value={time}
+                        type="time" value={time}
                         onChange={onTime}
                         min={timeMin}
                         className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
@@ -645,7 +644,11 @@ const CreateExam = () => {
         examDuration: '',
         isActive: true
     });
-    // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [batches, setBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
+    const batchDropdownRef = useRef(null);
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [showAIDialog, setShowAIDialog] = useState(false);
@@ -660,7 +663,52 @@ const CreateExam = () => {
     const [aiReferenceKey, setAiReferenceKey] = useState(null);
     const fileInputRef = useRef(null);
     const pollingIntervalRef = useRef(null);
-    // const durationOptions = ['5 mins', '10 mins', '15 mins', '20mins', '20 mins', '25 mins', '30 mins'];
+
+    useEffect(() => {
+        const orgCode = localStorage.getItem('orgCode');
+        if (orgCode) {
+            fetchBatches(orgCode);
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
+
+    const handleBatchSelect = (batch) => {
+        setFormData(prev => ({ ...prev, batch: batch.name }));
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+    };
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
 
     const handleInputChange = useCallback((field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1069,9 +1117,10 @@ const CreateExam = () => {
                 batch: '',
                 startTime: '',
                 endTime: '',
-                examDuration: '30 mins',
+                examDuration: '',
                 isActive: true
             });
+            setBatchSearchTerm('');
             setQuestions([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
             setShowQuestions(false);
         } catch (error) {
@@ -1140,35 +1189,6 @@ const CreateExam = () => {
                             />
                         </div>
 
-                        {/* <div>
-                            <label className="block text-sm font-medium text-gray-600 !mb-2">Exam Duration (minutes)</label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 text-left flex items-center justify-between cursor-pointer"
-                                >
-                                    <span>{formData.examDuration}</span>
-                                    <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                {isDropdownOpen && (
-                                    <div className="absolute top-full left-0 right-0 !mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                                        {durationOptions.map((option) => (
-                                            <button
-                                                key={option}
-                                                onClick={() => {
-                                                    handleInputChange('examDuration', option);
-                                                    setIsDropdownOpen(false);
-                                                }}
-                                                className="w-full !px-4 !py-3 text-left hover:bg-[#5E48EF]/5 first:rounded-t-lg last:rounded-b-lg transition-colors cursor-pointer"
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div> */}
-
                         <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">Exam Duration (in minutes)</label>
                             <input
@@ -1183,13 +1203,44 @@ const CreateExam = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-600 !mb-2">Batch</label>
-                            <input
-                                type="text"
-                                value={formData.batch}
-                                onChange={(e) => handleInputChange('batch', e.target.value)}
-                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                                placeholder="Batch"
-                            />
+                            <div className="relative" ref={batchDropdownRef}>
+                                <input
+                                    type="text"
+                                    placeholder="Search Batch"
+                                    value={batchSearchTerm}
+                                    onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                    onFocus={() => setBatchDropdownOpen(true)}
+                                    disabled={isLoadingBatches}
+                                    className="w-full !px-4 !py-3 !pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                </div>
+                                {batchDropdownOpen && (
+                                    <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                        {isLoadingBatches ? (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                Loading batches...
+                                            </div>
+                                        ) : filteredBatches.length > 0 ? (
+                                            filteredBatches.map((batch) => (
+                                                <div
+                                                    key={batch.id}
+                                                    onClick={() => handleBatchSelect(batch)}
+                                                    className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                >
+                                                    <div className="font-medium text-gray-900">{batch.name}</div>
+                                                    <div className="text-sm text-gray-500">{batch.description}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                No batches found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <DateTimePicker
@@ -1225,8 +1276,7 @@ const CreateExam = () => {
                                 Is Active
                             </label>
                             {!canToggleActive() && formData.startTime && (
-                                <span className="text-xs text-gray-400 !ml-2">(Can only be toggled if start date is more than 24 hours from now)</span>
-                            )}
+                                <span className="text-xs text-gray-400 !ml-2">(Can only be toggled if start date is more than 24 hours from now)</span>)}
                         </div>
                     </div>
 

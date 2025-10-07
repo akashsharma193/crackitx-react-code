@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Search, Trophy, Medal, Award, X } from 'lucide-react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Search, Trophy, Medal, Award, X, ChevronDown } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -23,6 +23,57 @@ const Ranking = () => {
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
+    const [batches, setBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
+    const batchDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const orgCode = localStorage.getItem('orgCode');
+        if (orgCode) {
+            fetchBatches(orgCode);
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
+
+    const handleBatchSelect = (batch) => {
+        setBatchCode(batch.name);
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+    };
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
 
     const getRankIcon = (rank) => {
         switch (rank) {
@@ -127,15 +178,43 @@ const Ranking = () => {
         <div className="h-full flex flex-col">
             <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 flex-shrink-0">
                 <div className="flex items-center gap-4 flex-wrap w-full">
-                    <div className="relative min-w-[280px]">
+                    <div className="relative min-w-[280px]" ref={batchDropdownRef}>
                         <input
                             type="text"
-                            placeholder="Batch Code (Required)"
-                            value={batchCode}
-                            onChange={(e) => setBatchCode(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            className="!pl-4 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                            placeholder="Search Batch"
+                            value={batchSearchTerm}
+                            onChange={(e) => setBatchSearchTerm(e.target.value)}
+                            onFocus={() => setBatchDropdownOpen(true)}
+                            disabled={isLoadingBatches}
+                            className="!pl-4 !pr-10 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
                         />
+                        <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                        </div>
+                        {batchDropdownOpen && (
+                            <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                {isLoadingBatches ? (
+                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                        Loading batches...
+                                    </div>
+                                ) : filteredBatches.length > 0 ? (
+                                    filteredBatches.map((batch) => (
+                                        <div
+                                            key={batch.id}
+                                            onClick={() => handleBatchSelect(batch)}
+                                            className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                        >
+                                            <div className="font-medium text-gray-900">{batch.name}</div>
+                                            <div className="text-sm text-gray-500">{batch.description}</div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                        No batches found
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative min-w-[280px]">

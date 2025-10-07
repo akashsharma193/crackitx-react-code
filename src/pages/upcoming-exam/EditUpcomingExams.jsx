@@ -485,6 +485,7 @@ const EditUpcomingExams = () => {
     const location = useLocation();
     const fileInputRef = useRef(null);
     const pollingIntervalRef = useRef(null);
+    const batchDropdownRef = useRef(null);
 
     const passedExamData = location.state?.examData || null;
     const isEditMode = location.state?.isEdit || false;
@@ -501,6 +502,10 @@ const EditUpcomingExams = () => {
         isActive: true
     });
 
+    const [batches, setBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
     const [showQuestions, setShowQuestions] = useState(false);
     const [showDialog, setShowDialog] = useState(false);
     const [showBackDialog, setShowBackDialog] = useState(false);
@@ -523,6 +528,13 @@ const EditUpcomingExams = () => {
     ]);
 
     useEffect(() => {
+        const orgCode = localStorage.getItem('orgCode');
+        if (orgCode) {
+            fetchBatches(orgCode);
+        }
+    }, []);
+
+    useEffect(() => {
         if (passedExamData && isEditMode) {
             setFormData({
                 subjectName: passedExamData.subjectName || '',
@@ -534,6 +546,8 @@ const EditUpcomingExams = () => {
                 examDuration: passedExamData.examDuration || '',
                 isActive: passedExamData.isActive !== undefined ? passedExamData.isActive : true
             });
+
+            setBatchSearchTerm(passedExamData.batch || '');
 
             if (passedExamData.questionList && passedExamData.questionList.length > 0) {
                 const transformedQuestions = passedExamData.questionList.map((q, index) => ({
@@ -547,6 +561,45 @@ const EditUpcomingExams = () => {
             }
         }
     }, [passedExamData, isEditMode]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
+
+    const handleBatchSelect = (batch) => {
+        setFormData(prev => ({ ...prev, batch: batch.name }));
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+    };
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
 
     const downloadSampleExcel = useCallback(() => {
         const sampleData = [
@@ -1148,13 +1201,44 @@ const EditUpcomingExams = () => {
                                     <label className="block text-sm font-medium text-gray-600 !mb-2">
                                         Batch
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={formData.batch}
-                                        onChange={(e) => handleInputChange('batch', e.target.value)}
-                                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                                        placeholder="Batch"
-                                    />
+                                    <div className="relative" ref={batchDropdownRef}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search Batch"
+                                            value={batchSearchTerm}
+                                            onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                            onFocus={() => setBatchDropdownOpen(true)}
+                                            disabled={isLoadingBatches}
+                                            className="w-full !px-4 !py-3 !pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        {batchDropdownOpen && (
+                                            <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                                {isLoadingBatches ? (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        Loading batches...
+                                                    </div>
+                                                ) : filteredBatches.length > 0 ? (
+                                                    filteredBatches.map((batch) => (
+                                                        <div
+                                                            key={batch.id}
+                                                            onClick={() => handleBatchSelect(batch)}
+                                                            className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                        >
+                                                            <div className="font-medium text-gray-900">{batch.name}</div>
+                                                            <div className="text-sm text-gray-500">{batch.description}</div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                        No batches found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div>
@@ -1308,7 +1392,7 @@ const EditUpcomingExams = () => {
                             <button
                                 onClick={handleSubmit}
                                 disabled={isLoading}
-                                className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-12 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all shadow-lg cursor-pointerdisabled:opacity-50 disabled:cursor-not-allowed"
+                                className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-12 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Exam' : 'Create Exam')}
                             </button>

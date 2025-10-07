@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import WelcomeComponent from '../../components/auth/WelcomeComponent';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/axiosConfig';
 import { toast } from 'react-toastify';
-import { User, Phone, Mail, Users, Building, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { User, Phone, Mail, Users, Building, Lock, CheckCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
 const RegisterPage = () => {
     const navigate = useNavigate();
@@ -18,6 +18,10 @@ const RegisterPage = () => {
         confirmPassword: ''
     });
 
+    const [organizations, setOrganizations] = useState([]);
+    const [batches, setBatches] = useState([]);
+    const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -29,12 +33,95 @@ const RegisterPage = () => {
         hasMinLength: false
     });
 
+    const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+    const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
+    const [orgSearchTerm, setOrgSearchTerm] = useState('');
+    const [batchSearchTerm, setBatchSearchTerm] = useState('');
+
+    const orgDropdownRef = useRef(null);
+    const batchDropdownRef = useRef(null);
+
+    useEffect(() => {
+        fetchOrganizations();
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (orgDropdownRef.current && !orgDropdownRef.current.contains(event.target)) {
+                setOrgDropdownOpen(false);
+            }
+            if (batchDropdownRef.current && !batchDropdownRef.current.contains(event.target)) {
+                setBatchDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchOrganizations = async () => {
+        setIsLoadingOrgs(true);
+        try {
+            const response = await apiClient.get('/user-open/getAllOrganization');
+            if (response.data && response.data.success && response.data.data) {
+                setOrganizations(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching organizations:', error);
+            toast.error('Failed to load organizations');
+        } finally {
+            setIsLoadingOrgs(false);
+        }
+    };
+
+    const fetchBatches = async (organizationName) => {
+        setIsLoadingBatches(true);
+        setBatches([]);
+        setFormData(prev => ({ ...prev, batch: '' }));
+        setBatchSearchTerm('');
+        try {
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: organizationName
+            });
+            if (response.data && response.data.success && response.data.data) {
+                setBatches(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to load batches');
+        } finally {
+            setIsLoadingBatches(false);
+        }
+    };
+
+    const handleOrgSelect = (org) => {
+        setFormData(prev => ({ ...prev, orgCode: org.name }));
+        setOrgSearchTerm(org.name);
+        setOrgDropdownOpen(false);
+        fetchBatches(org.name);
+    };
+
+    const handleBatchSelect = (batch) => {
+        setFormData(prev => ({ ...prev, batch: batch.name }));
+        setBatchSearchTerm(batch.name);
+        setBatchDropdownOpen(false);
+    };
+
+    const filteredOrganizations = organizations.filter(org =>
+        org.name.toLowerCase().includes(orgSearchTerm.toLowerCase()) ||
+        org.description.toLowerCase().includes(orgSearchTerm.toLowerCase())
+    );
+
+    const filteredBatches = batches.filter(batch =>
+        batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+        batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
+    );
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
 
-        // For phone number field, only allow numeric input
         if (name === 'number') {
-            const numericValue = value.replace(/\D/g, ''); // Remove all non-digits
+            const numericValue = value.replace(/\D/g, '');
             setFormData({
                 ...formData,
                 [name]: numericValue
@@ -46,7 +133,6 @@ const RegisterPage = () => {
             });
         }
 
-        // Real-time password validation
         if (name === 'password') {
             validatePassword(value);
         }
@@ -91,13 +177,13 @@ const RegisterPage = () => {
             return false;
         }
 
-        if (!formData.batch.trim()) {
-            toast.error('Please enter your batch');
+        if (!formData.orgCode.trim()) {
+            toast.error('Please select an organization');
             return false;
         }
 
-        if (!formData.orgCode.trim()) {
-            toast.error('Please enter organization code');
+        if (!formData.batch.trim()) {
+            toast.error('Please select a batch');
             return false;
         }
 
@@ -123,7 +209,6 @@ const RegisterPage = () => {
             return false;
         }
 
-        // Enhanced password validation
         if (!isPasswordValid()) {
             toast.error('Password must meet all security requirements');
             return false;
@@ -173,11 +258,9 @@ const RegisterPage = () => {
 
             console.log('Registration response:', response);
 
-            // Check for successful response
             if (response.data && (response.status === 200 || response.status === 201)) {
                 toast.success('Email is sent Please activate your account');
 
-                // Clear form
                 setFormData({
                     name: '',
                     number: '',
@@ -188,7 +271,10 @@ const RegisterPage = () => {
                     confirmPassword: ''
                 });
 
-                // Reset password validation
+                setOrgSearchTerm('');
+                setBatchSearchTerm('');
+                setBatches([]);
+
                 setPasswordValidation({
                     hasUppercase: false,
                     hasLowercase: false,
@@ -197,7 +283,6 @@ const RegisterPage = () => {
                     hasMinLength: false
                 });
 
-                // Navigate after a short delay
                 setTimeout(() => {
                     navigate('/', { replace: true });
                 }, 1500);
@@ -265,11 +350,9 @@ const RegisterPage = () => {
                         toast.error(errorMessage || `Server error (${status}). Please try again.`);
                 }
             } else if (error.request) {
-                // Network error
                 console.log('Network error:', error.request);
                 toast.error('Network error. Please check your internet connection and try again.');
             } else {
-                // Other errors
                 console.log('Other error:', error.message);
                 toast.error('An unexpected error occurred. Please try again.');
             }
@@ -280,10 +363,8 @@ const RegisterPage = () => {
 
     return (
         <div className="min-h-screen flex overflow-hidden">
-            {/* Welcome Section */}
             <WelcomeComponent />
 
-            {/* Registration Form */}
             <div className="flex-1 bg-gray-50 flex items-center justify-center" style={{ padding: '64px' }}>
                 <div className="w-full max-w-md">
                     <div className="bg-white rounded-2xl shadow-xl" style={{ padding: '48px 40px' }}>
@@ -292,7 +373,6 @@ const RegisterPage = () => {
                         </h1>
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Name Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <User className="w-5 h-5 text-gray-400" />
@@ -315,7 +395,6 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Mobile Number Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Phone className="w-5 h-5 text-gray-400" />
@@ -341,7 +420,6 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Mail className="w-5 h-5 text-gray-400" />
@@ -364,53 +442,104 @@ const RegisterPage = () => {
                                 />
                             </div>
 
-                            {/* Batch Field */}
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
-                                    <Users className="w-5 h-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    name="batch"
-                                    placeholder="Batch"
-                                    value={formData.batch}
-                                    onChange={handleInputChange}
-                                    disabled={isLoading}
-                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                                    style={{
-                                        paddingLeft: '48px',
-                                        paddingRight: '16px',
-                                        paddingTop: '16px',
-                                        paddingBottom: '16px',
-                                        fontSize: '16px'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Organization Code Field */}
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
+                            <div className="relative" ref={orgDropdownRef}>
+                                <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px', zIndex: 10 }}>
                                     <Building className="w-5 h-5 text-gray-400" />
                                 </div>
                                 <input
                                     type="text"
-                                    name="orgCode"
-                                    placeholder="Organization Code"
-                                    value={formData.orgCode}
-                                    onChange={handleInputChange}
-                                    disabled={isLoading}
+                                    placeholder="Search Organization"
+                                    value={orgSearchTerm}
+                                    onChange={(e) => setOrgSearchTerm(e.target.value)}
+                                    onFocus={() => setOrgDropdownOpen(true)}
+                                    disabled={isLoading || isLoadingOrgs}
                                     className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                     style={{
                                         paddingLeft: '48px',
-                                        paddingRight: '16px',
+                                        paddingRight: '48px',
                                         paddingTop: '16px',
                                         paddingBottom: '16px',
                                         fontSize: '16px'
                                     }}
                                 />
+                                <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '16px' }}>
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                </div>
+                                {orgDropdownOpen && (
+                                    <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                        {isLoadingOrgs ? (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                Loading organizations...
+                                            </div>
+                                        ) : filteredOrganizations.length > 0 ? (
+                                            filteredOrganizations.map((org) => (
+                                                <div
+                                                    key={org.id}
+                                                    onClick={() => handleOrgSelect(org)}
+                                                    className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                >
+                                                    <div className="font-medium text-gray-900">{org.name}</div>
+                                                    <div className="text-sm text-gray-500">{org.description}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                No organizations found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Password Field */}
+                            <div className="relative" ref={batchDropdownRef}>
+                                <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px', zIndex: 10 }}>
+                                    <Users className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search Batch"
+                                    value={batchSearchTerm}
+                                    onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                    onFocus={() => setBatchDropdownOpen(true)}
+                                    disabled={isLoading || isLoadingBatches || !formData.orgCode}
+                                    className="w-full bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                    style={{
+                                        paddingLeft: '48px',
+                                        paddingRight: '48px',
+                                        paddingTop: '16px',
+                                        paddingBottom: '16px',
+                                        fontSize: '16px'
+                                    }}
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '16px' }}>
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                </div>
+                                {batchDropdownOpen && formData.orgCode && (
+                                    <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                        {isLoadingBatches ? (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                Loading batches...
+                                            </div>
+                                        ) : filteredBatches.length > 0 ? (
+                                            filteredBatches.map((batch) => (
+                                                <div
+                                                    key={batch.id}
+                                                    onClick={() => handleBatchSelect(batch)}
+                                                    className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                >
+                                                    <div className="font-medium text-gray-900">{batch.name}</div>
+                                                    <div className="text-sm text-gray-500">{batch.description}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                No batches found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Lock className="w-5 h-5 text-gray-400" />
@@ -446,7 +575,6 @@ const RegisterPage = () => {
                                 </button>
                             </div>
 
-                            {/* Password Validation Indicators */}
                             {formData.password && (
                                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                                     <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
@@ -485,7 +613,6 @@ const RegisterPage = () => {
                                 </div>
                             )}
 
-                            {/* Confirm Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <CheckCircle className="w-5 h-5 text-gray-400" />
@@ -521,14 +648,12 @@ const RegisterPage = () => {
                                 </button>
                             </div>
 
-                            {/* Password Match Indicator */}
                             {formData.confirmPassword && (
                                 <div className={`text-xs ${formData.password === formData.confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
                                     {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
                                 </div>
                             )}
 
-                            {/* Register Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -545,7 +670,6 @@ const RegisterPage = () => {
                                 {isLoading ? 'Creating Account...' : 'Register'}
                             </button>
 
-                            {/* Login Link */}
                             <div className="text-center">
                                 <span className="text-gray-600" style={{ fontSize: '14px' }}>
                                     Already have an account?{' '}
