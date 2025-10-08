@@ -19,13 +19,10 @@ const CircularLoader = () => {
 
 const PastExams = () => {
     const navigate = useNavigate();
-    const isInitialLoadRef = useRef(true);
     const searchTimeoutRef = useRef(null);
-    const abortControllerRef = useRef(null);
 
     const [examData, setExamData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
 
@@ -34,19 +31,9 @@ const PastExams = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [pageSize] = useState(10);
 
-    const fetchPastExamData = useCallback(async (page = 0, search = '', filter = '') => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        abortControllerRef.current = new AbortController();
-
+    const fetchPastExamData = async (page = 0, search = '', filter = '') => {
         try {
             setLoading(true);
-            setError(null);
-            
-            // Clear any existing error toasts
-            toast.dismiss();
 
             const filterObj = {};
 
@@ -64,10 +51,7 @@ const PastExams = () => {
                 filter: filterObj
             };
 
-            console.log('Fetching Exam History with body:', requestBody);
-            const response = await apiClient.post('/questionPaper/getPastExam', requestBody, {
-                signal: abortControllerRef.current.signal
-            });
+            const response = await apiClient.post('/questionPaper/getPastExam', requestBody);
 
             if (response.data.success && response.data.data) {
                 const transformedData = response.data.data.content.map((item, index) => ({
@@ -88,55 +72,35 @@ const PastExams = () => {
                 }));
 
                 setExamData(transformedData);
-
                 setTotalPages(response.data.data.page.totalPages);
                 setTotalElements(response.data.data.page.totalElements);
                 setCurrentPage(response.data.data.page.number);
-            } else {
-                throw new Error(response.data.message || 'Failed to fetch past exam data');
             }
         } catch (err) {
-            if (err.name === 'AbortError') {
-                return;
-            }
-            const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch past exam data';
-            setError(errorMessage);
             console.error('Error fetching past exam data:', err);
-            
-            // Only show toast error if it's not a cancelled request and we don't have data
-            if (!abortControllerRef.current?.signal?.aborted && examData.length === 0) {
-                toast.error('Failed to fetch past exam data');
-            }
+            const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch past exam data';
+            toast.error(errorMessage);
+            setExamData([]);
         } finally {
             setLoading(false);
         }
-    }, [pageSize]);
-
-    useEffect(() => {
-        if (isInitialLoadRef.current) {
-            fetchPastExamData(0, '', '');
-            isInitialLoadRef.current = false;
-        }
-    }, [fetchPastExamData]);
+    };
 
     useEffect(() => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
 
-        if (!isInitialLoadRef.current) {
-            searchTimeoutRef.current = setTimeout(() => {
-                fetchPastExamData(0, searchTerm, filterTerm);
-                setCurrentPage(0);
-            }, 500);
-        }
+        searchTimeoutRef.current = setTimeout(() => {
+            fetchPastExamData(0, searchTerm, filterTerm);
+        }, 500);
 
         return () => {
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
         };
-    }, [searchTerm, filterTerm, fetchPastExamData]);
+    }, [searchTerm, filterTerm]);
 
     const handleViewClick = useCallback((exam) => {
         navigate(`/exam-participants/${exam.questionId}`, {
@@ -148,14 +112,12 @@ const PastExams = () => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
             fetchPastExamData(newPage, searchTerm, filterTerm);
         }
-    }, [totalPages, currentPage, searchTerm, filterTerm, fetchPastExamData]);
+    }, [totalPages, currentPage, searchTerm, filterTerm]);
 
     const handleClear = useCallback(() => {
         setSearchTerm('');
         setFilterTerm('');
-        setCurrentPage(0);
-        fetchPastExamData(0, '', '');
-    }, [fetchPastExamData]);
+    }, []);
 
     const handleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
@@ -170,23 +132,20 @@ const PastExams = () => {
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
-            setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
-    }, [searchTerm, filterTerm, fetchPastExamData]);
+    }, [searchTerm, filterTerm]);
 
     const handleFilterKeyPress = useCallback((e) => {
         if (e.key === 'Enter') {
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
-            setCurrentPage(0);
             fetchPastExamData(0, searchTerm, filterTerm);
         }
-    }, [searchTerm, filterTerm, fetchPastExamData]);
+    }, [searchTerm, filterTerm]);
 
     const handleDownload = useCallback(() => {
-        console.log('Download Exam History data');
         toast.info('Download functionality coming soon!');
     }, []);
 
@@ -219,9 +178,6 @@ const PastExams = () => {
 
     useEffect(() => {
         return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
@@ -282,13 +238,7 @@ const PastExams = () => {
             <div className="flex-1 overflow-y-auto !p-8">
                 {loading && <CircularLoader />}
 
-                {!loading && error && (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-red-500 text-lg">Error: {error}</div>
-                    </div>
-                )}
-
-                {!loading && !error && (
+                {!loading && (
                     <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1]">
                         <table className="min-w-full text-left text-sm">
                             <thead className="bg-white text-[#7966F1] font-bold border-b">

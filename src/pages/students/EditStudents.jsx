@@ -173,6 +173,13 @@ const EditStudent = () => {
         navigate('/home', { state: { activeTab: 'Students' } });
     };
 
+    const handleSidebarTabChange = (newTab) => {
+        navigate('/home', {
+            state: { activeTab: newTab },
+            replace: false
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -245,7 +252,7 @@ const EditStudent = () => {
             <div className="min-h-screen flex flex-col">
                 <HeaderComponent />
                 <div className="flex flex-1 overflow-hidden">
-                    <SidebarComponent activeTab="Students" setActiveTab={() => { }} />
+                    <SidebarComponent activeTab="Students" setActiveTab={handleSidebarTabChange} />
                     <div className="flex-1 bg-gray-50 flex items-center justify-center">
                         <div className="text-[#7966F1] text-lg font-semibold">
                             Loading Student Data...
@@ -261,7 +268,8 @@ const EditStudent = () => {
             <HeaderComponent />
 
             <div className="flex flex-1 overflow-hidden">
-                <SidebarComponent activeTab="Students" setActiveTab={() => { }} />
+                {/* FIXED: Changed from setActiveTab={() => { }} to setActiveTab={handleSidebarTabChange} */}
+                <SidebarComponent activeTab="Students" setActiveTab={handleSidebarTabChange} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
                     <div className="flex items-center gap-3 text-white bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-5">

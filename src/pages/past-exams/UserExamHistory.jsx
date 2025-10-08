@@ -314,20 +314,11 @@ const UserExamHistory = () => {
     const [currentResults, setCurrentResults] = useState(null);
 
     const searchTimeoutRef = useRef(null);
-    const abortControllerRef = useRef(null);
-    const isInitialLoadRef = useRef(true);
 
     const fetchCompletedTestData = useCallback(async (page = 0, search = '', filter = '') => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        abortControllerRef.current = new AbortController();
-
         try {
             setLoading(true);
             setError(null);
-            toast.dismiss();
 
             const filterObj = {};
 
@@ -345,9 +336,7 @@ const UserExamHistory = () => {
                 filter: filterObj
             };
 
-            const response = await apiClient.post('/user-activity/getAllCompletedTest', requestBody, {
-                signal: abortControllerRef.current.signal
-            });
+            const response = await apiClient.post('/user-activity/getAllCompletedTest', requestBody);
 
             if (response.data.success && response.data.data) {
                 const transformedData = response.data.data.content.map((item, index) => ({
@@ -375,20 +364,14 @@ const UserExamHistory = () => {
                 throw new Error(response.data.message || 'Failed to fetch completed test data');
             }
         } catch (err) {
-            if (err.name === 'AbortError') {
-                return;
-            }
             const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch completed test data';
             setError(errorMessage);
             console.error('Error fetching completed test data:', err);
-            
-            if (!abortControllerRef.current?.signal?.aborted && examData.length === 0) {
-                toast.error('Failed to fetch completed test data');
-            }
+            toast.error('Failed to fetch completed test data');
         } finally {
             setLoading(false);
         }
-    }, [pageSize, examData.length]);
+    }, [pageSize]);
 
     const handleViewClick = useCallback(async (exam) => {
         if (!exam.questionId) {
@@ -428,24 +411,18 @@ const UserExamHistory = () => {
         setCurrentResults(null);
     }, []);
 
-    useEffect(() => {
-        if (isInitialLoadRef.current) {
-            fetchCompletedTestData(0, '', '');
-            isInitialLoadRef.current = false;
-        }
-    }, [fetchCompletedTestData]);
+    // useEffect(() => {
+    //     fetchCompletedTestData(0, '', '');
+    // }, [fetchCompletedTestData]);
 
     useEffect(() => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
 
-        if (!isInitialLoadRef.current) {
-            searchTimeoutRef.current = setTimeout(() => {
-                fetchCompletedTestData(0, searchTerm, filterTerm);
-                setCurrentPage(0);
-            }, 500);
-        }
+        searchTimeoutRef.current = setTimeout(() => {
+            fetchCompletedTestData(0, searchTerm, filterTerm);
+        }, 500);
 
         return () => {
             if (searchTimeoutRef.current) {
@@ -463,9 +440,7 @@ const UserExamHistory = () => {
     const handleClear = useCallback(() => {
         setSearchTerm('');
         setFilterTerm('');
-        setCurrentPage(0);
-        fetchCompletedTestData(0, '', '');
-    }, [fetchCompletedTestData]);
+    }, []);
 
     const handleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
@@ -480,7 +455,6 @@ const UserExamHistory = () => {
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
-            setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
     }, [searchTerm, filterTerm, fetchCompletedTestData]);
@@ -490,7 +464,6 @@ const UserExamHistory = () => {
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
-            setCurrentPage(0);
             fetchCompletedTestData(0, searchTerm, filterTerm);
         }
     }, [searchTerm, filterTerm, fetchCompletedTestData]);
@@ -529,9 +502,6 @@ const UserExamHistory = () => {
 
     useEffect(() => {
         return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
             }
@@ -612,7 +582,6 @@ const UserExamHistory = () => {
                                     <th className="!px-6 !py-4">Test Name</th>
                                     <th className="!px-6 !py-4">Batch</th>
                                     <th className="!px-6 !py-4">Conducted By</th>
-                                    {/* <th className="!px-6 !py-4">Duration</th> */}
                                     <th className="!px-6 !py-4">Start Time</th>
                                     <th className="!px-6 !py-4">End Time</th>
                                     <th className="!px-6 !py-4">Total Questions</th>
@@ -627,7 +596,6 @@ const UserExamHistory = () => {
                                             <td className="!px-6 !py-4">{exam.testName}</td>
                                             <td className="!px-6 !py-4">{exam.batch}</td>
                                             <td className="!px-6 !py-4">{exam.conductedBy}</td>
-                                            {/* <td className="!px-6 !py-4">{exam.examDuration}</td> */}
                                             <td className="!px-6 !py-4">{exam.startTime}</td>
                                             <td className="!px-6 !py-4">{exam.endTime}</td>
                                             <td className="!px-6 !py-4">{exam.totalQuestions}</td>
@@ -656,7 +624,7 @@ const UserExamHistory = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="9" className="!px-6 !py-8 text-center text-gray-500">
+                                        <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
                                             {hasFilters ? 'No completed tests found matching your criteria' : 'No completed tests found'}
                                         </td>
                                     </tr>

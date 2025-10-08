@@ -229,12 +229,19 @@ const CreateStudent = () => {
         }
     };
 
+    const handleSidebarTabChange = (newTab) => {
+        navigate('/home', {
+            state: { activeTab: newTab },
+            replace: false
+        });
+    };
+
     return (
         <div className="min-h-screen flex flex-col">
             <HeaderComponent />
 
             <div className="flex flex-1 overflow-hidden">
-                <SidebarComponent activeTab="Students" setActiveTab={() => { }} />
+                <SidebarComponent activeTab="Students" setActiveTab={handleSidebarTabChange} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
                     <div className="flex items-center gap-3 text-white bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-5">

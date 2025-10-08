@@ -56,6 +56,7 @@ const CircularLoader = () => {
 
 const Students = () => {
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('active');
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
@@ -79,7 +80,7 @@ const Students = () => {
         return () => clearTimeout(timeoutId);
     }, [searchTerm, filterTerm]);
 
-    const fetchStudents = async (page = 0, search = '', filter = '') => {
+    const fetchStudents = async (page = 0, search = '', filter = '', tab = 'active') => {
         try {
             setLoading(true);
 
@@ -99,9 +100,11 @@ const Students = () => {
                 filter: filterObj
             };
 
-            console.log('Fetching students with params:', requestBody);
+            const endpoint = tab === 'active' ? '/admin-secured/getAllUser' : '/admin-secured/getAllInactiveUser';
 
-            const response = await apiClient.post(`/admin-secured/getAllUser`, requestBody);
+            console.log('Fetching students with params:', { endpoint, requestBody });
+
+            const response = await apiClient.post(endpoint, requestBody);
 
             if (response.data.success) {
                 const responseData = response.data.data;
@@ -140,13 +143,23 @@ const Students = () => {
     };
 
     useEffect(() => {
-        fetchStudents(0, '', '');
+        fetchStudents(0, '', '', activeTab);
     }, []);
 
     useEffect(() => {
         setCurrentPage(0);
-        fetchStudents(0, debouncedSearchTerm, debouncedFilterTerm);
+        fetchStudents(0, debouncedSearchTerm, debouncedFilterTerm, activeTab);
     }, [debouncedSearchTerm, debouncedFilterTerm]);
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        setSearchTerm('');
+        setFilterTerm('');
+        setDebouncedSearchTerm('');
+        setDebouncedFilterTerm('');
+        setCurrentPage(0);
+        fetchStudents(0, '', '', tab);
+    };
 
     const handleViewClick = (student) => {
         navigate(`/user-details/${student.userId}`, {
@@ -183,7 +196,7 @@ const Students = () => {
                 setShowDeleteDialog(false);
                 setUserToDelete(null);
 
-                await fetchStudents(currentPage, debouncedSearchTerm, debouncedFilterTerm);
+                await fetchStudents(currentPage, debouncedSearchTerm, debouncedFilterTerm, activeTab);
             } else {
                 throw new Error(response.data.message || 'Failed to disable user');
             }
@@ -203,7 +216,7 @@ const Students = () => {
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages && newPage !== currentPage) {
             setCurrentPage(newPage);
-            fetchStudents(newPage, debouncedSearchTerm, debouncedFilterTerm);
+            fetchStudents(newPage, debouncedSearchTerm, debouncedFilterTerm, activeTab);
         }
     };
 
@@ -213,7 +226,7 @@ const Students = () => {
         setDebouncedSearchTerm('');
         setDebouncedFilterTerm('');
         setCurrentPage(0);
-        fetchStudents(0, '', '');
+        fetchStudents(0, '', '', activeTab);
     };
 
     const handleSearchChange = (e) => {
@@ -228,7 +241,7 @@ const Students = () => {
         if (e.key === 'Enter') {
             setDebouncedSearchTerm(searchTerm);
             setCurrentPage(0);
-            fetchStudents(0, searchTerm, filterTerm);
+            fetchStudents(0, searchTerm, filterTerm, activeTab);
         }
     };
 
@@ -236,7 +249,7 @@ const Students = () => {
         if (e.key === 'Enter') {
             setDebouncedFilterTerm(filterTerm);
             setCurrentPage(0);
-            fetchStudents(0, searchTerm, filterTerm);
+            fetchStudents(0, searchTerm, filterTerm, activeTab);
         }
     };
 
@@ -277,186 +290,209 @@ const Students = () => {
 
     return (
         <div className="flex-1 !py-0 overflow-y-auto">
+            <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 mt-0 shadow-md">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="relative min-w-[320px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by name..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            onKeyPress={handleSearchKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
+                    </div>
+
+                    <div className="relative min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Filter by batch..."
+                            value={filterTerm}
+                            onChange={handleFilterChange}
+                            onKeyPress={handleFilterKeyPress}
+                            className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleClear}
+                        className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                        <X size={16} className="text-gray-500" />
+                        Clear
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <button
+                        onClick={handleCreateStudentClick}
+                        className="bg-white text-[#7966F1] font-semibold !px-4 !py-2 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                        Create Student
+                    </button>
+                    <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
+                        <Download size={20} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white border-b border-gray-200 !px-8 !pt-4">
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => handleTabChange('active')}
+                        className={`!px-6 !py-3 font-semibold text-sm rounded-t-lg transition-all ${
+                            activeTab === 'active'
+                                ? 'bg-[#7966F1] text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        Active Users
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('inactive')}
+                        className={`!px-6 !py-3 font-semibold text-sm rounded-t-lg transition-all ${
+                            activeTab === 'inactive'
+                                ? 'bg-[#7966F1] text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        Inactive Users
+                    </button>
+                </div>
+            </div>
+
             {loading && <CircularLoader />}
 
             {!loading && (
-                <>
-                    <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 mt-0 shadow-md">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="relative min-w-[320px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    onKeyPress={handleSearchKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <div className="relative min-w-[200px]">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Filter by batch..."
-                                    value={filterTerm}
-                                    onChange={handleFilterChange}
-                                    onKeyPress={handleFilterKeyPress}
-                                    className="!pl-10 !pr-4 !py-2 rounded-md bg-white text-gray-600 placeholder:text-gray-400 border-none outline-none w-full"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handleClear}
-                                className="bg-white text-gray-500 font-semibold !px-4 !py-2 rounded-md flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                            >
-                                <X size={16} className="text-gray-500" />
-                                Clear
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-4 md:mt-0">
-                            <button
-                                onClick={handleCreateStudentClick}
-                                className="bg-white text-[#7966F1] font-semibold !px-4 !py-2 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
-                            >
-                                Create Student
-                            </button>
-                            <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
-                                <Download size={20} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8">
-                        <table className="min-w-full text-left text-sm">
-                            <thead className="bg-white text-[#7966F1] font-bold border-b">
-                                <tr>
-                                    <th className="!px-6 !py-4">Sr.no.</th>
-                                    <th className="!px-6 !py-4">Name</th>
-                                    <th className="!px-6 !py-4">Email Id</th>
-                                    <th className="!px-6 !py-4">Phone Number</th>
-                                    <th className="!px-6 !py-4">Batch</th>
-                                    <th className="!px-6 !py-4">View</th>
-                                    <th className="!px-6 !py-4">Edit</th>
-                                    <th className="!px-6 !py-4">Delete</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {students.length > 0 ? (
-                                    students.map((student, index) => (
-                                        <tr key={student.id || index} className="border-t hover:bg-gray-50">
-                                            <td className="!px-6 !py-4">{(currentPage * pageSize) + index + 1}</td>
-                                            <td className="!px-6 !py-4">{student.name || 'N/A'}</td>
-                                            <td className="!px-6 !py-4">{student.email || 'N/A'}</td>
-                                            <td className="!px-6 !py-4">{student.mobile || 'N/A'}</td>
-                                            <td className="!px-6 !py-4">{student.batch || 'N/A'}</td>
-                                            <td className="!px-6 !py-4">
-                                                <div className="relative group inline-block">
-                                                    <Eye
-                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                        size={20}
-                                                        onClick={() => handleViewClick(student)}
-                                                    />
-                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        View
-                                                    </div>
+                <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-[#7966F1] !m-8 !mt-2">
+                    <table className="min-w-full text-left text-sm">
+                        <thead className="bg-white text-[#7966F1] font-bold border-b">
+                            <tr>
+                                <th className="!px-6 !py-4">Sr.no.</th>
+                                <th className="!px-6 !py-4">Name</th>
+                                <th className="!px-6 !py-4">Email Id</th>
+                                <th className="!px-6 !py-4">Phone Number</th>
+                                <th className="!px-6 !py-4">Batch</th>
+                                <th className="!px-6 !py-4">View</th>
+                                <th className="!px-6 !py-4">Edit</th>
+                                <th className="!px-6 !py-4">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {students.length > 0 ? (
+                                students.map((student, index) => (
+                                    <tr key={student.id || index} className="border-t hover:bg-gray-50">
+                                        <td className="!px-6 !py-4">{(currentPage * pageSize) + index + 1}</td>
+                                        <td className="!px-6 !py-4">{student.name || 'N/A'}</td>
+                                        <td className="!px-6 !py-4">{student.email || 'N/A'}</td>
+                                        <td className="!px-6 !py-4">{student.mobile || 'N/A'}</td>
+                                        <td className="!px-6 !py-4">{student.batch || 'N/A'}</td>
+                                        <td className="!px-6 !py-4">
+                                            <div className="relative group inline-block">
+                                                <Eye
+                                                    className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                    size={20}
+                                                    onClick={() => handleViewClick(student)}
+                                                />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                    View
                                                 </div>
-                                            </td>
-                                            <td className="!px-6 !py-4">
-                                                <div className="relative group inline-block">
-                                                    <Edit
-                                                        className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                        size={20}
-                                                        onClick={() => handleEditClick(student)}
-                                                    />
-                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        Edit
-                                                    </div>
+                                            </div>
+                                        </td>
+                                        <td className="!px-6 !py-4">
+                                            <div className="relative group inline-block">
+                                                <Edit
+                                                    className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                    size={20}
+                                                    onClick={() => handleEditClick(student)}
+                                                />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                    Edit
                                                 </div>
-                                            </td>
-                                            <td className="!px-6 !py-4">
-                                                <div className="relative group inline-block">
-                                                    <Trash2
-                                                        className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
-                                                        size={20}
-                                                        onClick={() => handleDeleteClick(student)}
-                                                    />
-                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        Delete
-                                                    </div>
+                                            </div>
+                                        </td>
+                                        <td className="!px-6 !py-4">
+                                            <div className="relative group inline-block">
+                                                <Trash2
+                                                    className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                                                    size={20}
+                                                    onClick={() => handleDeleteClick(student)}
+                                                />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                    Delete
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
-                                            {hasFilters ? 'No students found matching your criteria' : 'No student data available'}
+                                            </div>
                                         </td>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
+                                        {hasFilters ? 'No students found matching your criteria' : `No ${activeTab} student data available`}
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
 
-                        {totalElements > 0 && (
-                            <div className="flex items-center justify-between !px-6 !py-4 border-t">
-                                <div className="text-sm text-gray-600">
-                                    Showing {startIndex} to {endIndex} of {totalElements} students
-                                    {hasFilters && (
-                                        <span className="text-[#7966F1] ml-2">
-                                            (filtered)
-                                        </span>
-                                    )}
-                                </div>
-
-                                {totalPages > 1 && (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 0}
-                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                                }`}
-                                        >
-                                            <ChevronLeft size={16} />
-                                            Previous
-                                        </button>
-
-                                        <div className="flex items-center gap-1">
-                                            {generatePaginationButtons().map((pageNum) => (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => handlePageChange(pageNum)}
-                                                    className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
-                                                        ? 'bg-[#7966F1] text-white'
-                                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                                        }`}
-                                                >
-                                                    {pageNum + 1}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages - 1}
-                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                                }`}
-                                        >
-                                            Next
-                                            <ChevronRight size={16} />
-                                        </button>
-                                    </div>
+                    {totalElements > 0 && (
+                        <div className="flex items-center justify-between !px-6 !py-4 border-t">
+                            <div className="text-sm text-gray-600">
+                                Showing {startIndex} to {endIndex} of {totalElements} students
+                                {hasFilters && (
+                                    <span className="text-[#7966F1] ml-2">
+                                        (filtered)
+                                    </span>
                                 )}
                             </div>
-                        )}
-                    </div>
-                </>
+
+                            {totalPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 0}
+                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            }`}
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Previous
+                                    </button>
+
+                                    <div className="flex items-center gap-1">
+                                        {generatePaginationButtons().map((pageNum) => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
+                                                    ? 'bg-[#7966F1] text-white'
+                                                    : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                    }`}
+                                            >
+                                                {pageNum + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages - 1}
+                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                            }`}
+                                    >
+                                        Next
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
 
             <DeleteUserDialog

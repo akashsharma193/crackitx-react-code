@@ -48,6 +48,9 @@ const HeaderComponent = () => {
                     if (userData.orgCode) {
                         localStorage.setItem('orgCode', userData.orgCode);
                     }
+                    if (userData.batch) {
+                        localStorage.setItem('batch', userData.batch);
+                    }
                     if (userData.userId) {
                         localStorage.setItem('userId', userData.userId);
                     }

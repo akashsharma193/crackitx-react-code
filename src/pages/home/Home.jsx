@@ -23,6 +23,7 @@ import UserFailedExams from '../failed-exams/UserFailedExams';
 import AllTests from '../all-test/AllTest';
 import UserUpcomingExam from '../upcoming-exam/UserUpcomingExam';
 import Ranking from '../ranking/Ranking';
+import UserRanking from '../ranking/UserRanking';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -173,6 +174,9 @@ const Home = () => {
                 case 'Exam History':
                     component = <UserExamHistory />;
                     break;
+                case 'Ranking':
+                    component = <UserRanking />;
+                    break;
                 case 'Upcoming Exam':
                     component = <UserUpcomingExam />;
                     break;
@@ -217,7 +221,7 @@ const Home = () => {
 
         const tabs = isAdmin 
             ? ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources']
-            : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
+            : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
 
         return (
             <div className="relative w-full h-full">
