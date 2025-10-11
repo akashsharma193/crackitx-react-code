@@ -18,6 +18,8 @@ import ExamParticipants from './pages/exam-participant/ExamParticipants';
 import ActivationPage from './pages/user-activate/UserActivationPage';
 import StudentDetails from './pages/students/StudentDetails';
 import ForgotPasswordPage from './pages/auth/ForgetPasswordPage';
+import CreateAdminForm from './pages/super-admin/CreateAdminForm';
+import EditAdmin from './pages/super-admin/EditAdmin';
 
 const ProtectedRoute = ({ children }) => {
   const authToken = localStorage.getItem('authToken');
@@ -33,6 +35,17 @@ const PublicRoute = ({ children }) => {
   const authToken = localStorage.getItem('authToken');
 
   if (authToken) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
+};
+
+const SuperAdminRoute = ({ children }) => {
+  const authToken = localStorage.getItem('authToken');
+  const userRole = localStorage.getItem('userRole');
+
+  if (authToken && userRole === 'SuperAdmin') {
     return <Navigate to="/home" replace />;
   }
 
@@ -62,6 +75,14 @@ function App() {
           }
         />
         <Route
+          path='/super-admin'
+          element={
+            <SuperAdminRoute>
+              <LoginPage isSuperAdmin={true} />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
           path='/register'
           element={
             <PublicRoute>
@@ -78,11 +99,9 @@ function App() {
           }
         />
 
-        {/* Public routes without redirect */}
         <Route path="/activation/:token" element={<ActivationPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-        {/* Protected routes - require authentication */}
         <Route
           path='/home'
           element={
@@ -163,8 +182,24 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/create-new-admin"
+          element={
+            <ProtectedRoute>
+              <CreateAdminForm />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Catch all - redirect to login */}
+        <Route
+          path="/edit-admin/:id"
+          element={
+            <ProtectedRoute>
+              <EditAdmin />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
 

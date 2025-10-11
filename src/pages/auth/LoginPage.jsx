@@ -5,7 +5,7 @@ import apiClient from '../../api/axiosConfig';
 import { toast } from 'react-toastify';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
-const LoginPage = () => {
+const LoginPage = ({ isSuperAdmin = false }) => {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
@@ -37,20 +37,20 @@ const LoginPage = () => {
         }
     };
 
-    const checkAdminRole = (token) => {
+    const checkUserRole = (token) => {
         try {
             const decodedToken = decodeJWT(token);
 
             if (!decodedToken) {
                 console.error('Failed to decode token');
-                return false;
+                return null;
             }
 
             localStorage.setItem('userRole', decodedToken.Roles);
-            return decodedToken.Roles === 'Admin';
+            return decodedToken.Roles;
         } catch (error) {
-            console.error('Error checking admin role:', error);
-            return false;
+            console.error('Error checking user role:', error);
+            return null;
         }
     };
 
@@ -86,7 +86,6 @@ const LoginPage = () => {
             [name]: value
         });
 
-        // Real-time password validation
         if (name === 'password') {
             validatePassword(value);
         }
@@ -108,7 +107,6 @@ const LoginPage = () => {
             return false;
         }
 
-        // Enhanced password validation for login
         if (!isPasswordValid()) {
             toast.error('Password must meet all security requirements');
             return false;
@@ -137,12 +135,36 @@ const LoginPage = () => {
             'Content-Type': 'application/json'
         };
 
+        const loginEndpoint = isSuperAdmin ? '/superAdminOpen/login' : '/user-open/login';
+
         try {
-            const response = await apiClient.post('/user-open/login', requestData, {
+            const response = await apiClient.post(loginEndpoint, requestData, {
                 headers: requestHeaders
             });
 
             if (response.data && response.status === 200) {
+                const userRole = response.data.data.token ? checkUserRole(response.data.data.token) : null;
+
+                if (isSuperAdmin && userRole !== 'Super Admin') {
+                    toast.error('Access denied. Super Admin credentials required.');
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('userData');
+                    localStorage.removeItem('userRole');
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (!isSuperAdmin && userRole === 'Super Admin') {
+                    toast.error('Please use the Super Admin login portal.');
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('userData');
+                    localStorage.removeItem('userRole');
+                    setIsLoading(false);
+                    return;
+                }
+
                 toast.success('Login successful!');
 
                 if (response.data.data.token) {
@@ -181,9 +203,6 @@ const LoginPage = () => {
                     }
                 }
 
-                checkAdminRole(token);
-
-                // Clear form and reset validation
                 setFormData({
                     email: '',
                     password: ''
@@ -240,11 +259,10 @@ const LoginPage = () => {
                 <div className="w-full max-w-md">
                     <div className="bg-white rounded-2xl shadow-xl" style={{ padding: '48px 40px' }}>
                         <h1 className="text-xl font-bold text-gray-900 text-center" style={{ marginBottom: '40px' }}>
-                            LOGIN
+                            {isSuperAdmin ? 'SUPER ADMIN LOGIN' : 'LOGIN'}
                         </h1>
 
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Email Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Mail className="w-5 h-5 text-gray-400" />
@@ -267,7 +285,6 @@ const LoginPage = () => {
                                 />
                             </div>
 
-                            {/* Password Field */}
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 flex items-center" style={{ paddingLeft: '16px' }}>
                                     <Lock className="w-5 h-5 text-gray-400" />
@@ -303,7 +320,6 @@ const LoginPage = () => {
                                 </button>
                             </div>
 
-                            {/* Password Validation Indicators - Only show when password is being typed */}
                             {formData.password && (
                                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                                     <div className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</div>
@@ -342,18 +358,18 @@ const LoginPage = () => {
                                 </div>
                             )}
 
-                            {/* Forgot Password Link */}
-                            <div className="text-right">
-                                <Link
-                                    to="/forgot-password"
-                                    className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
-                                    style={{ fontSize: '14px' }}
-                                >
-                                    Forgot Password?
-                                </Link>
-                            </div>
+                            {!isSuperAdmin && (
+                                <div className="text-right">
+                                    <Link
+                                        to="/forgot-password"
+                                        className="text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
+                                        style={{ fontSize: '14px' }}
+                                    >
+                                        Forgot Password?
+                                    </Link>
+                                </div>
+                            )}
 
-                            {/* Login Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -370,18 +386,19 @@ const LoginPage = () => {
                                 {isLoading ? 'Logging in...' : 'Login'}
                             </button>
 
-                            {/* Register Link */}
-                            <div className="text-center">
-                                <span className="text-gray-600" style={{ fontSize: '14px' }}>
-                                    Don't have an account?{' '}
-                                </span>
-                                <Link to="/register"
-                                    className="text-gray-900 font-semibold hover:text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
-                                    style={{ fontSize: '14px' }}
-                                >
-                                    Register
-                                </Link>
-                            </div>
+                            {!isSuperAdmin && (
+                                <div className="text-center">
+                                    <span className="text-gray-600" style={{ fontSize: '14px' }}>
+                                        Don't have an account?{' '}
+                                    </span>
+                                    <Link to="/register"
+                                        className="text-gray-900 font-semibold hover:text-[#5E48EF] transition-colors bg-transparent border-none cursor-pointer"
+                                        style={{ fontSize: '14px' }}
+                                    >
+                                        Register
+                                    </Link>
+                                </div>
+                            )}
                         </form>
                     </div>
                 </div>

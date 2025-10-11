@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
 
+
 import PastExams from '../past-exams/PastExams';
 import Dashboard from '../dashboard/Dashboard';
+import SuperAdminDashboard from '../dashboard/SuperAdminDashboard';
 import ActiveExams from '../active-exams/ActiveExams';
 import LogoutDialog from '../../components/LogOutComponent';
 import CreateExam from '../create-exam/CreateExam';
@@ -24,6 +26,11 @@ import AllTests from '../all-test/AllTest';
 import UserUpcomingExam from '../upcoming-exam/UserUpcomingExam';
 import Ranking from '../ranking/Ranking';
 import UserRanking from '../ranking/UserRanking';
+import SuperAdminSidebarComponent from '../../components/AdminSidebarComponent';
+import CreateOrganization from '../super-admin/CreateOrganisation';
+import Configuration from '../super-admin/Configuration';
+import Compliance from '../super-admin/Compliance';
+import CreateAdmin from '../super-admin/CreateAdmin';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -32,9 +39,9 @@ const EResources = () => (
 );
 
 const ComponentWrapper = ({ children, isActive }) => (
-    <div 
+    <div
         className={`w-full h-full ${isActive ? 'block' : 'hidden'}`}
-        style={{ 
+        style={{
             position: isActive ? 'relative' : 'absolute',
             visibility: isActive ? 'visible' : 'hidden'
         }}
@@ -113,14 +120,21 @@ const Home = () => {
         localStorage.removeItem('userRole');
         localStorage.removeItem('deviceId');
         sessionStorage.clear();
-        navigate('/', { replace: true });
-    }, [navigate]);
+
+        const role = userRole;
+        if (role === 'SuperAdmin') {
+            navigate('/super-admin', { replace: true });
+        } else {
+            navigate('/', { replace: true });
+        }
+    }, [navigate, userRole]);
 
     const handleLogoutCancel = useCallback(() => {
         setShowLogoutDialog(false);
     }, []);
 
     const isAdmin = userRole === 'Admin';
+    const isSuperAdmin = userRole === 'Super Admin';
 
     const createComponent = useCallback((tabName) => {
         if (componentCache.current[tabName]) {
@@ -128,7 +142,27 @@ const Home = () => {
         }
 
         let component;
-        if (isAdmin) {
+        if (isSuperAdmin) {
+            switch (tabName) {
+                case 'Dashboard':
+                    component = <SuperAdminDashboard setActiveTab={setActiveTab} />;
+                    break;
+                case 'Configuration':
+                    component = <Configuration />;
+                    break;
+                case 'Create Admin':
+                    component = <CreateAdmin />;
+                    break;
+                case 'Create Organization':
+                    component = <CreateOrganization />;
+                    break;
+                case 'Compliance':
+                    component = <Compliance />;
+                    break;
+                default:
+                    component = <div className='p-6'>No Content</div>;
+            }
+        } else if (isAdmin) {
             switch (tabName) {
                 case 'Dashboard':
                     component = <Dashboard setActiveTab={setActiveTab} />;
@@ -196,7 +230,7 @@ const Home = () => {
 
         componentCache.current[tabName] = component;
         return component;
-    }, [isAdmin, handleNavigateToQuiz]);
+    }, [isAdmin, isSuperAdmin, handleNavigateToQuiz]);
 
     const clearCache = useCallback(() => {
         componentCache.current = {};
@@ -219,9 +253,14 @@ const Home = () => {
             );
         }
 
-        const tabs = isAdmin 
-            ? ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources']
-            : ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
+        let tabs;
+        if (isSuperAdmin) {
+            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Compliance'];
+        } else if (isAdmin) {
+            tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources'];
+        } else {
+            tabs = ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
+        }
 
         return (
             <div className="relative w-full h-full">
@@ -246,7 +285,12 @@ const Home = () => {
         <div className="h-screen flex flex-col overflow-hidden">
             <HeaderComponent />
             <div className='flex flex-1 overflow-hidden'>
-                {isAdmin ? (
+                {isSuperAdmin ? (
+                    <SuperAdminSidebarComponent
+                        activeTab={activeTab}
+                        setActiveTab={handleTabChange}
+                    />
+                ) : isAdmin ? (
                     <SidebarComponent
                         activeTab={activeTab}
                         setActiveTab={handleTabChange}

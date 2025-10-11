@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import apiClient from '../api/axiosConfig';
+import { useNavigate } from 'react-router-dom';
 
 const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const navigate = useNavigate();
 
     const clearLocalStorage = () => {
         try {
@@ -13,12 +15,16 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
         }
     };
 
-    // Handle logout process
     const handleLogout = async () => {
         try {
             setIsLoggingOut(true);
 
-            const response = await apiClient.post('/user-secured/logOut');
+            const userRole = localStorage.getItem('userRole');
+            const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
+
+            const logoutEndpoint = isSuperAdmin ? '/superAdmin/logOut' : '/user-secured/logOut';
+
+            const response = await apiClient.post(logoutEndpoint);
 
             if (response.data.success || response.status === 200) {
                 clearLocalStorage();
@@ -32,7 +38,11 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
                 }
 
                 setTimeout(() => {
-                    window.location.href = '/';
+                    if (isSuperAdmin) {
+                        window.location.href = '/super-admin';
+                    } else {
+                        window.location.href = '/';
+                    }
                 }, 1000);
 
             } else {
@@ -42,6 +52,9 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
         } catch (error) {
             console.error('Logout error:', error);
             let errorMessage = 'An unexpected error occurred during logout.';
+
+            const userRole = localStorage.getItem('userRole');
+            const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
 
             if (error.response) {
                 if (error.response.data && error.response.data.message) {
@@ -55,7 +68,11 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
                         onConfirm();
                     }
                     setTimeout(() => {
-                        window.location.href = '/';
+                        if (isSuperAdmin) {
+                            window.location.href = '/super-admin';
+                        } else {
+                            window.location.href = '/';
+                        }
                     }, 1000);
                     return;
                 } else if (error.response.status === 500) {

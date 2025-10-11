@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import logo from '/src/assets/logo.png';
 import welcomeImage from '/src/assets/images/welcome-image.png'
 import adminImage from '/src/assets/images/profile-image.png'
-import { User, Mail, Phone, LogOut, Building, Hash } from 'lucide-react'
+import { User, Mail, Phone, LogOut, Building, Hash, Shield } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import LogoutDialog from './LogOutComponent';
 import apiClient from '../api/axiosConfig';
@@ -12,6 +12,7 @@ const HeaderComponent = () => {
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [userRole, setUserRole] = useState(null);
     const navigate = useNavigate();
     const profileRef = useRef(null);
 
@@ -29,15 +30,25 @@ const HeaderComponent = () => {
     }, []);
 
     useEffect(() => {
+        const role = localStorage.getItem('userRole');
+        setUserRole(role);
+    }, []);
+
+    useEffect(() => {
         const fetchUserProfile = async () => {
             try {
                 setIsLoading(true);
 
-                const isAdmin = localStorage.getItem('userRole') === 'Admin';
+                const role = localStorage.getItem('userRole');
+                let endpoint;
 
-                const endpoint = isAdmin
-                    ? '/user-secured/getUserProfile'
-                    : '/user-activity/getUserProfile';
+                if (role === 'SuperAdmin' || role === 'Super Admin') {
+                    endpoint = '/superAdmin/getUserProfile';
+                } else if (role === 'Admin') {
+                    endpoint = '/user-secured/getUserProfile';
+                } else {
+                    endpoint = '/user-activity/getUserProfile';
+                }
 
                 const response = await apiClient.get(endpoint);
 
@@ -76,39 +87,74 @@ const HeaderComponent = () => {
     };
 
     const handleConfirmLogout = () => {
+        const role = localStorage.getItem('userRole');
+
         localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
         localStorage.removeItem('userSession');
         localStorage.removeItem('orgCode');
         localStorage.removeItem('userRole');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('batch');
+        localStorage.removeItem('deviceId');
         sessionStorage.clear();
 
-        navigate('/', { replace: true });
+        if (role === 'SuperAdmin' || role === 'Super Admin') {
+            navigate('/super-admin', { replace: true });
+        } else {
+            navigate('/', { replace: true });
+        }
 
-        window.history.pushState(null, null, '/');
+        window.history.pushState(null, null, role === 'SuperAdmin' || role === 'Super Admin' ? '/super-admin' : '/');
         window.addEventListener('popstate', function () {
-            window.history.pushState(null, null, '/');
+            window.history.pushState(null, null, role === 'SuperAdmin' || role === 'Super Admin' ? '/super-admin' : '/');
         });
     };
 
-    const profileOptions = [
-        {
-            icon: <Phone size={18} className="text-gray-600" />,
-            label: userProfile?.mobile || 'No phone number'
-        },
-        {
-            icon: <Building size={18} className="text-gray-600" />,
-            label: userProfile?.orgCode || 'No org code'
-        },
-        {
-            icon: <Hash size={18} className="text-gray-600" />,
-            label: userProfile?.batch || 'No batch code'
-        },
-        {
+    const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
+
+    const getProfileOptions = () => {
+        const options = [];
+
+        if (isSuperAdmin) {
+            options.push({
+                icon: <Phone size={18} className="text-gray-600" />,
+                label: userProfile?.mobile || 'No phone number'
+            });
+            options.push({
+                icon: <Mail size={18} className="text-gray-600" />,
+                label: userProfile?.email || 'No email'
+            });
+            options.push({
+                icon: <Shield size={18} className="text-gray-600" />,
+                label: 'Super Admin'
+            });
+        } else {
+            options.push({
+                icon: <Phone size={18} className="text-gray-600" />,
+                label: userProfile?.mobile || 'No phone number'
+            });
+            options.push({
+                icon: <Building size={18} className="text-gray-600" />,
+                label: userProfile?.orgCode || 'No org code'
+            });
+            options.push({
+                icon: <Hash size={18} className="text-gray-600" />,
+                label: userProfile?.batch || 'No batch code'
+            });
+        }
+
+        options.push({
             icon: <LogOut size={18} className="text-gray-600" />,
             label: 'Log Out',
             action: handleLogout
-        },
-    ];
+        });
+
+        return options;
+    };
+
+    const profileOptions = getProfileOptions();
 
     if (isLoading) {
         return (
@@ -154,7 +200,7 @@ const HeaderComponent = () => {
                                     <img className='h-[60px]' src={adminImage} alt="Profile" />
                                     <div>
                                         <p>{userProfile?.name || 'User'}</p>
-                                        <p>{userProfile?.email || 'user@gmail.com'}</p>
+                                        <p className="text-sm text-gray-600">{userProfile?.email || 'user@gmail.com'}</p>
                                     </div>
                                 </div>
                                 <hr />
@@ -167,7 +213,7 @@ const HeaderComponent = () => {
                                         <div className="flex-shrink-0">
                                             {item.icon}
                                         </div>
-                                        <p className="flex-1">{item.label}</p>
+                                        <p className="flex-1 text-sm">{item.label}</p>
                                     </div>
                                 ))}
                             </div>
