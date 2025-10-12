@@ -26,8 +26,8 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
 
             const response = await apiClient.post(logoutEndpoint);
 
+            clearLocalStorage();
             if (response.data.success || response.status === 200) {
-                clearLocalStorage();
 
                 toast.success('Logout successful');
 
