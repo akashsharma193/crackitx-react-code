@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
-
-
 import PastExams from '../past-exams/PastExams';
 import Dashboard from '../dashboard/Dashboard';
 import SuperAdminDashboard from '../dashboard/SuperAdminDashboard';
@@ -31,6 +29,7 @@ import CreateOrganization from '../super-admin/CreateOrganisation';
 import Configuration from '../super-admin/Configuration';
 import Compliance from '../super-admin/Compliance';
 import CreateAdmin from '../super-admin/CreateAdmin';
+import Feedback from '../feedback/Feedback';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -179,6 +178,9 @@ const Home = () => {
                 case 'Ranking':
                     component = <Ranking />;
                     break;
+                case 'Feedback':
+                    component = <Feedback />;
+                    break;
                 case 'Create Exam':
                     component = <CreateExam />;
                     break;
@@ -257,7 +259,7 @@ const Home = () => {
         if (isSuperAdmin) {
             tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Compliance'];
         } else if (isAdmin) {
-            tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'E-Resources'];
+            tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Feedback', 'Upcoming Exam', 'E-Resources'];
         } else {
             tabs = ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
         }

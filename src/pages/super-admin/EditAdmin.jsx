@@ -215,7 +215,7 @@ const EditAdmin = () => {
                 name: form.name.trim(),
                 email: form.email.trim(),
                 mobile: form.mobile.trim(),
-                batch: form.orgCode.trim(),
+                orgCode: form.orgCode.trim(),
                 isActive: form.isActive,
                 isAdmin: true
             };
