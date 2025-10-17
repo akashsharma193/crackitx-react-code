@@ -30,6 +30,7 @@ import Configuration from '../super-admin/Configuration';
 import Compliance from '../super-admin/Compliance';
 import CreateAdmin from '../super-admin/CreateAdmin';
 import Feedback from '../feedback/Feedback';
+import SendNotification from '../super-admin/SendNotification';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -158,6 +159,9 @@ const Home = () => {
                 case 'Compliance':
                     component = <Compliance />;
                     break;
+                case 'Notification':
+                    component = <SendNotification />;
+                    break;
                 default:
                     component = <div className='p-6'>No Content</div>;
             }
@@ -257,7 +261,7 @@ const Home = () => {
 
         let tabs;
         if (isSuperAdmin) {
-            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Compliance'];
+            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Compliance', 'Notification'];
         } else if (isAdmin) {
             tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Feedback', 'Upcoming Exam', 'E-Resources'];
         } else {

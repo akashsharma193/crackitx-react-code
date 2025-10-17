@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { Settings, UserPlus, Building2, Shield } from 'lucide-react';
+import { Settings, UserPlus, Building2, Shield, Bell } from 'lucide-react';
 import dashboardIcon from '/src/assets/icons/dashboard-icon.png';
 import logOutIcon from '/src/assets/icons/logout-icon.png';
 
@@ -9,6 +9,7 @@ const sidebarItems = [
     { label: 'Create Admin', icon: 'lucide', lucideIcon: UserPlus },
     { label: 'Create Organization', icon: 'lucide', lucideIcon: Building2 },
     { label: 'Compliance', icon: 'lucide', lucideIcon: Shield },
+    { label: 'Notification', icon: 'lucide', lucideIcon: Bell },
     { label: 'Log Out', icon: logOutIcon },
 ];
 
