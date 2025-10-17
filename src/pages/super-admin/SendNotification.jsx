@@ -59,12 +59,19 @@ const SendNotification = () => {
         }
     };
 
-    const fetchBatches = async (organizationCode) => {
+    const fetchBatches = async (organizationName) => {
+        if (!organizationName) {
+            return;
+        }
+
         setIsLoadingBatches(true);
+        setBatches([]);
+
         try {
             const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
-                organization: organizationCode
+                organization: organizationName
             });
+
             if (response.data && response.data.success && response.data.data) {
                 setBatches(response.data.data);
             }
@@ -75,15 +82,20 @@ const SendNotification = () => {
         }
     };
 
-    const handleOrgSelect = (org) => {
-        setFormData(prev => ({ ...prev, orgCode: org.code, batchCode: '' }));
-        setOrgSearchTerm(org.name);
+    const handleOrgSelect = async (org) => {
+        const orgName = org.name;
+
+        setFormData(prev => ({ ...prev, orgCode: orgName, batchCode: '' }));
+        setOrgSearchTerm(orgName);
         setBatchSearchTerm('');
         setOrgDropdownOpen(false);
-        fetchBatches(org.code);
+        setBatches([]);
+
         if (errors.orgCode) {
             setErrors(prev => ({ ...prev, orgCode: '' }));
         }
+
+        await fetchBatches(orgName);
     };
 
     const handleBatchSelect = (batch) => {
@@ -96,8 +108,7 @@ const SendNotification = () => {
     };
 
     const filteredOrganizations = organizations.filter(org =>
-        org?.name?.toLowerCase().includes(orgSearchTerm.toLowerCase()) ||
-        org?.code?.toLowerCase().includes(orgSearchTerm.toLowerCase())
+        org?.name?.toLowerCase().includes(orgSearchTerm.toLowerCase())
     );
 
     const filteredBatches = batches.filter(batch =>
@@ -256,7 +267,6 @@ const SendNotification = () => {
                                                             className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
                                                         >
                                                             <div className="font-medium text-gray-900">{org.name}</div>
-                                                            <div className="text-sm text-gray-500">{org.code}</div>
                                                         </div>
                                                     ))
                                                 ) : (

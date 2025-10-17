@@ -4,6 +4,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import HeaderComponent from '../../components/HeaderComponent';
 import SidebarComponent from '../../components/SidebarComponenet';
+import SuperAdminSidebarComponent from '../../components/AdminSidebarComponent';
 import apiClient from '../../api/axiosConfig';
 
 const ConfirmationDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }) => {
@@ -40,6 +41,7 @@ const EditStudent = () => {
     const { id } = useParams();
     const location = useLocation();
     const studentData = location.state?.student;
+    const fromSuperAdmin = location.state?.fromSuperAdmin || false;
 
     const [form, setForm] = useState({
         id: '',
@@ -83,9 +85,13 @@ const EditStudent = () => {
         } else if (id) {
             fetchStudentData(id);
         } else {
-            navigate('/home', { state: { activeTab: 'Students' } });
+            if (fromSuperAdmin) {
+                navigate('/home', { state: { activeTab: 'Create Admin' } });
+            } else {
+                navigate('/home', { state: { activeTab: 'Students' } });
+            }
         }
-    }, [studentData, id, navigate]);
+    }, [studentData, id, navigate, fromSuperAdmin]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -134,12 +140,20 @@ const EditStudent = () => {
                 setBatchSearchTerm(data.batch || '');
             } else {
                 toast.error('Failed to fetch student data');
-                navigate('/home', { state: { activeTab: 'Students' } });
+                if (fromSuperAdmin) {
+                    navigate('/home', { state: { activeTab: 'Create Admin' } });
+                } else {
+                    navigate('/home', { state: { activeTab: 'Students' } });
+                }
             }
         } catch (error) {
             console.error('Error fetching student data:', error);
             toast.error('Failed to fetch student data');
-            navigate('/home', { state: { activeTab: 'Students' } });
+            if (fromSuperAdmin) {
+                navigate('/home', { state: { activeTab: 'Create Admin' } });
+            } else {
+                navigate('/home', { state: { activeTab: 'Students' } });
+            }
         } finally {
             setInitialLoading(false);
         }
@@ -170,7 +184,11 @@ const EditStudent = () => {
 
     const confirmBack = () => {
         setShowBackDialog(false);
-        navigate('/home', { state: { activeTab: 'Students' } });
+        if (fromSuperAdmin) {
+            navigate('/home', { state: { activeTab: 'Create Admin' } });
+        } else {
+            navigate('/home', { state: { activeTab: 'Students' } });
+        }
     };
 
     const handleSidebarTabChange = (newTab) => {
@@ -230,7 +248,11 @@ const EditStudent = () => {
             if (response.data.success) {
                 toast.success('User updated successfully!');
                 setTimeout(() => {
-                    navigate('/home', { state: { activeTab: 'Students' } });
+                    if (fromSuperAdmin) {
+                        navigate('/home', { state: { activeTab: 'Create Admin' } });
+                    } else {
+                        navigate('/home', { state: { activeTab: 'Students' } });
+                    }
                 }, 1500);
             } else {
                 throw new Error(response.data.message || 'Failed to update user');
@@ -247,12 +269,15 @@ const EditStudent = () => {
         }
     };
 
+    const activeTabForSidebar = fromSuperAdmin ? 'Create Admin' : 'Students';
+    const SidebarToRender = fromSuperAdmin ? SuperAdminSidebarComponent : SidebarComponent;
+
     if (initialLoading) {
         return (
             <div className="min-h-screen flex flex-col">
                 <HeaderComponent />
                 <div className="flex flex-1 overflow-hidden">
-                    <SidebarComponent activeTab="Students" setActiveTab={handleSidebarTabChange} />
+                    <SidebarToRender activeTab={activeTabForSidebar} setActiveTab={handleSidebarTabChange} />
                     <div className="flex-1 bg-gray-50 flex items-center justify-center">
                         <div className="text-[#7966F1] text-lg font-semibold">
                             Loading Student Data...
@@ -268,8 +293,7 @@ const EditStudent = () => {
             <HeaderComponent />
 
             <div className="flex flex-1 overflow-hidden">
-                {/* FIXED: Changed from setActiveTab={() => { }} to setActiveTab={handleSidebarTabChange} */}
-                <SidebarComponent activeTab="Students" setActiveTab={handleSidebarTabChange} />
+                <SidebarToRender activeTab={activeTabForSidebar} setActiveTab={handleSidebarTabChange} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
                     <div className="flex items-center gap-3 text-white bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-5">

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
-const DeleteAdminDialog = ({ isOpen, onClose, onConfirm, loading }) => {
+const DeleteDialog = ({ isOpen, onClose, onConfirm, loading, type }) => {
     if (!isOpen) return null;
 
     return (
@@ -12,9 +12,9 @@ const DeleteAdminDialog = ({ isOpen, onClose, onConfirm, loading }) => {
             <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200">
                 <div className="text-center">
                     <h2 className="text-red-600 text-xl font-bold !mb-3">Alert!</h2>
-                    <p className="text-gray-800 !mb-2">Do you want to disable this admin?</p>
+                    <p className="text-gray-800 !mb-2">Do you want to disable this {type}?</p>
                     <p className="text-sm text-red-500 font-medium !mb-6">
-                        <span className="text-black font-semibold">Note:</span> This action will deactivate the admin account.
+                        <span className="text-black font-semibold">Note:</span> This action will deactivate the {type} account.
                     </p>
                     <div className="flex justify-center gap-4">
                         <button
@@ -71,7 +71,7 @@ const CreateAdmin = () => {
     const [debouncedSelectedBatch, setDebouncedSelectedBatch] = useState('');
     const [pageSize] = useState(10);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [adminToDelete, setAdminToDelete] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [allOrganizations, setAllOrganizations] = useState([]);
     const [allStudentsData, setAllStudentsData] = useState([]);
@@ -248,42 +248,54 @@ const CreateAdmin = () => {
         }
     }, [debouncedSearchTerm, debouncedSelectedOrg, debouncedSelectedBatch]);
 
-    const handleEditClick = (admin) => {
-        navigate(`/edit-admin/${admin.id}`, {
-            state: { admin: admin }
-        });
+    const handleEditClick = (item) => {
+        if (activeTab === 'admin') {
+            navigate(`/edit-admin/${item.id}`, {
+                state: { admin: item }
+            });
+        } else {
+            navigate(`/edit-user/${item.id}`, {
+                state: { student: item, fromSuperAdmin: true }
+                
+            });
+        }
     };
 
-    const handleDeleteClick = (admin) => {
-        setAdminToDelete(admin);
+    const handleDeleteClick = (item) => {
+        setItemToDelete(item);
         setShowDeleteDialog(true);
     };
 
     const handleDeleteConfirm = async () => {
-        if (!adminToDelete) return;
+        if (!itemToDelete) return;
 
         try {
             setDeleteLoading(true);
 
             const requestBody = {
-                id: adminToDelete.id,
+                id: itemToDelete.id,
                 isActive: false
             };
 
-            const response = await apiClient.post('/superAdmin/enableDisableUser', requestBody);
+            const endpoint = activeTab === 'admin' ? '/superAdmin/enableDisableUser' : '/admin-secured/enableDisableUser';
+            const response = await apiClient.post(endpoint, requestBody);
 
             if (response.data.success) {
-                toast.success('Admin disabled successfully!');
+                toast.success(`${activeTab === 'admin' ? 'Admin' : 'Student'} disabled successfully!`);
                 setShowDeleteDialog(false);
-                setAdminToDelete(null);
+                setItemToDelete(null);
 
-                await fetchAdmins(currentPage, debouncedSearchTerm, debouncedSelectedOrg);
+                if (activeTab === 'admin') {
+                    await fetchAdmins(currentPage, debouncedSearchTerm, debouncedSelectedOrg);
+                } else {
+                    await fetchStudents(currentPage, debouncedSearchTerm, debouncedSelectedOrg, debouncedSelectedBatch);
+                }
             } else {
-                throw new Error(response.data.message || 'Failed to disable admin');
+                throw new Error(response.data.message || `Failed to disable ${activeTab}`);
             }
         } catch (error) {
-            console.error('Error disabling admin:', error);
-            toast.error('Failed to disable admin. Please try again.');
+            console.error(`Error disabling ${activeTab}:`, error);
+            toast.error(`Failed to disable ${activeTab}. Please try again.`);
         } finally {
             setDeleteLoading(false);
         }
@@ -291,7 +303,7 @@ const CreateAdmin = () => {
 
     const handleDeleteCancel = () => {
         setShowDeleteDialog(false);
-        setAdminToDelete(null);
+        setItemToDelete(null);
     };
 
     const handlePageChange = (newPage) => {
@@ -513,12 +525,8 @@ const CreateAdmin = () => {
                                 <th className="!px-6 !py-4">Phone Number</th>
                                 <th className="!px-6 !py-4">Organization</th>
                                 {activeTab === 'student' && <th className="!px-6 !py-4">Batch</th>}
-                                {activeTab === 'admin' && (
-                                    <>
-                                        <th className="!px-6 !py-4">Edit</th>
-                                        <th className="!px-6 !py-4">Delete</th>
-                                    </>
-                                )}
+                                <th className="!px-6 !py-4">Edit</th>
+                                <th className="!px-6 !py-4">Delete</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -531,39 +539,35 @@ const CreateAdmin = () => {
                                         <td className="!px-6 !py-4">{item.mobile || 'N/A'}</td>
                                         <td className="!px-6 !py-4">{item.orgCode || 'N/A'}</td>
                                         {activeTab === 'student' && <td className="!px-6 !py-4">{item.batch || 'N/A'}</td>}
-                                        {activeTab === 'admin' && (
-                                            <>
-                                                <td className="!px-6 !py-4">
-                                                    <div className="relative group inline-block">
-                                                        <Edit
-                                                            className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
-                                                            size={20}
-                                                            onClick={() => handleEditClick(item)}
-                                                        />
-                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                            Edit
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="!px-6 !py-4">
-                                                    <div className="relative group inline-block">
-                                                        <Trash2
-                                                            className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
-                                                            size={20}
-                                                            onClick={() => handleDeleteClick(item)}
-                                                        />
-                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                            Delete
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </>
-                                        )}
+                                        <td className="!px-6 !py-4">
+                                            <div className="relative group inline-block">
+                                                <Edit
+                                                    className="text-[#7966F1] cursor-pointer hover:text-[#5a4bcc] transition-colors"
+                                                    size={20}
+                                                    onClick={() => handleEditClick(item)}
+                                                />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                    Edit
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="!px-6 !py-4">
+                                            <div className="relative group inline-block">
+                                                <Trash2
+                                                    className="text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                                                    size={20}
+                                                    onClick={() => handleDeleteClick(item)}
+                                                />
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                    Delete
+                                                </div>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={activeTab === 'admin' ? "7" : "6"} className="!px-6 !py-8 text-center text-gray-500">
+                                    <td colSpan={activeTab === 'admin' ? "7" : "8"} className="!px-6 !py-8 text-center text-gray-500">
                                         {hasFilters ? `No ${activeTab}s found matching your criteria` : `No ${activeTab} data available`}
                                     </td>
                                 </tr>
@@ -629,11 +633,12 @@ const CreateAdmin = () => {
                 </div>
             )}
 
-            <DeleteAdminDialog
+            <DeleteDialog
                 isOpen={showDeleteDialog}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 loading={deleteLoading}
+                type={activeTab}
             />
         </div>
     );
