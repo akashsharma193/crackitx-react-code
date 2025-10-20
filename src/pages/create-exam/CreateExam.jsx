@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X, Image as ImageIcon, Type, GripVertical } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -37,7 +37,7 @@ const CreateExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
     );
 };
 
-const AIGeneratingDialog = ({ isOpen, onCancel, remainingTime }) => {
+const AIGeneratingDialog = ({ isOpen, onCancel }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
@@ -166,7 +166,6 @@ const ImportAIDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
         </div>
     );
 };
-
 const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
     const [bankFormData, setBankFormData] = useState({
         subject: '',
@@ -340,7 +339,6 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
     const currentPageQuestionIds = questionList.map(q => q.id);
     const currentPageSelectedCount = currentPageQuestionIds.filter(id => allSelectedQuestions.includes(id)).length;
     const allCurrentPageSelected = currentPageQuestionIds.length > 0 && currentPageQuestionIds.every(id => allSelectedQuestions.includes(id));
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
             <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-4xl w-full mx-4 border border-gray-200 max-h-[90vh] overflow-y-auto">
@@ -511,53 +509,296 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
     );
 };
 
-const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
-        <div className="flex items-center justify-between !mb-4">
-            <h3 className="text-[#5E48EF] text-lg font-medium">Question {questionIndex + 1}</h3>
-            <button
-                onClick={() => onDeleteQuestion(question.id)}
-                className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                aria-label="Delete question"
-            >
-                <Trash2 className="w-5 h-5" />
-            </button>
-        </div>
-        <div className="!mb-6">
-            <textarea
-                value={question.question}
-                onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
-                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
-                placeholder="Enter your question here..."
-                rows="3"
-            />
-        </div>
-        <div className="!mb-4">
-            <h4 className="text-sm font-medium text-gray-600 !mb-3">Options (Select one as the correct answer)</h4>
-            <div className="space-y-3">
-                {question.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-3 !mb-3">
+const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload }) => {
+    const questionImageRef = useRef(null);
+    const optionImageRefs = useRef([]);
+    const [tempCategory, setTempCategory] = useState(question.category || '');
+
+    const handleQuestionImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image size should be less than 5MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                onImageUpload(question.id, 'question', reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleOptionImageUpload = (optionIndex, e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image size should be less than 5MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                onImageUpload(question.id, 'option', reader.result, optionIndex);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleCategoryUpdate = () => {
+        if (tempCategory.trim() === '') {
+            toast.error('Category cannot be empty');
+            return;
+        }
+        onCategoryChange(question.id, tempCategory);
+        toast.success('Category updated successfully');
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
+            <div className="flex items-center justify-between !mb-4">
+                <h3 className="text-[#5E48EF] text-lg font-medium">Question {questionIndex + 1}</h3>
+                <button
+                    onClick={() => onDeleteQuestion(question.id)}
+                    className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                    aria-label="Delete question"
+                >
+                    <Trash2 className="w-5 h-5" />
+                </button>
+            </div>
+
+            <div className="!mb-4">
+                <label className="block text-sm font-medium text-gray-600 !mb-2">Category (Optional)</label>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={tempCategory}
+                        onChange={(e) => setTempCategory(e.target.value)}
+                        onBlur={(e) => setTempCategory(e.target.value)}
+                        className="w-full !px-4 !py-3 pr-12 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                        placeholder="Enter category (e.g., Math, History)"
+                    />
+                    <button
+                        onClick={handleCategoryUpdate}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-700 transition-colors cursor-pointer"
+                        aria-label="Update category"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div className="!mb-4">
+                <div className="flex items-center justify-between !mb-2">
+                    <label className="block text-sm font-medium text-gray-600">Question</label>
+                    <div className="flex gap-2">
                         <button
-                            onClick={() => onCorrectAnswerChange(question.id, index)}
-                            className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center ${question.correctAnswer === index ? 'border-[#5E48EF] bg-[#5E48EF]' : 'border-[#5E48EF] bg-transparent'
-                                }`}
-                            aria-label={`Select option ${index + 1} as correct answer`}
+                            onClick={() => onQuestionTypeChange(question.id, 'text')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.questionType === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
-                            {question.correctAnswer === index && <div className="w-2 h-2 bg-white rounded-full" />}
+                            <Type className="w-4 h-4" />
+                            Text
                         </button>
-                        <input
-                            type="text"
-                            value={option}
-                            onChange={(e) => onOptionChange(question.id, index, e.target.value)}
-                            className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                            placeholder={`Option ${index + 1}`}
-                        />
+                        <button
+                            onClick={() => onQuestionTypeChange(question.id, 'image')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.questionType === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            <ImageIcon className="w-4 h-4" />
+                            Image
+                        </button>
                     </div>
-                ))}
+                </div>
+
+                {question.questionType === 'text' ? (
+                    <textarea
+                        value={question.question}
+                        onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
+                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
+                        placeholder="Enter your question here..."
+                        rows="3"
+                    />
+                ) : (
+                    <div>
+                        <input
+                            type="file"
+                            ref={questionImageRef}
+                            onChange={handleQuestionImageUpload}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        {question.questionImage ? (
+                            <div className="relative">
+                                <img src={question.questionImage} alt="Question" className="w-full max-h-64 object-contain border border-[#5E48EF] rounded-lg" />
+                                <button
+                                    onClick={() => onImageUpload(question.id, 'question', null)}
+                                    className="absolute top-2 right-2 bg-red-500 text-white !p-2 rounded-full hover:bg-red-600 cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => questionImageRef.current?.click()}
+                                className="w-full !px-4 !py-8 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-2"
+                            >
+                                <ImageIcon className="w-8 h-8 text-[#5E48EF]" />
+                                <span className="text-sm text-gray-600">Click to upload question image</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <div className="!mb-4">
+                <div className="flex items-center justify-between !mb-3">
+                    <h4 className="text-sm font-medium text-gray-600">Options (Select one as the correct answer)</h4>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onOptionTypeChange(question.id, 'text')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.optionType === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            <Type className="w-4 h-4" />
+                            Text
+                        </button>
+                        <button
+                            onClick={() => onOptionTypeChange(question.id, 'image')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.optionType === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            <ImageIcon className="w-4 h-4" />
+                            Image
+                        </button>
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    {question.options.map((option, index) => (
+                        <div key={index} className="flex items-start gap-3 !mb-3">
+                            <button
+                                onClick={() => onCorrectAnswerChange(question.id, index)}
+                                className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center !mt-3 ${question.correctAnswer === index ? 'border-[#5E48EF] bg-[#5E48EF]' : 'border-[#5E48EF] bg-transparent'}`}
+                                aria-label={`Select option ${index + 1} as correct answer`}
+                            >
+                                {question.correctAnswer === index && <div className="w-2 h-2 bg-white rounded-full" />}
+                            </button>
+
+                            {question.optionType === 'text' ? (
+                                <input
+                                    type="text"
+                                    value={option}
+                                    onChange={(e) => onOptionChange(question.id, index, e.target.value)}
+                                    className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                    placeholder={`Option ${index + 1}`}
+                                />
+                            ) : (
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        ref={(el) => (optionImageRefs.current[index] = el)}
+                                        onChange={(e) => handleOptionImageUpload(index, e)}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    {question.optionImages && question.optionImages[index] ? (
+                                        <div className="relative">
+                                            <img src={question.optionImages[index]} alt={`Option ${index + 1}`} className="w-full max-h-32 object-contain border border-[#5E48EF] rounded-lg" />
+                                            <button
+                                                onClick={() => onImageUpload(question.id, 'option', null, index)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white !p-1 rounded-full hover:bg-red-600 cursor-pointer"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => optionImageRefs.current[index]?.click()}
+                                            className="w-full !px-4 !py-6 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-1"
+                                        >
+                                            <ImageIcon className="w-6 h-6 text-[#5E48EF]" />
+                                            <span className="text-xs text-gray-600">Upload option {index + 1} image</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
+
+const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload, onMoveQuestion }) => {
+    const [isOpen, setIsOpen] = useState(true);
+    const [draggedQuestion, setDraggedQuestion] = useState(null);
+
+    const handleDragStart = (e, questionId) => {
+        setDraggedQuestion(questionId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        if (draggedQuestion) {
+            onMoveQuestion(draggedQuestion, category);
+            setDraggedQuestion(null);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !mb-6">
+            <div
+                className="flex items-center justify-between !p-4 cursor-pointer hover:bg-gray-50 transition"
+                onClick={() => setIsOpen(!isOpen)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+            >
+                <div className="flex items-center gap-3">
+                    <ChevronDown className={`w-5 h-5 text-[#5E48EF] transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`} />
+                    <h2 className="text-[#5E48EF] text-xl font-bold">{category || 'Uncategorized'}</h2>
+                    <span className="bg-[#5E48EF] text-white text-sm !px-3 !py-1 rounded-full">{questions.length}</span>
+                </div>
+            </div>
+
+            {isOpen && (
+                <div className="!p-4 !pt-0">
+                    {questions.map((question, index) => (
+                        <div
+                            key={question.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, question.id)}
+                            className="cursor-move"
+                        >
+                            <div className="flex items-start gap-2">
+                                <div className="!pt-8">
+                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <QuestionCard
+                                        question={question}
+                                        questionIndex={index}
+                                        onQuestionChange={onQuestionChange}
+                                        onOptionChange={onOptionChange}
+                                        onCorrectAnswerChange={onCorrectAnswerChange}
+                                        onDeleteQuestion={onDeleteQuestion}
+                                        onCategoryChange={onCategoryChange}
+                                        onQuestionTypeChange={onQuestionTypeChange}
+                                        onOptionTypeChange={onOptionTypeChange}
+                                        onImageUpload={onImageUpload}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const pad = (n) => String(n).padStart(2, '0');
 const nowLocalMinutes = () => {
@@ -632,7 +873,6 @@ const DateTimePicker = ({ label, value, onChange, minDateTime }) => {
         </div>
     );
 };
-
 const CreateExam = () => {
     const [formData, setFormData] = useState({
         subjectName: '',
@@ -658,7 +898,17 @@ const CreateExam = () => {
     const [isAILoading, setIsAILoading] = useState(false);
     const [isQuestionBankLoading, setIsQuestionBankLoading] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
-    const [questions, setQuestions] = useState([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+    const [questions, setQuestions] = useState([{ 
+        id: 1, 
+        question: '', 
+        options: ['', '', '', ''], 
+        correctAnswer: null, 
+        category: '', 
+        questionType: 'text', 
+        optionType: 'text', 
+        questionImage: null, 
+        optionImages: [null, null, null, null] 
+    }]);
     const [pollingAttempts, setPollingAttempts] = useState(0);
     const [aiReferenceKey, setAiReferenceKey] = useState(null);
     const fileInputRef = useRef(null);
@@ -709,7 +959,6 @@ const CreateExam = () => {
         batch.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
         batch.description.toLowerCase().includes(batchSearchTerm.toLowerCase())
     );
-
     const handleInputChange = useCallback((field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     }, []);
@@ -730,9 +979,88 @@ const CreateExam = () => {
         setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, correctAnswer: optionIndex } : q)));
     }, []);
 
+    const handleCategoryChange = useCallback((questionId, category) => {
+        setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, category } : q)));
+    }, []);
+
+    const handleQuestionTypeChange = useCallback((questionId, type) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                if (type === 'text') {
+                    return { ...q, questionType: type, questionImage: null };
+                } else {
+                    return { ...q, questionType: type, question: '' };
+                }
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleOptionTypeChange = useCallback((questionId, type) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                if (type === 'text') {
+                    return { ...q, optionType: type, optionImages: [null, null, null, null] };
+                } else {
+                    return { ...q, optionType: type, options: ['', '', '', ''] };
+                }
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleImageUpload = useCallback((questionId, imageType, imageData, optionIndex = null) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                if (imageType === 'question') {
+                    return { ...q, questionImage: imageData };
+                } else if (imageType === 'option' && optionIndex !== null) {
+                    const newOptionImages = [...q.optionImages];
+                    newOptionImages[optionIndex] = imageData;
+                    return { ...q, optionImages: newOptionImages };
+                }
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleMoveQuestion = useCallback((questionId, targetCategory) => {
+        setQuestions((prev) => prev.map((q) => 
+            q.id === questionId ? { ...q, category: targetCategory } : q
+        ));
+        toast.success('Question moved successfully');
+    }, []);
+
     const addNewQuestion = useCallback(() => {
-        const newQuestion = { id: Date.now(), question: '', options: ['', '', '', ''], correctAnswer: null };
+        const lastQuestion = questions[questions.length - 1];
+        const newQuestion = { 
+            id: Date.now(), 
+            question: '', 
+            options: ['', '', '', ''], 
+            correctAnswer: null, 
+            category: lastQuestion?.category || '', 
+            questionType: 'text', 
+            optionType: 'text', 
+            questionImage: null, 
+            optionImages: [null, null, null, null] 
+        };
         setQuestions((prev) => [...prev, newQuestion]);
+    }, [questions]);
+
+    const addNewSection = useCallback(() => {
+        const newQuestion = { 
+            id: Date.now(), 
+            question: '', 
+            options: ['', '', '', ''], 
+            correctAnswer: null, 
+            category: '', 
+            questionType: 'text', 
+            optionType: 'text', 
+            questionImage: null, 
+            optionImages: [null, null, null, null] 
+        };
+        setQuestions((prev) => [...prev, newQuestion]);
+        toast.info('New section created! Please enter a category name.');
     }, []);
 
     const deleteQuestion = useCallback((questionId) => {
@@ -744,16 +1072,70 @@ const CreateExam = () => {
     }, []);
 
     const handleResetQuestions = useCallback(() => {
-        setQuestions([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+        setQuestions([{ 
+            id: 1, 
+            question: '', 
+            options: ['', '', '', ''], 
+            correctAnswer: null, 
+            category: '', 
+            questionType: 'text', 
+            optionType: 'text', 
+            questionImage: null, 
+            optionImages: [null, null, null, null] 
+        }]);
         setShowQuestions(false);
         toast.success('Questions reset successfully!');
     }, []);
-
     const downloadSampleExcel = useCallback(() => {
         const sampleData = [
-            { Question: 'What is the capital of France?', 'Option 1': 'London', 'Option 2': 'Berlin', 'Option 3': 'Paris', 'Option 4': 'Madrid', 'Correct Answer': 'Paris' },
-            { Question: 'Which planet is known as the Red Planet?', 'Option 1': 'Venus', 'Option 2': 'Mars', 'Option 3': 'Jupiter', 'Option 4': 'Saturn', 'Correct Answer': 'Mars' },
-            { Question: 'What is 2 + 2?', 'Option 1': '3', 'Option 2': '4', 'Option 3': '5', 'Option 4': '6', 'Correct Answer': '4' }
+            { 
+                Question: 'What is the capital of France?', 
+                'Option 1': 'London', 
+                'Option 2': 'Berlin', 
+                'Option 3': 'Paris', 
+                'Option 4': 'Madrid', 
+                'Correct Answer': 'Paris', 
+                Category: 'Geography',
+                'Question Type': 'text',
+                'Option Type': 'text',
+                'Question Image URL': '',
+                'Option 1 Image URL': '',
+                'Option 2 Image URL': '',
+                'Option 3 Image URL': '',
+                'Option 4 Image URL': ''
+            },
+            { 
+                Question: 'Which planet is known as the Red Planet?', 
+                'Option 1': 'Venus', 
+                'Option 2': 'Mars', 
+                'Option 3': 'Jupiter', 
+                'Option 4': 'Saturn', 
+                'Correct Answer': 'Mars', 
+                Category: 'Science',
+                'Question Type': 'text',
+                'Option Type': 'text',
+                'Question Image URL': '',
+                'Option 1 Image URL': '',
+                'Option 2 Image URL': '',
+                'Option 3 Image URL': '',
+                'Option 4 Image URL': ''
+            },
+            { 
+                Question: '', 
+                'Option 1': '', 
+                'Option 2': '', 
+                'Option 3': '', 
+                'Option 4': '', 
+                'Correct Answer': '1', 
+                Category: 'Math',
+                'Question Type': 'image',
+                'Option Type': 'text',
+                'Question Image URL': 'https://example.com/question-image.jpg',
+                'Option 1 Image URL': '',
+                'Option 2 Image URL': '',
+                'Option 3 Image URL': '',
+                'Option 4 Image URL': ''
+            }
         ];
         const ws = XLSX.utils.json_to_sheet(sampleData);
         const wb = XLSX.utils.book_new();
@@ -776,53 +1158,103 @@ const CreateExam = () => {
                     toast.error('Excel file is empty');
                     return;
                 }
-                const requiredColumns = ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
-                const firstRow = jsonData[0];
-                const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
-                if (missingColumns.length > 0) {
-                    toast.error(`Missing required columns: ${missingColumns.join(', ')}`);
-                    return;
-                }
+                
                 const importedQuestions = [];
                 let hasErrors = false;
+                
                 jsonData.forEach((row, index) => {
                     const rowNumber = index + 1;
-                    if (!row['Question'] || !row['Question'].toString().trim()) {
-                        toast.error(`Row ${rowNumber}: Question is required`);
-                        hasErrors = true;
-                        return;
+                    const questionType = (row['Question Type'] || 'text').toString().toLowerCase();
+                    const optionType = (row['Option Type'] || 'text').toString().toLowerCase();
+                    
+                    if (questionType === 'text') {
+                        if (!row['Question'] || !row['Question'].toString().trim()) {
+                            toast.error(`Row ${rowNumber}: Question text is required when Question Type is text`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
-                    const options = [
-                        row['Option 1']?.toString().trim() || '',
-                        row['Option 2']?.toString().trim() || '',
-                        row['Option 3']?.toString().trim() || '',
-                        row['Option 4']?.toString().trim() || ''
-                    ];
-                    if (options.some((opt) => !opt)) {
-                        toast.error(`Row ${rowNumber}: All 4 options are required`);
-                        hasErrors = true;
-                        return;
+                    
+                    if (questionType === 'image') {
+                        if (!row['Question Image URL'] || !row['Question Image URL'].toString().trim()) {
+                            toast.error(`Row ${rowNumber}: Question Image URL is required when Question Type is image`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
+                    
+                    let options = ['', '', '', ''];
+                    let optionImages = [null, null, null, null];
+                    
+                    if (optionType === 'text') {
+                        options = [
+                            row['Option 1']?.toString().trim() || '',
+                            row['Option 2']?.toString().trim() || '',
+                            row['Option 3']?.toString().trim() || '',
+                            row['Option 4']?.toString().trim() || ''
+                        ];
+                        if (options.some((opt) => !opt)) {
+                            toast.error(`Row ${rowNumber}: All 4 text options are required when Option Type is text`);
+                            hasErrors = true;
+                            return;
+                        }
+                    }
+                    
+                    if (optionType === 'image') {
+                        optionImages = [
+                            row['Option 1 Image URL']?.toString().trim() || null,
+                            row['Option 2 Image URL']?.toString().trim() || null,
+                            row['Option 3 Image URL']?.toString().trim() || null,
+                            row['Option 4 Image URL']?.toString().trim() || null
+                        ];
+                        if (optionImages.some((img) => !img)) {
+                            toast.error(`Row ${rowNumber}: All 4 option image URLs are required when Option Type is image`);
+                            hasErrors = true;
+                            return;
+                        }
+                    }
+                    
                     const correctAnswer = row['Correct Answer']?.toString().trim();
                     if (!correctAnswer) {
                         toast.error(`Row ${rowNumber}: Correct answer is required`);
                         hasErrors = true;
                         return;
                     }
-                    const correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
-                    if (correctAnswerIndex === -1) {
-                        toast.error(`Row ${rowNumber}: Correct answer must match one of the options exactly`);
-                        hasErrors = true;
-                        return;
+                    
+                    let correctAnswerIndex = -1;
+                    if (optionType === 'text') {
+                        correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
+                        if (correctAnswerIndex === -1) {
+                            toast.error(`Row ${rowNumber}: Correct answer must match one of the text options exactly`);
+                            hasErrors = true;
+                            return;
+                        }
+                    } else {
+                        const correctAnswerNumber = parseInt(correctAnswer);
+                        if (correctAnswerNumber >= 1 && correctAnswerNumber <= 4) {
+                            correctAnswerIndex = correctAnswerNumber - 1;
+                        } else {
+                            toast.error(`Row ${rowNumber}: For image options, Correct Answer must be 1, 2, 3, or 4`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
+                    
                     importedQuestions.push({
                         id: Date.now() + index,
-                        question: row['Question'].toString().trim(),
+                        question: questionType === 'text' ? (row['Question']?.toString().trim() || '') : '',
+                        questionImage: questionType === 'image' ? (row['Question Image URL']?.toString().trim() || null) : null,
                         options: options,
-                        correctAnswer: correctAnswerIndex
+                        optionImages: optionImages,
+                        correctAnswer: correctAnswerIndex,
+                        category: row['Category']?.toString().trim() || '',
+                        questionType: questionType,
+                        optionType: optionType
                     });
                 });
+                
                 if (hasErrors) return;
+                
                 if (importedQuestions.length === 0) {
                     toast.error('No valid questions found in the Excel file');
                     return;
@@ -831,7 +1263,9 @@ const CreateExam = () => {
                 setQuestions((prevQuestions) => {
                     const hasEmptyQuestion = prevQuestions.length === 1 &&
                         prevQuestions[0].question === '' &&
+                        prevQuestions[0].questionImage === null &&
                         prevQuestions[0].options.every(opt => opt === '') &&
+                        prevQuestions[0].optionImages.every(img => img === null) &&
                         prevQuestions[0].correctAnswer === null;
 
                     if (hasEmptyQuestion) {
@@ -851,7 +1285,6 @@ const CreateExam = () => {
         reader.readAsBinaryString(file);
         event.target.value = '';
     }, []);
-
     const pollQuestionStatus = useCallback(async (referenceKey, currentAttempt) => {
         try {
             const response = await apiClient.get(`questionGenerator/statusCheckQuestionRequest/${referenceKey}`);
@@ -869,14 +1302,21 @@ const CreateExam = () => {
                             id: Date.now() + index,
                             question: item.question,
                             options: item.options || ['', '', '', ''],
-                            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+                            category: '',
+                            questionType: 'text',
+                            optionType: 'text',
+                            questionImage: null,
+                            optionImages: [null, null, null, null]
                         };
                     });
 
                     setQuestions((prevQuestions) => {
                         const hasEmptyQuestion = prevQuestions.length === 1 &&
                             prevQuestions[0].question === '' &&
+                            prevQuestions[0].questionImage === null &&
                             prevQuestions[0].options.every(opt => opt === '') &&
+                            prevQuestions[0].optionImages.every(img => img === null) &&
                             prevQuestions[0].correctAnswer === null;
 
                         if (hasEmptyQuestion) {
@@ -993,14 +1433,21 @@ const CreateExam = () => {
                     id: Date.now() + index,
                     question: item.question,
                     options: item.options || ['', '', '', ''],
-                    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+                    category: '',
+                    questionType: 'text',
+                    optionType: 'text',
+                    questionImage: null,
+                    optionImages: [null, null, null, null]
                 };
             });
 
             setQuestions((prevQuestions) => {
                 const hasEmptyQuestion = prevQuestions.length === 1 &&
                     prevQuestions[0].question === '' &&
+                    prevQuestions[0].questionImage === null &&
                     prevQuestions[0].options.every(opt => opt === '') &&
+                    prevQuestions[0].optionImages.every(img => img === null) &&
                     prevQuestions[0].correctAnswer === null;
 
                 if (hasEmptyQuestion) {
@@ -1020,7 +1467,6 @@ const CreateExam = () => {
             setIsQuestionBankLoading(false);
         }
     }, []);
-
     const canToggleActive = () => {
         if (!formData.startTime) return false;
         const startDate = new Date(formData.startTime);
@@ -1055,14 +1501,23 @@ const CreateExam = () => {
             toast.error('End date and time must be after start date and time');
             return;
         }
-        const validQuestions = questions.filter(
-            (q) => q.question.trim() !== '' && q.options.length === 4 && q.options.every((opt) => opt.trim() !== '') && q.correctAnswer !== null
-        );
-        const invalidQuestions = questions.filter(
-            (q) => q.question.trim() === '' || q.options.length !== 4 || !q.options.every((opt) => opt.trim() !== '') || q.correctAnswer === null
-        );
+        
+        const validQuestions = questions.filter((q) => {
+            const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
+            const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+            const hasCorrectAnswer = q.correctAnswer !== null;
+            return hasQuestion && hasOptions && hasCorrectAnswer;
+        });
+        
+        const invalidQuestions = questions.filter((q) => {
+            const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
+            const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+            const hasCorrectAnswer = q.correctAnswer !== null;
+            return !hasQuestion || !hasOptions || !hasCorrectAnswer;
+        });
+        
         if (invalidQuestions.length > 0) {
-            toast.error('All questions must have exactly 4 options and a correct answer selected');
+            toast.error('All questions must have complete question content, all 4 options, and a correct answer selected');
             return;
         }
         if (validQuestions.length === 0) {
@@ -1087,14 +1542,37 @@ const CreateExam = () => {
     const handleCreate = useCallback(async () => {
         setIsLoading(true);
         try {
-            const validQuestions = questions.filter(
-                (q) => q.question.trim() !== '' && q.options.length === 4 && q.options.every((opt) => opt.trim() !== '') && q.correctAnswer !== null
-            );
-            const questionList = validQuestions.map((q) => ({
-                question: q.question.trim(),
-                options: q.options.map((opt) => opt.trim()),
-                correctAnswer: q.options[q.correctAnswer].trim()
-            }));
+            const validQuestions = questions.filter((q) => {
+                const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
+                const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+                const hasCorrectAnswer = q.correctAnswer !== null;
+                return hasQuestion && hasOptions && hasCorrectAnswer;
+            });
+            
+            const questionList = validQuestions.map((q) => {
+                const questionObj = {};
+                
+                if (q.questionType === 'text') {
+                    questionObj.question = q.question.trim();
+                } else {
+                    questionObj.questionImage = q.questionImage;
+                }
+                
+                if (q.optionType === 'text') {
+                    questionObj.options = q.options.map((opt) => opt.trim());
+                    questionObj.correctAnswer = q.options[q.correctAnswer].trim();
+                } else {
+                    questionObj.optionsImage = q.optionImages;
+                    questionObj.correctAnswer = String(q.correctAnswer + 1);
+                }
+                
+                if (q.category && q.category.trim() !== '') {
+                    questionObj.category = q.category.trim();
+                }
+                
+                return questionObj;
+            });
+            
             const examData = {
                 questionList,
                 examDuration: formData.examDuration.replace(' mins', ''),
@@ -1106,6 +1584,7 @@ const CreateExam = () => {
                 isActive: isActiveDisabled ? true : formData.isActive,
                 orgCode: localStorage.getItem('orgCode')
             };
+            
             const response = await apiClient.post('/questionPaper/createQuestionPaper', examData);
             console.log('API Response:', response.data);
             toast.success('Exam created successfully!');
@@ -1121,7 +1600,17 @@ const CreateExam = () => {
                 isActive: true
             });
             setBatchSearchTerm('');
-            setQuestions([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+            setQuestions([{ 
+                id: 1, 
+                question: '', 
+                options: ['', '', '', ''], 
+                correctAnswer: null, 
+                category: '', 
+                questionType: 'text', 
+                optionType: 'text', 
+                questionImage: null, 
+                optionImages: [null, null, null, null] 
+            }]);
             setShowQuestions(false);
         } catch (error) {
             console.error('Error creating exam:', error);
@@ -1149,6 +1638,17 @@ const CreateExam = () => {
     const minStart = nowLocalMinutes();
     const minEnd = formData.startTime || minStart;
 
+    const groupedQuestions = useMemo(() => {
+        const groups = {};
+        questions.forEach(q => {
+            const category = q.category || 'Uncategorized';
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+            groups[category].push(q);
+        });
+        return groups;
+    }, [questions]);
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="bg-[#7966F1] !px-6 !py-4 flex items-center justify-between">
@@ -1211,9 +1711,9 @@ const CreateExam = () => {
                                     onChange={(e) => setBatchSearchTerm(e.target.value)}
                                     onFocus={() => setBatchDropdownOpen(true)}
                                     disabled={isLoadingBatches}
-                                    className="w-full !px-4 !py-3 !pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                    className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
                                 />
-                                <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <ChevronDown className="w-5 h-5 text-gray-400" />
                                 </div>
                                 {batchDropdownOpen && (
@@ -1280,7 +1780,7 @@ const CreateExam = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-center gap-4 !mt-8">
+                    <div className="flex justify-center gap-4 !mt-8 flex-wrap">
                         <input type="file" ref={fileInputRef} onChange={handleExcelImport} accept=".xlsx,.xls" className="hidden" />
                         <button
                             onClick={() => fileInputRef.current?.click()}
@@ -1311,19 +1811,36 @@ const CreateExam = () => {
                             <RefreshCw className="w-5 h-5" />
                         </button>
                     </div>
+                    
+                    {showQuestions && (
+                        <div className="flex justify-center gap-4 !mt-6">
+                            <button
+                                onClick={addNewSection}
+                                className="bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#4F46E5] hover:to-[#7C3AED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                            >
+                                Create New Category
+                                <Plus className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {showQuestions && (
                     <div className="!mb-6">
-                        {questions.map((question, index) => (
-                            <QuestionCard
-                                key={question.id}
-                                question={question}
-                                questionIndex={index}
+                        {Object.keys(groupedQuestions).sort().map((category) => (
+                            <CategoryAccordion
+                                key={category}
+                                category={category}
+                                questions={groupedQuestions[category]}
                                 onQuestionChange={handleQuestionChange}
                                 onOptionChange={handleOptionChange}
                                 onCorrectAnswerChange={handleCorrectAnswerChange}
                                 onDeleteQuestion={deleteQuestion}
+                                onCategoryChange={handleCategoryChange}
+                                onQuestionTypeChange={handleQuestionTypeChange}
+                                onOptionTypeChange={handleOptionTypeChange}
+                                onImageUpload={handleImageUpload}
+                                onMoveQuestion={handleMoveQuestion}
                             />
                         ))}
                     </div>
@@ -1335,7 +1852,7 @@ const CreateExam = () => {
                             onClick={addNewQuestion}
                             className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                         >
-                            Add Questions
+                            Add Question to Current Category
                             <Plus className="w-5 h-5" />
                         </button>
                     )}
@@ -1377,7 +1894,6 @@ const CreateExam = () => {
                 <AIGeneratingDialog
                     isOpen={showAIGeneratingDialog}
                     onCancel={handleCancelAIGeneration}
-                    remainingTime={getRemainingTime}
                 />
             )}
 
