@@ -21,16 +21,141 @@ const QuizResultsPage = ({ resultData, onBack }) => {
 
     const totalQuestions = questionList.length;
     const mockAnswerList = questionList.map(question => ({
-        question: question.question,
-        options: question.options,
+        question: question.question || '',
+        questionImage: question.questionImage || null,
+        options: question.options || [],
+        optionsImage: question.optionsImage || null,
         correctAnswer: question.correctAnswer,
-        userAnswer: null
+        userAnswer: null,
+        category: question.category || null
     }));
 
     const correctAnswers = 0;
     const wrongAnswers = 0;
     const skippedAnswers = totalQuestions;
     const score = 0;
+
+    const renderQuestionContent = (item) => {
+        const hasQuestionText = item.question && item.question.trim() !== '';
+        const hasQuestionImage = item.questionImage && item.questionImage !== null;
+
+        if (hasQuestionText && hasQuestionImage) {
+            return (
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                    <img 
+                        src={item.questionImage} 
+                        alt="Question" 
+                        className="max-w-full h-auto rounded-lg border border-gray-300"
+                        style={{ maxHeight: '300px' }}
+                    />
+                </div>
+            );
+        } else if (hasQuestionImage) {
+            return (
+                <img 
+                    src={item.questionImage} 
+                    alt="Question" 
+                    className="max-w-full h-auto rounded-lg border border-gray-300"
+                    style={{ maxHeight: '300px' }}
+                />
+            );
+        } else {
+            return <h3 className="font-semibold text-gray-800">{item.question}</h3>;
+        }
+    };
+
+    const renderOptionContent = (option, optionImage, optionIndex) => {
+        const hasText = option && option.trim() !== '';
+        const hasImage = optionImage && optionImage !== null;
+
+        if (hasText && hasImage) {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span>{option}</span>
+                        <img 
+                            src={optionImage} 
+                            alt={`Option ${optionIndex + 1}`} 
+                            className="max-w-full h-auto rounded border border-gray-300"
+                            style={{ maxHeight: '150px' }}
+                        />
+                    </div>
+                </div>
+            );
+        } else if (hasImage) {
+            return (
+                <div className="flex items-start gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <img 
+                        src={optionImage} 
+                        alt={`Option ${optionIndex + 1}`} 
+                        className="max-w-full h-auto rounded border border-gray-300"
+                        style={{ maxHeight: '150px' }}
+                    />
+                </div>
+            );
+        } else {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <span className="flex-1">{option}</span>
+                </div>
+            );
+        }
+    };
+
+    const getCorrectAnswerIdentifier = (item, optionIndex) => {
+        if (item.optionsImage && Array.isArray(item.optionsImage) && item.optionsImage.length > 0) {
+            const hasTextOptions = item.options && Array.isArray(item.options) && item.options.some(opt => opt && opt.trim() !== '');
+            const hasImageOptions = item.optionsImage.some(img => img !== null);
+
+            if (hasTextOptions && hasImageOptions) {
+                return item.options[optionIndex];
+            } else if (hasImageOptions) {
+                return String(optionIndex + 1);
+            } else {
+                return item.options[optionIndex];
+            }
+        } else {
+            return item.options[optionIndex];
+        }
+    };
+
+    const isCorrectAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.correctAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
+
+    const isUserSelectedAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.userAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
 
     const PieChart = ({ correct, wrong, skipped, total }) => {
         const correctPercentage = (correct / total) * 100;
@@ -206,7 +331,7 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                             return (
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isCorrect
                                             ? 'bg-green-500 text-white'
                                             : isSkipped
                                                 ? 'bg-gray-500 text-white'
@@ -216,12 +341,18 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                         </div>
 
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-800 !mb-4">{item.question}</h3>
+                                            <div className="!mb-4">
+                                                {renderQuestionContent(item)}
+                                            </div>
 
                                             <div className="space-y-2">
-                                                {item.options.map((option, optionIndex) => {
-                                                    const isCorrectOption = option === item.correctAnswer;
-                                                    const isUserAnswer = option === item.userAnswer;
+                                                {item.options && item.options.map((option, optionIndex) => {
+                                                    const optionImage = item.optionsImage && Array.isArray(item.optionsImage)
+                                                        ? item.optionsImage[optionIndex]
+                                                        : null;
+                                                    
+                                                    const isCorrectOption = isCorrectAnswer(item, optionIndex);
+                                                    const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
 
                                                     let bgColor = 'bg-gray-50';
                                                     let textColor = 'text-gray-700';
@@ -243,14 +374,9 @@ const QuizResultsPage = ({ resultData, onBack }) => {
                                                             className={`!p-3 border rounded-lg ${bgColor} ${textColor} ${borderColor}`}
                                                         >
                                                             <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
-                                                                        {String.fromCharCode(65 + optionIndex)}
-                                                                    </span>
-                                                                    <span className="flex-1">{option}</span>
-                                                                </div>
+                                                                {renderOptionContent(option, optionImage, optionIndex)}
 
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-2 flex-shrink-0">
                                                                     {isCorrectOption && (
                                                                         <span className="text-xs font-semibold text-green-600 bg-green-200 !px-2 !py-1 rounded flex items-center gap-1">
                                                                             <CheckCircle size={12} />
@@ -578,86 +704,85 @@ const UserUnattemptedExams = ({ onNavigateToResults }) => {
                                                             }`}
                                                     >
                                                         {loadingStates[exam.questionId] ? (
-                                                            <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
-                                                        ) : (
-                                                            <Eye size={20} />
-                                                        )}
-                                                    </button>
-                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                        Preview Questions
+                                                            <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>) : (
+                                                                <Eye size={20} />
+                                                            )}
+                                                        </button>
+                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                            Preview Questions
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="8" className="!px-6 !py-8 text-center text-gray-500">
+                                                {searchTerm || filterTerm ? 'No unattempted exams found matching your criteria' : 'No unattempted exams found'}
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="9" className="!px-6 !py-8 text-center text-gray-500">
-                                            {searchTerm || filterTerm ? 'No unattempted exams found matching your criteria' : 'No unattempted exams found'}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-
-                        {examData.length > 0 && totalPages > 1 && (
-                            <div className="flex items-center justify-between !px-6 !py-4 border-t">
-                                <div className="text-sm text-gray-600">
-                                    Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} unattempted exams
-                                    {(searchTerm || filterTerm) && (
-                                        <span className="text-[#7966F1] ml-2">
-                                            (filtered)
-                                        </span>
                                     )}
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 0}
-                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                            }`}
-                                    >
-                                        <ChevronLeft size={16} />
-                                        Previous
-                                    </button>
-
-                                    <div className="flex items-center gap-1">
-                                        {getPageNumbers().map((pageNum) => (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
-                                                    ? 'bg-[#7966F1] text-white'
-                                                    : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                                    }`}
-                                            >
-                                                {pageNum + 1}
-                                            </button>
-                                        ))}
+                                </tbody>
+                            </table>
+    
+                            {examData.length > 0 && totalPages > 1 && (
+                                <div className="flex items-center justify-between !px-6 !py-4 border-t">
+                                    <div className="text-sm text-gray-600">
+                                        Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} unattempted exams
+                                        {(searchTerm || filterTerm) && (
+                                            <span className="text-[#7966F1] ml-2">
+                                                (filtered)
+                                            </span>
+                                        )}
                                     </div>
-
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages - 1}
-                                        className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
-                                            }`}
-                                    >
-                                        Next
-                                        <ChevronRight size={16} />
-                                    </button>
+    
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 0}
+                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === 0
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                }`}
+                                        >
+                                            <ChevronLeft size={16} />
+                                            Previous
+                                        </button>
+    
+                                        <div className="flex items-center gap-1">
+                                            {getPageNumbers().map((pageNum) => (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                    className={`!px-3 !py-2 rounded-md text-sm font-medium transition ${pageNum === currentPage
+                                                        ? 'bg-[#7966F1] text-white'
+                                                        : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                        }`}
+                                                >
+                                                    {pageNum + 1}
+                                                </button>
+                                            ))}
+                                        </div>
+    
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages - 1}
+                                            className={`flex items-center gap-1 !px-3 !py-2 rounded-md text-sm font-medium transition ${currentPage === totalPages - 1
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-[#7966F1] border border-[#7966F1] hover:bg-[#7966F1] hover:text-white cursor-pointer'
+                                                }`}
+                                        >
+                                            Next
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
-export default UserUnattemptedExams;
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    };
+    
+    export default UserUnattemptedExams;

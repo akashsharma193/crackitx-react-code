@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X, Image as ImageIcon, Type, GripVertical } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X, Image as ImageIcon, Type, GripVertical, Edit2, Check } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import apiClient from '../../api/axiosConfig';
@@ -513,6 +513,8 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
     const questionImageRef = useRef(null);
     const optionImageRefs = useRef([]);
     const [tempCategory, setTempCategory] = useState(question.category || '');
+    const [questionInputMode, setQuestionInputMode] = useState(question.questionInputMode || 'text');
+    const [optionsInputMode, setOptionsInputMode] = useState(question.optionsInputMode || 'text');
 
     const handleQuestionImageUpload = (e) => {
         const file = e.target.files[0];
@@ -553,6 +555,40 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
         toast.success('Category updated successfully');
     };
 
+    const handleQuestionInputModeChange = (mode) => {
+        setQuestionInputMode(mode);
+        onQuestionChange(question.id, 'questionInputMode', mode);
+        if (mode === 'text') {
+            onImageUpload(question.id, 'question', null);
+            onQuestionTypeChange(question.id, 'text');
+        } else if (mode === 'image') {
+            onQuestionChange(question.id, 'question', '');
+            onQuestionTypeChange(question.id, 'image');
+        } else if (mode === 'both') {
+            onQuestionTypeChange(question.id, 'text');
+        }
+    };
+
+    const handleOptionsInputModeChange = (mode) => {
+        setOptionsInputMode(mode);
+        onQuestionChange(question.id, 'optionsInputMode', mode);
+        if (mode === 'text') {
+            question.options.forEach((_, index) => {
+                onImageUpload(question.id, 'option', null, index);
+                onOptionTypeChange(question.id, index, 'text');
+            });
+        } else if (mode === 'image') {
+            question.options.forEach((_, index) => {
+                onOptionChange(question.id, index, '');
+                onOptionTypeChange(question.id, index, 'image');
+            });
+        } else if (mode === 'both') {
+            question.options.forEach((_, index) => {
+                onOptionTypeChange(question.id, index, 'text');
+            });
+        }
+    };
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
             <div className="flex items-center justify-between !mb-4">
@@ -567,108 +603,113 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
             </div>
 
             <div className="!mb-4">
-                <label className="block text-sm font-medium text-gray-600 !mb-2">Category (Optional)</label>
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={tempCategory}
-                        onChange={(e) => setTempCategory(e.target.value)}
-                        onBlur={(e) => setTempCategory(e.target.value)}
-                        className="w-full !px-4 !py-3 pr-12 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                        placeholder="Enter category (e.g., Math, History)"
-                    />
-                    <button
-                        onClick={handleCategoryUpdate}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-700 transition-colors cursor-pointer"
-                        aria-label="Update category"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <div className="!mb-4">
                 <div className="flex items-center justify-between !mb-2">
-                    <label className="block text-sm font-medium text-gray-600">Question</label>
+                    <label className="block text-sm font-medium text-gray-600">Question Input Mode</label>
                     <div className="flex gap-2">
                         <button
-                            onClick={() => onQuestionTypeChange(question.id, 'text')}
-                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.questionType === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                            onClick={() => handleQuestionInputModeChange('text')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
                             <Type className="w-4 h-4" />
-                            Text
+                            Text Only
                         </button>
                         <button
-                            onClick={() => onQuestionTypeChange(question.id, 'image')}
-                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.questionType === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                            onClick={() => handleQuestionInputModeChange('image')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
                             <ImageIcon className="w-4 h-4" />
-                            Image
+                            Image Only
+                        </button>
+                        <button
+                            onClick={() => handleQuestionInputModeChange('both')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'both' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            <Type className="w-4 h-4" />
+                            <ImageIcon className="w-4 h-4" />
+                            Both
                         </button>
                     </div>
                 </div>
 
-                {question.questionType === 'text' ? (
-                    <textarea
-                        value={question.question}
-                        onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
-                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
-                        placeholder="Enter your question here..."
-                        rows="3"
-                    />
-                ) : (
-                    <div>
-                        <input
-                            type="file"
-                            ref={questionImageRef}
-                            onChange={handleQuestionImageUpload}
-                            accept="image/*"
-                            className="hidden"
-                        />
-                        {question.questionImage ? (
-                            <div className="relative">
-                                <img src={question.questionImage} alt="Question" className="w-full max-h-64 object-contain border border-[#5E48EF] rounded-lg" />
+                <div className="space-y-3">
+                    {(questionInputMode === 'text' || questionInputMode === 'both') && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 !mb-1">Question Text</label>
+                            <textarea
+                                value={question.question}
+                                onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
+                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
+                                placeholder="Enter your question here..."
+                                rows="3"
+                            />
+                        </div>
+                    )}
+
+                    {(questionInputMode === 'image' || questionInputMode === 'both') && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 !mb-1">Question Image</label>
+                            <input
+                                type="file"
+                                ref={questionImageRef}
+                                onChange={handleQuestionImageUpload}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            {question.questionImage ? (
+                                <div className="relative">
+                                    <img src={question.questionImage} alt="Question" className="w-full max-h-64 object-contain border border-[#5E48EF] rounded-lg" />
+                                    <button
+                                        onClick={() => onImageUpload(question.id, 'question', null)}
+                                        className="absolute top-2 right-2 bg-red-500 text-white !p-2 rounded-full hover:bg-red-600 cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
                                 <button
-                                    onClick={() => onImageUpload(question.id, 'question', null)}
-                                    className="absolute top-2 right-2 bg-red-500 text-white !p-2 rounded-full hover:bg-red-600 cursor-pointer"
+                                    onClick={() => questionImageRef.current?.click()}
+                                    className="w-full !px-4 !py-8 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-2"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <ImageIcon className="w-8 h-8 text-[#5E48EF]" />
+                                    <span className="text-sm text-gray-600">Click to upload question image</span>
                                 </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => questionImageRef.current?.click()}
-                                className="w-full !px-4 !py-8 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-2"
-                            >
-                                <ImageIcon className="w-8 h-8 text-[#5E48EF]" />
-                                <span className="text-sm text-gray-600">Click to upload question image</span>
-                            </button>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="!mb-4">
                 <div className="flex items-center justify-between !mb-3">
-                    <h4 className="text-sm font-medium text-gray-600">Options (Select one as the correct answer)</h4>
+                    <h4 className="text-sm font-medium text-gray-600">Options Input Mode</h4>
                     <div className="flex gap-2">
                         <button
-                            onClick={() => onOptionTypeChange(question.id, 'text')}
-                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.optionType === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                            onClick={() => handleOptionsInputModeChange('text')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
                             <Type className="w-4 h-4" />
-                            Text
+                            Text Only
                         </button>
                         <button
-                            onClick={() => onOptionTypeChange(question.id, 'image')}
-                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${question.optionType === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                            onClick={() => handleOptionsInputModeChange('image')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
                             <ImageIcon className="w-4 h-4" />
-                            Image
+                            Image Only
+                        </button>
+                        <button
+                            onClick={() => handleOptionsInputModeChange('both')}
+                            className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'both' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            <Type className="w-4 h-4" />
+                            <ImageIcon className="w-4 h-4" />
+                            Both
                         </button>
                     </div>
+                </div>
+
+                <div className="!mb-2">
+                    <h4 className="text-sm font-medium text-gray-600">Options (Select one as the correct answer)</h4>
                 </div>
                 <div className="space-y-3">
                     {question.options.map((option, index) => (
@@ -681,44 +722,50 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
                                 {question.correctAnswer === index && <div className="w-2 h-2 bg-white rounded-full" />}
                             </button>
 
-                            {question.optionType === 'text' ? (
-                                <input
-                                    type="text"
-                                    value={option}
-                                    onChange={(e) => onOptionChange(question.id, index, e.target.value)}
-                                    className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                                    placeholder={`Option ${index + 1}`}
-                                />
-                            ) : (
-                                <div className="flex-1">
+                            <div className="flex-1 space-y-2">
+                                <span className="text-xs text-gray-500">Option {index + 1}</span>
+
+                                {(optionsInputMode === 'text' || optionsInputMode === 'both') && (
                                     <input
-                                        type="file"
-                                        ref={(el) => (optionImageRefs.current[index] = el)}
-                                        onChange={(e) => handleOptionImageUpload(index, e)}
-                                        accept="image/*"
-                                        className="hidden"
+                                        type="text"
+                                        value={option.text}
+                                        onChange={(e) => onOptionChange(question.id, index, e.target.value)}
+                                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                        placeholder={`Option ${index + 1} text`}
                                     />
-                                    {question.optionImages && question.optionImages[index] ? (
-                                        <div className="relative">
-                                            <img src={question.optionImages[index]} alt={`Option ${index + 1}`} className="w-full max-h-32 object-contain border border-[#5E48EF] rounded-lg" />
+                                )}
+
+                                {(optionsInputMode === 'image' || optionsInputMode === 'both') && (
+                                    <div className='!mt-3'>
+                                        <input
+                                            type="file"
+                                            ref={(el) => (optionImageRefs.current[index] = el)}
+                                            onChange={(e) => handleOptionImageUpload(index, e)}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        {option.image ? (
+                                            <div className="relative">
+                                                <img src={option.image} alt={`Option ${index + 1}`} className="w-full max-h-32 object-contain border border-[#5E48EF] rounded-lg" />
+                                                <button
+                                                    onClick={() => onImageUpload(question.id, 'option', null, index)}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white !p-1 rounded-full hover:bg-red-600 cursor-pointer"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ) : (
                                             <button
-                                                onClick={() => onImageUpload(question.id, 'option', null, index)}
-                                                className="absolute top-1 right-1 bg-red-500 text-white !p-1 rounded-full hover:bg-red-600 cursor-pointer"
+                                                onClick={() => optionImageRefs.current[index]?.click()}
+                                                className="w-full !px-4 !py-6 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-1"
                                             >
-                                                <X className="w-3 h-3" />
+                                                <ImageIcon className="w-6 h-6 text-[#5E48EF]" />
+                                                <span className="text-xs text-gray-600">Upload option {index + 1} image</span>
                                             </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => optionImageRefs.current[index]?.click()}
-                                            className="w-full !px-4 !py-6 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-1"
-                                        >
-                                            <ImageIcon className="w-6 h-6 text-[#5E48EF]" />
-                                            <span className="text-xs text-gray-600">Upload option {index + 1} image</span>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -727,9 +774,11 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
     );
 };
 
-const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload, onMoveQuestion }) => {
+const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload, onMoveQuestion, onAddQuestion }) => {
     const [isOpen, setIsOpen] = useState(true);
     const [draggedQuestion, setDraggedQuestion] = useState(null);
+    const [isEditingCategory, setIsEditingCategory] = useState(false);
+    const [editedCategoryName, setEditedCategoryName] = useState(category);
 
     const handleDragStart = (e, questionId) => {
         setDraggedQuestion(questionId);
@@ -744,8 +793,26 @@ const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChan
     const handleDrop = (e) => {
         e.preventDefault();
         if (draggedQuestion) {
-            onMoveQuestion(draggedQuestion, category);
+            onMoveQuestion(draggedQuestion, editedCategoryName);
             setDraggedQuestion(null);
+        }
+    };
+
+    const handleCategoryEdit = () => {
+        if (editedCategoryName.trim() && editedCategoryName !== category) {
+            questions.forEach(q => {
+                onCategoryChange(q.id, editedCategoryName);
+            });
+        }
+        setIsEditingCategory(false);
+    };
+
+    const handleCategoryKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleCategoryEdit();
+        } else if (e.key === 'Escape') {
+            setEditedCategoryName(category);
+            setIsEditingCategory(false);
         }
     };
 
@@ -753,15 +820,60 @@ const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChan
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !mb-6">
             <div
                 className="flex items-center justify-between !p-4 cursor-pointer hover:bg-gray-50 transition"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => !isEditingCategory && setIsOpen(!isOpen)}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
             >
                 <div className="flex items-center gap-3">
                     <ChevronDown className={`w-5 h-5 text-[#5E48EF] transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`} />
-                    <h2 className="text-[#5E48EF] text-xl font-bold">{category || 'Uncategorized'}</h2>
+                    {isEditingCategory ? (
+                        <input
+                            type="text"
+                            value={editedCategoryName}
+                            onChange={(e) => setEditedCategoryName(e.target.value)}
+                            onBlur={handleCategoryEdit}
+                            onKeyDown={handleCategoryKeyPress}
+                            onClick={(e) => e.stopPropagation()}
+                            className="!px-3 !py-1 border-2 border-[#5E48EF] rounded text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#5E48EF]"
+                            autoFocus
+                        />
+                    ) : (
+                        <h2 className="text-[#5E48EF] text-xl font-bold">{editedCategoryName || 'Uncategorized'}</h2>
+                    )}
+                    {!isEditingCategory && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditingCategory(true);
+                            }}
+                            className="text-[#5E48EF] hover:text-[#7966F1] transition"
+                        >
+                            <Edit2 className="w-4 h-4" />
+                        </button>
+                    )}
+                    {isEditingCategory && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCategoryEdit();
+                            }}
+                            className="text-green-600 hover:text-green-700 transition"
+                        >
+                            <Check className="w-4 h-4" />
+                        </button>
+                    )}
                     <span className="bg-[#5E48EF] text-white text-sm !px-3 !py-1 rounded-full">{questions.length}</span>
                 </div>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAddQuestion(editedCategoryName);
+                    }}
+                    className="bg-[#5E48EF] text-white !px-4 !py-2 rounded-lg font-medium hover:bg-[#7966F1] transition flex items-center gap-2"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Question
+                </button>
             </div>
 
             {isOpen && (
@@ -898,16 +1010,21 @@ const CreateExam = () => {
     const [isAILoading, setIsAILoading] = useState(false);
     const [isQuestionBankLoading, setIsQuestionBankLoading] = useState(false);
     const [isActiveDisabled, setIsActiveDisabled] = useState(false);
-    const [questions, setQuestions] = useState([{ 
-        id: 1, 
-        question: '', 
-        options: ['', '', '', ''], 
-        correctAnswer: null, 
-        category: '', 
-        questionType: 'text', 
-        optionType: 'text', 
-        questionImage: null, 
-        optionImages: [null, null, null, null] 
+    const [questions, setQuestions] = useState([{
+        id: 1,
+        question: '',
+        options: [
+            { text: '', type: 'text', image: null },
+            { text: '', type: 'text', image: null },
+            { text: '', type: 'text', image: null },
+            { text: '', type: 'text', image: null }
+        ],
+        correctAnswer: null,
+        category: '',
+        questionType: 'text',
+        optionType: 'text',
+        questionImage: null,
+        optionImages: [null, null, null, null]
     }]);
     const [pollingAttempts, setPollingAttempts] = useState(0);
     const [aiReferenceKey, setAiReferenceKey] = useState(null);
@@ -970,7 +1087,10 @@ const CreateExam = () => {
     const handleOptionChange = useCallback((questionId, optionIndex, value) => {
         setQuestions((prev) =>
             prev.map((q) =>
-                q.id === questionId ? { ...q, options: q.options.map((opt, idx) => (idx === optionIndex ? value : opt)) } : q
+                q.id === questionId ? {
+                    ...q,
+                    options: q.options.map((opt, idx) => (idx === optionIndex ? { ...opt, text: value } : opt))
+                } : q
             )
         );
     }, []);
@@ -996,14 +1116,16 @@ const CreateExam = () => {
         }));
     }, []);
 
-    const handleOptionTypeChange = useCallback((questionId, type) => {
+    const handleOptionTypeChange = useCallback((questionId, optionIndex, type) => {
         setQuestions((prev) => prev.map((q) => {
             if (q.id === questionId) {
+                const newOptions = [...q.options];
                 if (type === 'text') {
-                    return { ...q, optionType: type, optionImages: [null, null, null, null] };
+                    newOptions[optionIndex] = { text: '', type: 'text', image: null };
                 } else {
-                    return { ...q, optionType: type, options: ['', '', '', ''] };
+                    newOptions[optionIndex] = { text: '', type: 'image', image: null };
                 }
+                return { ...q, options: newOptions };
             }
             return q;
         }));
@@ -1015,9 +1137,9 @@ const CreateExam = () => {
                 if (imageType === 'question') {
                     return { ...q, questionImage: imageData };
                 } else if (imageType === 'option' && optionIndex !== null) {
-                    const newOptionImages = [...q.optionImages];
-                    newOptionImages[optionIndex] = imageData;
-                    return { ...q, optionImages: newOptionImages };
+                    const newOptions = [...q.options];
+                    newOptions[optionIndex] = { ...newOptions[optionIndex], image: imageData };
+                    return { ...q, options: newOptions };
                 }
             }
             return q;
@@ -1025,7 +1147,7 @@ const CreateExam = () => {
     }, []);
 
     const handleMoveQuestion = useCallback((questionId, targetCategory) => {
-        setQuestions((prev) => prev.map((q) => 
+        setQuestions((prev) => prev.map((q) =>
             q.id === questionId ? { ...q, category: targetCategory } : q
         ));
         toast.success('Question moved successfully');
@@ -1033,38 +1155,90 @@ const CreateExam = () => {
 
     const addNewQuestion = useCallback(() => {
         const lastQuestion = questions[questions.length - 1];
-        const newQuestion = { 
-            id: Date.now(), 
-            question: '', 
-            options: ['', '', '', ''], 
-            correctAnswer: null, 
-            category: lastQuestion?.category || '', 
-            questionType: 'text', 
-            optionType: 'text', 
-            questionImage: null, 
-            optionImages: [null, null, null, null] 
+        const newQuestion = {
+            id: Date.now(),
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: lastQuestion?.category || '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null]
         };
         setQuestions((prev) => [...prev, newQuestion]);
     }, [questions]);
 
+    const addQuestionToCategory = useCallback((categoryName) => {
+        const newQuestion = {
+            id: Date.now(),
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: categoryName,
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null]
+        };
+        setQuestions((prev) => [...prev, newQuestion]);
+    }, []);
+
     const addNewSection = useCallback(() => {
-        const newQuestion = { 
-            id: Date.now(), 
-            question: '', 
-            options: ['', '', '', ''], 
-            correctAnswer: null, 
-            category: '', 
-            questionType: 'text', 
-            optionType: 'text', 
-            questionImage: null, 
-            optionImages: [null, null, null, null] 
+        const newQuestion = {
+            id: Date.now(),
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null]
         };
         setQuestions((prev) => [...prev, newQuestion]);
         toast.info('New section created! Please enter a category name.');
     }, []);
 
     const deleteQuestion = useCallback((questionId) => {
-        setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+        setQuestions((prev) => {
+            const filtered = prev.filter((q) => q.id !== questionId);
+            if (filtered.length === 0) {
+                setShowQuestions(false);
+                return [{
+                    id: Date.now(),
+                    question: '',
+                    options: [
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null }
+                    ],
+                    correctAnswer: null,
+                    category: '',
+                    questionType: 'text',
+                    optionType: 'text',
+                    questionImage: null,
+                    optionImages: [null, null, null, null]
+                }];
+            }
+            return filtered;
+        });
     }, []);
 
     const handleAddQuestions = useCallback(() => {
@@ -1072,69 +1246,50 @@ const CreateExam = () => {
     }, []);
 
     const handleResetQuestions = useCallback(() => {
-        setQuestions([{ 
-            id: 1, 
-            question: '', 
-            options: ['', '', '', ''], 
-            correctAnswer: null, 
-            category: '', 
-            questionType: 'text', 
-            optionType: 'text', 
-            questionImage: null, 
-            optionImages: [null, null, null, null] 
+        setQuestions([{
+            id: 1,
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null]
         }]);
         setShowQuestions(false);
         toast.success('Questions reset successfully!');
     }, []);
     const downloadSampleExcel = useCallback(() => {
         const sampleData = [
-            { 
-                Question: 'What is the capital of France?', 
-                'Option 1': 'London', 
-                'Option 2': 'Berlin', 
-                'Option 3': 'Paris', 
-                'Option 4': 'Madrid', 
-                'Correct Answer': 'Paris', 
-                Category: 'Geography',
-                'Question Type': 'text',
-                'Option Type': 'text',
-                'Question Image URL': '',
-                'Option 1 Image URL': '',
-                'Option 2 Image URL': '',
-                'Option 3 Image URL': '',
-                'Option 4 Image URL': ''
+            {
+                Question: 'What is the capital of France?',
+                'Option 1': 'London',
+                'Option 2': 'Berlin',
+                'Option 3': 'Paris',
+                'Option 4': 'Madrid',
+                'Correct Answer': 'Paris',
             },
-            { 
-                Question: 'Which planet is known as the Red Planet?', 
-                'Option 1': 'Venus', 
-                'Option 2': 'Mars', 
-                'Option 3': 'Jupiter', 
-                'Option 4': 'Saturn', 
-                'Correct Answer': 'Mars', 
-                Category: 'Science',
-                'Question Type': 'text',
-                'Option Type': 'text',
-                'Question Image URL': '',
-                'Option 1 Image URL': '',
-                'Option 2 Image URL': '',
-                'Option 3 Image URL': '',
-                'Option 4 Image URL': ''
+            {
+                Question: 'Which planet is known as the Red Planet?',
+                'Option 1': 'Venus',
+                'Option 2': 'Mars',
+                'Option 3': 'Jupiter',
+                'Option 4': 'Saturn',
+                'Correct Answer': 'Mars',
             },
-            { 
-                Question: '', 
-                'Option 1': '', 
-                'Option 2': '', 
-                'Option 3': '', 
-                'Option 4': '', 
-                'Correct Answer': '1', 
-                Category: 'Math',
-                'Question Type': 'image',
-                'Option Type': 'text',
-                'Question Image URL': 'https://example.com/question-image.jpg',
-                'Option 1 Image URL': '',
-                'Option 2 Image URL': '',
-                'Option 3 Image URL': '',
-                'Option 4 Image URL': ''
+            {
+                Question: 'What is 2+2',
+                'Option 1': '4',
+                'Option 2': '5',
+                'Option 3': '6',
+                'Option 4': '7',
+                'Correct Answer': '4',
             }
         ];
         const ws = XLSX.utils.json_to_sheet(sampleData);
@@ -1158,15 +1313,15 @@ const CreateExam = () => {
                     toast.error('Excel file is empty');
                     return;
                 }
-                
+
                 const importedQuestions = [];
                 let hasErrors = false;
-                
+
                 jsonData.forEach((row, index) => {
                     const rowNumber = index + 1;
                     const questionType = (row['Question Type'] || 'text').toString().toLowerCase();
                     const optionType = (row['Option Type'] || 'text').toString().toLowerCase();
-                    
+
                     if (questionType === 'text') {
                         if (!row['Question'] || !row['Question'].toString().trim()) {
                             toast.error(`Row ${rowNumber}: Question text is required when Question Type is text`);
@@ -1174,7 +1329,7 @@ const CreateExam = () => {
                             return;
                         }
                     }
-                    
+
                     if (questionType === 'image') {
                         if (!row['Question Image URL'] || !row['Question Image URL'].toString().trim()) {
                             toast.error(`Row ${rowNumber}: Question Image URL is required when Question Type is image`);
@@ -1182,10 +1337,10 @@ const CreateExam = () => {
                             return;
                         }
                     }
-                    
+
                     let options = ['', '', '', ''];
                     let optionImages = [null, null, null, null];
-                    
+
                     if (optionType === 'text') {
                         options = [
                             row['Option 1']?.toString().trim() || '',
@@ -1199,7 +1354,7 @@ const CreateExam = () => {
                             return;
                         }
                     }
-                    
+
                     if (optionType === 'image') {
                         optionImages = [
                             row['Option 1 Image URL']?.toString().trim() || null,
@@ -1213,14 +1368,14 @@ const CreateExam = () => {
                             return;
                         }
                     }
-                    
+
                     const correctAnswer = row['Correct Answer']?.toString().trim();
                     if (!correctAnswer) {
                         toast.error(`Row ${rowNumber}: Correct answer is required`);
                         hasErrors = true;
                         return;
                     }
-                    
+
                     let correctAnswerIndex = -1;
                     if (optionType === 'text') {
                         correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
@@ -1239,12 +1394,17 @@ const CreateExam = () => {
                             return;
                         }
                     }
-                    
+
                     importedQuestions.push({
                         id: Date.now() + index,
                         question: questionType === 'text' ? (row['Question']?.toString().trim() || '') : '',
                         questionImage: questionType === 'image' ? (row['Question Image URL']?.toString().trim() || null) : null,
-                        options: options,
+                        options: [
+                            { text: options[0], type: optionType, image: optionType === 'image' ? optionImages[0] : null },
+                            { text: options[1], type: optionType, image: optionType === 'image' ? optionImages[1] : null },
+                            { text: options[2], type: optionType, image: optionType === 'image' ? optionImages[2] : null },
+                            { text: options[3], type: optionType, image: optionType === 'image' ? optionImages[3] : null }
+                        ],
                         optionImages: optionImages,
                         correctAnswer: correctAnswerIndex,
                         category: row['Category']?.toString().trim() || '',
@@ -1252,9 +1412,9 @@ const CreateExam = () => {
                         optionType: optionType
                     });
                 });
-                
+
                 if (hasErrors) return;
-                
+
                 if (importedQuestions.length === 0) {
                     toast.error('No valid questions found in the Excel file');
                     return;
@@ -1264,8 +1424,7 @@ const CreateExam = () => {
                     const hasEmptyQuestion = prevQuestions.length === 1 &&
                         prevQuestions[0].question === '' &&
                         prevQuestions[0].questionImage === null &&
-                        prevQuestions[0].options.every(opt => opt === '') &&
-                        prevQuestions[0].optionImages.every(img => img === null) &&
+                        prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                         prevQuestions[0].correctAnswer === null;
 
                     if (hasEmptyQuestion) {
@@ -1298,10 +1457,16 @@ const CreateExam = () => {
 
                     const aiQuestions = response.data.data.map((item, index) => {
                         const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                        const opts = item.options || ['', '', '', ''];
                         return {
                             id: Date.now() + index,
                             question: item.question,
-                            options: item.options || ['', '', '', ''],
+                            options: [
+                                { text: opts[0], type: 'text', image: null },
+                                { text: opts[1], type: 'text', image: null },
+                                { text: opts[2], type: 'text', image: null },
+                                { text: opts[3], type: 'text', image: null }
+                            ],
                             correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
                             category: '',
                             questionType: 'text',
@@ -1315,8 +1480,7 @@ const CreateExam = () => {
                         const hasEmptyQuestion = prevQuestions.length === 1 &&
                             prevQuestions[0].question === '' &&
                             prevQuestions[0].questionImage === null &&
-                            prevQuestions[0].options.every(opt => opt === '') &&
-                            prevQuestions[0].optionImages.every(img => img === null) &&
+                            prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                             prevQuestions[0].correctAnswer === null;
 
                         if (hasEmptyQuestion) {
@@ -1429,10 +1593,16 @@ const CreateExam = () => {
         try {
             const bankQuestions = selectedQuestionData.map((item, index) => {
                 const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                const opts = item.options || ['', '', '', ''];
                 return {
                     id: Date.now() + index,
                     question: item.question,
-                    options: item.options || ['', '', '', ''],
+                    options: [
+                        { text: opts[0], type: 'text', image: null },
+                        { text: opts[1], type: 'text', image: null },
+                        { text: opts[2], type: 'text', image: null },
+                        { text: opts[3], type: 'text', image: null }
+                    ],
                     correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
                     category: '',
                     questionType: 'text',
@@ -1446,8 +1616,7 @@ const CreateExam = () => {
                 const hasEmptyQuestion = prevQuestions.length === 1 &&
                     prevQuestions[0].question === '' &&
                     prevQuestions[0].questionImage === null &&
-                    prevQuestions[0].options.every(opt => opt === '') &&
-                    prevQuestions[0].optionImages.every(img => img === null) &&
+                    prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                     prevQuestions[0].correctAnswer === null;
 
                 if (hasEmptyQuestion) {
@@ -1501,21 +1670,63 @@ const CreateExam = () => {
             toast.error('End date and time must be after start date and time');
             return;
         }
-        
+
         const validQuestions = questions.filter((q) => {
-            const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
-            const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+            const questionInputMode = q.questionInputMode || 'text';
+            const optionsInputMode = q.optionsInputMode || 'text';
+
+            let hasQuestion = false;
+            if (questionInputMode === 'text') {
+                hasQuestion = q.question && q.question.trim() !== '';
+            } else if (questionInputMode === 'image') {
+                hasQuestion = q.questionImage !== null;
+            } else if (questionInputMode === 'both') {
+                hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+            }
+
+            const hasOptions = q.options.every((opt) => {
+                if (optionsInputMode === 'text') {
+                    return opt.text && opt.text.trim() !== '';
+                } else if (optionsInputMode === 'image') {
+                    return opt.image !== null;
+                } else if (optionsInputMode === 'both') {
+                    return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                }
+                return false;
+            });
+
             const hasCorrectAnswer = q.correctAnswer !== null;
             return hasQuestion && hasOptions && hasCorrectAnswer;
         });
-        
+
         const invalidQuestions = questions.filter((q) => {
-            const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
-            const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+            const questionInputMode = q.questionInputMode || 'text';
+            const optionsInputMode = q.optionsInputMode || 'text';
+
+            let hasQuestion = false;
+            if (questionInputMode === 'text') {
+                hasQuestion = q.question && q.question.trim() !== '';
+            } else if (questionInputMode === 'image') {
+                hasQuestion = q.questionImage !== null;
+            } else if (questionInputMode === 'both') {
+                hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+            }
+
+            const hasOptions = q.options.every((opt) => {
+                if (optionsInputMode === 'text') {
+                    return opt.text && opt.text.trim() !== '';
+                } else if (optionsInputMode === 'image') {
+                    return opt.image !== null;
+                } else if (optionsInputMode === 'both') {
+                    return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                }
+                return false;
+            });
+
             const hasCorrectAnswer = q.correctAnswer !== null;
             return !hasQuestion || !hasOptions || !hasCorrectAnswer;
         });
-        
+
         if (invalidQuestions.length > 0) {
             toast.error('All questions must have complete question content, all 4 options, and a correct answer selected');
             return;
@@ -1543,36 +1754,83 @@ const CreateExam = () => {
         setIsLoading(true);
         try {
             const validQuestions = questions.filter((q) => {
-                const hasQuestion = (q.questionType === 'text' && q.question.trim() !== '') || (q.questionType === 'image' && q.questionImage !== null);
-                const hasOptions = (q.optionType === 'text' && q.options.every((opt) => opt.trim() !== '')) || (q.optionType === 'image' && q.optionImages.every((img) => img !== null));
+                const questionInputMode = q.questionInputMode || 'text';
+                const optionsInputMode = q.optionsInputMode || 'text';
+    
+                let hasQuestion = false;
+                if (questionInputMode === 'text') {
+                    hasQuestion = q.question && q.question.trim() !== '';
+                } else if (questionInputMode === 'image') {
+                    hasQuestion = q.questionImage !== null;
+                } else if (questionInputMode === 'both') {
+                    hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+                }
+    
+                const hasOptions = q.options.every((opt) => {
+                    if (optionsInputMode === 'text') {
+                        return opt.text && opt.text.trim() !== '';
+                    } else if (optionsInputMode === 'image') {
+                        return opt.image !== null;
+                    } else if (optionsInputMode === 'both') {
+                        return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                    }
+                    return false;
+                });
+    
                 const hasCorrectAnswer = q.correctAnswer !== null;
                 return hasQuestion && hasOptions && hasCorrectAnswer;
             });
-            
+    
             const questionList = validQuestions.map((q) => {
                 const questionObj = {};
-                
-                if (q.questionType === 'text') {
+                const questionInputMode = q.questionInputMode || 'text';
+                const optionsInputMode = q.optionsInputMode || 'text';
+    
+                if (questionInputMode === 'text') {
                     questionObj.question = q.question.trim();
-                } else {
+                } else if (questionInputMode === 'image') {
                     questionObj.questionImage = q.questionImage;
+                } else if (questionInputMode === 'both') {
+                    if (q.question && q.question.trim() !== '') {
+                        questionObj.question = q.question.trim();
+                    }
+                    if (q.questionImage) {
+                        questionObj.questionImage = q.questionImage;
+                    }
                 }
-                
-                if (q.optionType === 'text') {
-                    questionObj.options = q.options.map((opt) => opt.trim());
-                    questionObj.correctAnswer = q.options[q.correctAnswer].trim();
-                } else {
-                    questionObj.optionsImage = q.optionImages;
+    
+                if (optionsInputMode === 'text') {
+                    questionObj.options = q.options.map((opt) => opt.text.trim());
+                    questionObj.correctAnswer = q.options[q.correctAnswer].text.trim();
+                } else if (optionsInputMode === 'image') {
+                    questionObj.optionsImage = q.options.map((opt) => opt.image);
                     questionObj.correctAnswer = String(q.correctAnswer + 1);
+                } else if (optionsInputMode === 'both') {
+                    const hasTextOptions = q.options.some(opt => opt.text && opt.text.trim() !== '');
+                    const hasImageOptions = q.options.some(opt => opt.image !== null);
+    
+                    if (hasTextOptions) {
+                        questionObj.options = q.options.map((opt) => opt.text.trim());
+                    }
+                    if (hasImageOptions) {
+                        questionObj.optionsImage = q.options.map((opt) => opt.image);
+                    }
+    
+                    const correctOpt = q.options[q.correctAnswer];
+                    if (correctOpt.text && correctOpt.text.trim() !== '') {
+                        questionObj.correctAnswer = correctOpt.text.trim();
+                    } else {
+                        questionObj.correctAnswer = String(q.correctAnswer + 1);
+                    }
                 }
-                
+    
                 if (q.category && q.category.trim() !== '') {
                     questionObj.category = q.category.trim();
                 }
-                
+    
                 return questionObj;
             });
-            
+    
             const examData = {
                 questionList,
                 examDuration: formData.examDuration.replace(' mins', ''),
@@ -1584,7 +1842,7 @@ const CreateExam = () => {
                 isActive: isActiveDisabled ? true : formData.isActive,
                 orgCode: localStorage.getItem('orgCode')
             };
-            
+    
             const response = await apiClient.post('/questionPaper/createQuestionPaper', examData);
             console.log('API Response:', response.data);
             toast.success('Exam created successfully!');
@@ -1600,16 +1858,21 @@ const CreateExam = () => {
                 isActive: true
             });
             setBatchSearchTerm('');
-            setQuestions([{ 
-                id: 1, 
-                question: '', 
-                options: ['', '', '', ''], 
-                correctAnswer: null, 
-                category: '', 
-                questionType: 'text', 
-                optionType: 'text', 
-                questionImage: null, 
-                optionImages: [null, null, null, null] 
+            setQuestions([{
+                id: 1,
+                question: '',
+                options: [
+                    { text: '', type: 'text', image: null },
+                    { text: '', type: 'text', image: null },
+                    { text: '', type: 'text', image: null },
+                    { text: '', type: 'text', image: null }
+                ],
+                correctAnswer: null,
+                category: '',
+                questionType: 'text',
+                optionType: 'text',
+                questionImage: null,
+                optionImages: [null, null, null, null]
             }]);
             setShowQuestions(false);
         } catch (error) {
@@ -1811,8 +2074,8 @@ const CreateExam = () => {
                             <RefreshCw className="w-5 h-5" />
                         </button>
                     </div>
-                    
-                    {showQuestions && (
+
+                    {showQuestions && questions.length > 0 && (
                         <div className="flex justify-center gap-4 !mt-6">
                             <button
                                 onClick={addNewSection}
@@ -1841,21 +2104,13 @@ const CreateExam = () => {
                                 onOptionTypeChange={handleOptionTypeChange}
                                 onImageUpload={handleImageUpload}
                                 onMoveQuestion={handleMoveQuestion}
+                                onAddQuestion={addQuestionToCategory}
                             />
                         ))}
                     </div>
                 )}
 
                 <div className="flex flex-col items-center gap-4">
-                    {showQuestions && (
-                        <button
-                            onClick={addNewQuestion}
-                            className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
-                        >
-                            Add Question to Current Category
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    )}
                     {!showQuestions && (
                         <button
                             onClick={handleAddQuestions}

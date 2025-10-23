@@ -121,6 +121,128 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
         );
     };
 
+    const renderQuestionContent = (item) => {
+        const hasQuestionText = item.question && item.question.trim() !== '';
+        const hasQuestionImage = item.questionImage && item.questionImage !== null;
+
+        if (hasQuestionText && hasQuestionImage) {
+            return (
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                    <img 
+                        src={item.questionImage} 
+                        alt="Question" 
+                        className="max-w-full h-auto rounded-lg border border-gray-300"
+                        style={{ maxHeight: '300px' }}
+                    />
+                </div>
+            );
+        } else if (hasQuestionImage) {
+            return (
+                <img 
+                    src={item.questionImage} 
+                    alt="Question" 
+                    className="max-w-full h-auto rounded-lg border border-gray-300"
+                    style={{ maxHeight: '300px' }}
+                />
+            );
+        } else {
+            return <h3 className="font-semibold text-gray-800">{item.question}</h3>;
+        }
+    };
+
+    const renderOptionContent = (option, optionImage, optionIndex) => {
+        const hasText = option && option.trim() !== '';
+        const hasImage = optionImage && optionImage !== null;
+
+        if (hasText && hasImage) {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span>{option}</span>
+                        <img 
+                            src={optionImage} 
+                            alt={`Option ${optionIndex + 1}`} 
+                            className="max-w-full h-auto rounded border border-gray-300"
+                            style={{ maxHeight: '150px' }}
+                        />
+                    </div>
+                </div>
+            );
+        } else if (hasImage) {
+            return (
+                <div className="flex items-start gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <img 
+                        src={optionImage} 
+                        alt={`Option ${optionIndex + 1}`} 
+                        className="max-w-full h-auto rounded border border-gray-300"
+                        style={{ maxHeight: '150px' }}
+                    />
+                </div>
+            );
+        } else {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <span className="flex-1">{option}</span>
+                </div>
+            );
+        }
+    };
+
+    const getCorrectAnswerIdentifier = (item, optionIndex) => {
+        if (item.optionsImage && Array.isArray(item.optionsImage) && item.optionsImage.length > 0) {
+            const hasTextOptions = item.options && Array.isArray(item.options) && item.options.some(opt => opt && opt.trim() !== '');
+            const hasImageOptions = item.optionsImage.some(img => img !== null);
+
+            if (hasTextOptions && hasImageOptions) {
+                return item.options[optionIndex];
+            } else if (hasImageOptions) {
+                return String(optionIndex + 1);
+            } else {
+                return item.options[optionIndex];
+            }
+        } else {
+            return item.options[optionIndex];
+        }
+    };
+
+    const isCorrectAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.correctAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
+
+    const isUserSelectedAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.userAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
+
     return (
         <div className="flex flex-col h-full">
             <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5 flex-shrink-0">
@@ -199,13 +321,14 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                         <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
 
                         {finalResult.map((item, index) => {
-                            const isCorrect = item.userAnswer === item.correctAnswer;
+                            const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer || 
+                                (Array.isArray(item.options) && item.options.some((opt, idx) => isCorrectAnswer(item, idx) && isUserSelectedAnswer(item, idx))));
                             const isSkipped = !item.userAnswer;
 
                             return (
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isCorrect
                                                 ? 'bg-green-500 text-white'
                                                 : isSkipped
                                                     ? 'bg-gray-500 text-white'
@@ -216,8 +339,10 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
 
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between !mb-4">
-                                                <h3 className="font-semibold text-gray-800 flex-1">{item.question}</h3>
-                                                <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg">
+                                                <div className="flex-1">
+                                                    {renderQuestionContent(item)}
+                                                </div>
+                                                <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg flex-shrink-0">
                                                     <Timer size={14} className="text-blue-600" />
                                                     <span className="text-sm font-medium text-blue-700">
                                                         {formatTime(item.timeTaken)}
@@ -226,9 +351,13 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                             </div>
 
                                             <div className="space-y-2">
-                                                {item.options.map((option, optionIndex) => {
-                                                    const isCorrectOption = option === item.correctAnswer;
-                                                    const isUserAnswer = option === item.userAnswer;
+                                                {item.options && item.options.map((option, optionIndex) => {
+                                                    const optionImage = item.optionsImage && Array.isArray(item.optionsImage) 
+                                                        ? item.optionsImage[optionIndex] 
+                                                        : null;
+                                                    
+                                                    const isCorrectOption = isCorrectAnswer(item, optionIndex);
+                                                    const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
 
                                                     let bgColor = 'bg-gray-50';
                                                     let textColor = 'text-gray-700';
@@ -250,14 +379,9 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                                             className={`!p-3 border rounded-lg ${bgColor} ${textColor} ${borderColor}`}
                                                         >
                                                             <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
-                                                                        {String.fromCharCode(65 + optionIndex)}
-                                                                    </span>
-                                                                    <span className="flex-1">{option}</span>
-                                                                </div>
+                                                                {renderOptionContent(option, optionImage, optionIndex)}
 
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-2 flex-shrink-0">
                                                                     {isCorrectOption && (
                                                                         <span className="text-xs font-semibold text-green-600 bg-green-200 !px-2 !py-1 rounded flex items-center gap-1">
                                                                             <CheckCircle size={12} />
@@ -583,7 +707,7 @@ const ExamParticipants = () => {
                                             <tbody>
                                                 {participants.length > 0 ? (
                                                     participants
-                                                        .sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage))
+                                                        .sort((a, b)=> parseFloat(b.percentage) - parseFloat(a.percentage))
                                                         .map((participant, index) => (
                                                             <tr key={participant.userId} className="border-b hover:bg-gray-50 transition-colors">
                                                                 <td className="!px-6 !py-4 font-medium text-gray-900">{index + 1}</td>

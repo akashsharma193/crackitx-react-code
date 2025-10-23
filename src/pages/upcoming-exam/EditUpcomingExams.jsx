@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, ArrowLeft, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Calendar, Clock, ArrowLeft, Upload, Bot, RefreshCw, Database, Search, ChevronLeft, ChevronRight, X, Image as ImageIcon, Type, GripVertical, Edit2, Check } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -70,7 +70,7 @@ const EditExamDialog = ({ isOpen, onClose, onConfirm, isLoading }) => {
     );
 };
 
-const AIGeneratingDialog = ({ isOpen, onCancel, remainingTime }) => {
+const AIGeneratingDialog = ({ isOpen, onCancel }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
@@ -544,12 +544,89 @@ const ImportQuestionBankDialog = ({ isOpen, onClose, onConfirm, isLoading }) => 
     );
 };
 
-const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
+const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload }) => {
+    const questionImageRef = useRef(null);
+    const optionImageRefs = useRef([]);
+    const [tempCategory, setTempCategory] = useState(question.category || '');
+    const [questionInputMode, setQuestionInputMode] = useState(question.questionInputMode || 'text');
+    const [optionsInputMode, setOptionsInputMode] = useState(question.optionsInputMode || 'text');
+
+    const handleQuestionImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image size should be less than 5MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                onImageUpload(question.id, 'question', reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleOptionImageUpload = (optionIndex, e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('Image size should be less than 5MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                onImageUpload(question.id, 'option', reader.result, optionIndex);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleCategoryUpdate = () => {
+        if (tempCategory.trim() === '') {
+            toast.error('Category cannot be empty');
+            return;
+        }
+        onCategoryChange(question.id, tempCategory);
+        toast.success('Category updated successfully');
+    };
+
+    const handleQuestionInputModeChange = (mode) => {
+        setQuestionInputMode(mode);
+        onQuestionChange(question.id, 'questionInputMode', mode);
+        if (mode === 'text') {
+            onImageUpload(question.id, 'question', null);
+            onQuestionTypeChange(question.id, 'text');
+        } else if (mode === 'image') {
+            onQuestionChange(question.id, 'question', '');
+            onQuestionTypeChange(question.id, 'image');
+        } else if (mode === 'both') {
+            onQuestionTypeChange(question.id, 'text');
+        }
+    };
+
+    const handleOptionsInputModeChange = (mode) => {
+        setOptionsInputMode(mode);
+        onQuestionChange(question.id, 'optionsInputMode', mode);
+        if (mode === 'text') {
+            question.options.forEach((_, index) => {
+                onImageUpload(question.id, 'option', null, index);
+                onOptionTypeChange(question.id, index, 'text');
+            });
+        } else if (mode === 'image') {
+            question.options.forEach((_, index) => {
+                onOptionChange(question.id, index, '');
+                onOptionTypeChange(question.id, index, 'image');
+            });
+        } else if (mode === 'both') {
+            question.options.forEach((_, index) => {
+                onOptionTypeChange(question.id, index, 'text');
+            });
+        }
+    };
+
+    return (<div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-6 !mb-6">
         <div className="flex items-center justify-between !mb-4">
-            <h3 className="text-[#5E48EF] text-lg font-medium">
-                Question {questionIndex + 1}
-            </h3>
+            <h3 className="text-[#5E48EF] text-lg font-medium">Question {questionIndex + 1}</h3>
             <button
                 onClick={() => onDeleteQuestion(question.id)}
                 className="text-red-500 hover:text-red-700 transition-colors cursor-pointer"
@@ -559,48 +636,389 @@ const QuestionCard = ({ question, questionIndex, onQuestionChange, onOptionChang
             </button>
         </div>
 
-        <div className="!mb-6">
-            <textarea
-                value={question.question}
-                onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
-                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
-                placeholder="Enter your question here..."
-                rows="3"
-            />
+        <div className="!mb-4">
+            <div className="flex items-center justify-between !mb-2">
+                <label className="block text-sm font-medium text-gray-600">Question Input Mode</label>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleQuestionInputModeChange('text')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <Type className="w-4 h-4" />
+                        Text Only
+                    </button>
+                    <button
+                        onClick={() => handleQuestionInputModeChange('image')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <ImageIcon className="w-4 h-4" />
+                        Image Only
+                    </button>
+                    <button
+                        onClick={() => handleQuestionInputModeChange('both')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${questionInputMode === 'both' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <Type className="w-4 h-4" />
+                        <ImageIcon className="w-4 h-4" />
+                        Both
+                    </button>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {(questionInputMode === 'text' || questionInputMode === 'both') && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 !mb-1">Question Text</label>
+                        <textarea
+                            value={question.question}
+                            onChange={(e) => onQuestionChange(question.id, 'question', e.target.value)}
+                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 resize-none"
+                            placeholder="Enter your question here..."
+                            rows="3"
+                        />
+                    </div>
+                )}
+
+                {(questionInputMode === 'image' || questionInputMode === 'both') && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 !mb-1">Question Image</label>
+                        <input
+                            type="file"
+                            ref={questionImageRef}
+                            onChange={handleQuestionImageUpload}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        {question.questionImage ? (
+                            <div className="relative">
+                                <img src={question.questionImage} alt="Question" className="w-full max-h-64 object-contain border border-[#5E48EF] rounded-lg" />
+                                <button
+                                    onClick={() => onImageUpload(question.id, 'question', null)}
+                                    className="absolute top-2 right-2 bg-red-500 text-white !p-2 rounded-full hover:bg-red-600 cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => questionImageRef.current?.click()}
+                                className="w-full !px-4 !py-8 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-2"
+                            >
+                                <ImageIcon className="w-8 h-8 text-[#5E48EF]" />
+                                <span className="text-sm text-gray-600">Click to upload question image</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
 
         <div className="!mb-4">
-            <h4 className="text-sm font-medium text-gray-600 !mb-3">
-                Options (Select one as the correct answer)
-            </h4>
+            <div className="flex items-center justify-between !mb-3">
+                <h4 className="text-sm font-medium text-gray-600">Options Input Mode</h4>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleOptionsInputModeChange('text')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'text' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <Type className="w-4 h-4" />
+                        Text Only
+                    </button>
+                    <button
+                        onClick={() => handleOptionsInputModeChange('image')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'image' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <ImageIcon className="w-4 h-4" />
+                        Image Only
+                    </button>
+                    <button
+                        onClick={() => handleOptionsInputModeChange('both')}
+                        className={`flex items-center gap-1 !px-3 !py-1 rounded-md text-sm transition cursor-pointer ${optionsInputMode === 'both' ? 'bg-[#5E48EF] text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        <Type className="w-4 h-4" />
+                        <ImageIcon className="w-4 h-4" />
+                        Both
+                    </button>
+                </div>
+            </div>
+
+            <div className="!mb-2">
+                <h4 className="text-sm font-medium text-gray-600">Options (Select one as the correct answer)</h4>
+            </div>
             <div className="space-y-3">
                 {question.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-3 !mb-3">
+                    <div key={index} className="flex items-start gap-3 !mb-3">
                         <button
                             onClick={() => onCorrectAnswerChange(question.id, index)}
-                            className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center ${question.correctAnswer === index
-                                ? 'border-[#5E48EF] bg-[#5E48EF]'
-                                : 'border-[#5E48EF] bg-transparent'
-                                }`}
+                            className={`w-6 h-6 rounded-full border-2 flex-shrink-0 transition-all cursor-pointer flex items-center justify-center !mt-3 ${question.correctAnswer === index ? 'border-[#5E48EF] bg-[#5E48EF]' : 'border-[#5E48EF] bg-transparent'}`}
                             aria-label={`Select option ${index + 1} as correct answer`}
                         >
-                            {question.correctAnswer === index && (
-                                <div className="w-2 h-2 bg-white rounded-full" />
-                            )}
+                            {question.correctAnswer === index && <div className="w-2 h-2 bg-white rounded-full" />}
                         </button>
-                        <input
-                            type="text"
-                            value={option}
-                            onChange={(e) => onOptionChange(question.id, index, e.target.value)}
-                            className="flex-1 !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-                            placeholder={`Option ${index + 1}`}
-                        />
+
+                        <div className="flex-1 space-y-2">
+                            <span className="text-xs text-gray-500">Option {index + 1}</span>
+
+                            {(optionsInputMode === 'text' || optionsInputMode === 'both') && (
+                                <input
+                                    type="text"
+                                    value={option.text}
+                                    onChange={(e) => onOptionChange(question.id, index, e.target.value)}
+                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                    placeholder={`Option ${index + 1} text`}
+                                />
+                            )}
+
+                            {(optionsInputMode === 'image' || optionsInputMode === 'both') && (
+                                <div className='!mt-3'>
+                                    <input
+                                        type="file"
+                                        ref={(el) => (optionImageRefs.current[index] = el)}
+                                        onChange={(e) => handleOptionImageUpload(index, e)}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    {option.image ? (
+                                        <div className="relative">
+                                            <img src={option.image} alt={`Option ${index + 1}`} className="w-full max-h-32 object-contain border border-[#5E48EF] rounded-lg" />
+                                            <button
+                                                onClick={() => onImageUpload(question.id, 'option', null, index)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white !p-1 rounded-full hover:bg-red-600 cursor-pointer"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => optionImageRefs.current[index]?.click()}
+                                            className="w-full !px-4 !py-6 border-2 border-dashed border-[#5E48EF] rounded-lg hover:bg-[#5E48EF]/5 transition cursor-pointer flex flex-col items-center gap-1"
+                                        >
+                                            <ImageIcon className="w-6 h-6 text-[#5E48EF]" />
+                                            <span className="text-xs text-gray-600">Upload option {index + 1} image</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
         </div>
     </div>
-);
+    );
+};
+
+const CategoryAccordion = ({ category, questions, onQuestionChange, onOptionChange, onCorrectAnswerChange, onDeleteQuestion, onCategoryChange, onQuestionTypeChange, onOptionTypeChange, onImageUpload, onMoveQuestion, onAddQuestion }) => {
+    const [isOpen, setIsOpen] = useState(true);
+    const [draggedQuestion, setDraggedQuestion] = useState(null);
+    const [isEditingCategory, setIsEditingCategory] = useState(false);
+    const [editedCategoryName, setEditedCategoryName] = useState(category);
+
+    const handleDragStart = (e, questionId) => {
+        setDraggedQuestion(questionId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        if (draggedQuestion) {
+            onMoveQuestion(draggedQuestion, editedCategoryName);
+            setDraggedQuestion(null);
+        }
+    };
+
+    const handleCategoryEdit = () => {
+        if (editedCategoryName.trim() && editedCategoryName !== category) {
+            questions.forEach(q => {
+                onCategoryChange(q.id, editedCategoryName);
+            });
+        }
+        setIsEditingCategory(false);
+    };
+
+    const handleCategoryKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleCategoryEdit();
+        } else if (e.key === 'Escape') {
+            setEditedCategoryName(category);
+            setIsEditingCategory(false);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !mb-6">
+            <div
+                className="flex items-center justify-between !p-4 cursor-pointer hover:bg-gray-50 transition"
+                onClick={() => !isEditingCategory && setIsOpen(!isOpen)}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+            >
+                <div className="flex items-center gap-3">
+                    <ChevronDown className={`w-5 h-5 text-[#5E48EF] transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`} />
+                    {isEditingCategory ? (
+                        <input
+                            type="text"
+                            value={editedCategoryName}
+                            onChange={(e) => setEditedCategoryName(e.target.value)}
+                            onBlur={handleCategoryEdit}
+                            onKeyDown={handleCategoryKeyPress}
+                            onClick={(e) => e.stopPropagation()}
+                            className="!px-3 !py-1 border-2 border-[#5E48EF] rounded text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-[#5E48EF]"
+                            autoFocus
+                        />
+                    ) : (
+                        <h2 className="text-[#5E48EF] text-xl font-bold">{editedCategoryName || 'Uncategorized'}</h2>
+                    )}
+                    {!isEditingCategory && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditingCategory(true);
+                            }}
+                            className="text-[#5E48EF] hover:text-[#7966F1] transition"
+                        >
+                            <Edit2 className="w-4 h-4" />
+                        </button>
+                    )}
+                    {isEditingCategory && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleCategoryEdit();
+                            }}
+                            className="text-green-600 hover:text-green-700 transition"
+                        >
+                            <Check className="w-4 h-4" />
+                        </button>
+                    )}
+                    <span className="bg-[#5E48EF] text-white text-sm !px-3 !py-1 rounded-full">{questions.length}</span>
+                </div>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAddQuestion(editedCategoryName);
+                    }}
+                    className="bg-[#5E48EF] text-white !px-4 !py-2 rounded-lg font-medium hover:bg-[#7966F1] transition flex items-center gap-2"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Question
+                </button>
+            </div>
+
+            {isOpen && (
+                <div className="!p-4 !pt-0">
+                    {questions.map((question, index) => (
+                        <div
+                            key={question.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, question.id)}
+                            className="cursor-move"
+                        >
+                            <div className="flex items-start gap-2">
+                                <div className="!pt-8">
+                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <QuestionCard
+                                        question={question}
+                                        questionIndex={index}
+                                        onQuestionChange={onQuestionChange}
+                                        onOptionChange={onOptionChange}
+                                        onCorrectAnswerChange={onCorrectAnswerChange}
+                                        onDeleteQuestion={onDeleteQuestion}
+                                        onCategoryChange={onCategoryChange}
+                                        onQuestionTypeChange={onQuestionTypeChange}
+                                        onOptionTypeChange={onOptionTypeChange}
+                                        onImageUpload={onImageUpload}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const pad = (n) => String(n).padStart(2, '0');
+const nowLocalMinutes = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const splitDateTime = (v) => {
+    if (!v) return { date: '', time: '' };
+    const [date, time] = v.split('T');
+    return { date: date || '', time: (time || '').slice(0, 5) };
+};
+const joinDateTime = (date, time) => (date && time ? `${date}T${time}` : date ? `${date}T00:00` : '');
+
+const DateTimePicker = ({ label, value, onChange, minDateTime }) => {
+    const { date, time } = splitDateTime(value);
+    const min = splitDateTime(minDateTime || '');
+    const onDate = (e) => {
+        const newDate = e.target.value;
+        onChange(joinDateTime(newDate, time));
+    };
+    const onTime = (e) => {
+        const newTime = e.target.value;
+        onChange(joinDateTime(date, newTime));
+    };
+    const timeMin = useMemo(() => {
+        if (!min.date) return undefined;
+        if (date === min.date) return min.time || undefined;
+        return undefined;
+    }, [date, min.date, min.time]);
+    return (
+        <div>
+            <label className="block text-sm font-medium text-gray-600 !mb-2">{label}</label>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                    <input
+                        type="date"
+                        value={date}
+                        onChange={onDate}
+                        min={min.date || undefined}
+                        className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Calendar className="w-5 h-5 text-gray-400" />
+                    </div>
+                </div>
+                <div className="relative">
+                    <input
+                        type="time" value={time}
+                        onChange={onTime}
+                        min={timeMin}
+                        className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Clock className="w-5 h-5 text-gray-400" />
+                    </div>
+                </div>
+            </div>
+            {value && (
+                <p className="text-xs text-gray-500 !mt-1">
+                    Selected:{' '}
+                    {new Date(value).toLocaleString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    })}
+                </p>
+            )}
+        </div>
+    );
+};
 
 const EditUpcomingExams = () => {
     const navigate = useNavigate();
@@ -644,8 +1062,20 @@ const EditUpcomingExams = () => {
         {
             id: 1,
             question: '',
-            options: ['', '', '', ''],
-            correctAnswer: null
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null],
+            questionInputMode: 'text',
+            optionsInputMode: 'text'
         }
     ]);
 
@@ -670,14 +1100,72 @@ const EditUpcomingExams = () => {
             });
 
             setBatchSearchTerm(passedExamData.batch || '');
-
+    
             if (passedExamData.questionList && passedExamData.questionList.length > 0) {
-                const transformedQuestions = passedExamData.questionList.map((q, index) => ({
-                    id: index + 1,
-                    question: q.question || '',
-                    options: q.options || ['', '', '', ''],
-                    correctAnswer: q.options ? q.options.findIndex(opt => opt === q.correctAnswer) : null
-                }));
+                const transformedQuestions = passedExamData.questionList.map((q, index) => {
+                    const hasQuestionImage = q.questionImage !== undefined && q.questionImage !== null;
+                    const hasQuestionText = q.question && q.question.trim() !== '';
+    
+                    let questionInputMode = 'text';
+                    if (hasQuestionImage && hasQuestionText) {
+                        questionInputMode = 'both';
+                    } else if (hasQuestionImage) {
+                        questionInputMode = 'image';
+                    }
+    
+                    let correctAnswerIndex = null;
+                    let options = [];
+                    let optionImages = [null, null, null, null];
+                    let optionsInputMode = 'text';
+    
+                    if (q.optionsImage && Array.isArray(q.optionsImage) && q.optionsImage.length > 0) {
+                        optionImages = q.optionsImage;
+                        options = q.options && Array.isArray(q.options) && q.options.length > 0
+                            ? q.options.map((opt, idx) => ({ text: opt || '', type: 'text', image: optionImages[idx] || null }))
+                            : optionImages.map((img, idx) => ({ text: '', type: 'image', image: img }));
+    
+                        const hasText = options.some(opt => opt.text && opt.text.trim() !== '');
+                        const hasImages = options.some(opt => opt.image !== null);
+    
+                        if (hasText && hasImages) {
+                            optionsInputMode = 'both';
+                        } else if (hasImages) {
+                            optionsInputMode = 'image';
+                        }
+                        if (q.correctAnswer) {
+                            const correctAnswerNum = parseInt(q.correctAnswer);
+                            if (!isNaN(correctAnswerNum) && correctAnswerNum >= 1 && correctAnswerNum <= 4) {
+                                correctAnswerIndex = correctAnswerNum - 1;
+                            } else {
+                                correctAnswerIndex = options.findIndex(opt => opt.text && opt.text.trim() === q.correctAnswer.trim());
+                            }
+                        }
+                    } else {
+                        const optionsArray = q.options || ['', '', '', ''];
+                        options = optionsArray.map(opt => ({ text: opt, type: 'text', image: null }));
+                        
+                        if (q.correctAnswer) {
+                            correctAnswerIndex = options.findIndex(opt => opt.text && opt.text.trim() === q.correctAnswer.trim());
+                        }
+                    }
+                    if (correctAnswerIndex === -1) {
+                        correctAnswerIndex = null;
+                    }
+    
+                    return {
+                        id: index + 1,
+                        question: q.question || '',
+                        questionImage: q.questionImage || null,
+                        options: options,
+                        correctAnswer: correctAnswerIndex,
+                        category: q.category || '',
+                        questionType: hasQuestionImage ? 'image' : 'text',
+                        optionType: optionsInputMode === 'image' ? 'image' : 'text',
+                        optionImages: optionImages,
+                        questionInputMode: questionInputMode,
+                        optionsInputMode: optionsInputMode
+                    };
+                });
                 setQuestions(transformedQuestions);
                 setShowQuestions(true);
             }
@@ -725,9 +1213,33 @@ const EditUpcomingExams = () => {
 
     const downloadSampleExcel = useCallback(() => {
         const sampleData = [
-            { Question: 'What is the capital of France?', 'Option 1': 'London', 'Option 2': 'Berlin', 'Option 3': 'Paris', 'Option 4': 'Madrid', 'Correct Answer': 'Paris' },
-            { Question: 'Which planet is known as the Red Planet?', 'Option 1': 'Venus', 'Option 2': 'Mars', 'Option 3': 'Jupiter', 'Option 4': 'Saturn', 'Correct Answer': 'Mars' },
-            { Question: 'What is 2 + 2?', 'Option 1': '3', 'Option 2': '4', 'Option 3': '5', 'Option 4': '6', 'Correct Answer': '4' }
+            {
+                Question: 'What is the capital of France?',
+                'Option 1': 'London',
+                'Option 2': 'Berlin',
+                'Option 3': 'Paris',
+                'Option 4': 'Madrid',
+                'Correct Answer': 'Paris',
+                'Category': 'Geography'
+            },
+            {
+                Question: 'Which planet is known as the Red Planet?',
+                'Option 1': 'Venus',
+                'Option 2': 'Mars',
+                'Option 3': 'Jupiter',
+                'Option 4': 'Saturn',
+                'Correct Answer': 'Mars',
+                'Category': 'Science'
+            },
+            {
+                Question: 'What is 2+2',
+                'Option 1': '4',
+                'Option 2': '5',
+                'Option 3': '6',
+                'Option 4': '7',
+                'Correct Answer': '4',
+                'Category': 'Math'
+            }
         ];
         const ws = XLSX.utils.json_to_sheet(sampleData);
         const wb = XLSX.utils.book_new();
@@ -739,7 +1251,6 @@ const EditUpcomingExams = () => {
     const handleExcelImport = useCallback((event) => {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -747,18 +1258,8 @@ const EditUpcomingExams = () => {
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
                 if (jsonData.length === 0) {
                     toast.error('Excel file is empty');
-                    return;
-                }
-
-                const requiredColumns = ['Question', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Correct Answer'];
-                const firstRow = jsonData[0];
-                const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
-
-                if (missingColumns.length > 0) {
-                    toast.error(`Missing required columns: ${missingColumns.join(', ')}`);
                     return;
                 }
 
@@ -767,24 +1268,54 @@ const EditUpcomingExams = () => {
 
                 jsonData.forEach((row, index) => {
                     const rowNumber = index + 1;
+                    const questionType = (row['Question Type'] || 'text').toString().toLowerCase();
+                    const optionType = (row['Option Type'] || 'text').toString().toLowerCase();
 
-                    if (!row['Question'] || !row['Question'].toString().trim()) {
-                        toast.error(`Row ${rowNumber}: Question is required`);
-                        hasErrors = true;
-                        return;
+                    if (questionType === 'text') {
+                        if (!row['Question'] || !row['Question'].toString().trim()) {
+                            toast.error(`Row ${rowNumber}: Question text isrequired when Question Type is text`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
 
-                    const options = [
-                        row['Option 1']?.toString().trim() || '',
-                        row['Option 2']?.toString().trim() || '',
-                        row['Option 3']?.toString().trim() || '',
-                        row['Option 4']?.toString().trim() || ''
-                    ];
+                    if (questionType === 'image') {
+                        if (!row['Question Image URL'] || !row['Question Image URL'].toString().trim()) {
+                            toast.error(`Row ${rowNumber}: Question Image URL is required when Question Type is image`);
+                            hasErrors = true;
+                            return;
+                        }
+                    }
 
-                    if (options.some((opt) => !opt)) {
-                        toast.error(`Row ${rowNumber}: All 4 options are required`);
-                        hasErrors = true;
-                        return;
+                    let options = ['', '', '', ''];
+                    let optionImages = [null, null, null, null];
+
+                    if (optionType === 'text') {
+                        options = [
+                            row['Option 1']?.toString().trim() || '',
+                            row['Option 2']?.toString().trim() || '',
+                            row['Option 3']?.toString().trim() || '',
+                            row['Option 4']?.toString().trim() || ''
+                        ];
+                        if (options.some((opt) => !opt)) {
+                            toast.error(`Row ${rowNumber}: All 4 text options are required when Option Type is text`);
+                            hasErrors = true;
+                            return;
+                        }
+                    }
+
+                    if (optionType === 'image') {
+                        optionImages = [
+                            row['Option 1 Image URL']?.toString().trim() || null,
+                            row['Option 2 Image URL']?.toString().trim() || null,
+                            row['Option 3 Image URL']?.toString().trim() || null,
+                            row['Option 4 Image URL']?.toString().trim() || null
+                        ];
+                        if (optionImages.some((img) => !img)) {
+                            toast.error(`Row ${rowNumber}: All 4 option image URLs are required when Option Type is image`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
 
                     const correctAnswer = row['Correct Answer']?.toString().trim();
@@ -794,18 +1325,42 @@ const EditUpcomingExams = () => {
                         return;
                     }
 
-                    const correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
-                    if (correctAnswerIndex === -1) {
-                        toast.error(`Row ${rowNumber}: Correct answer must match one of the options exactly`);
-                        hasErrors = true;
-                        return;
+                    let correctAnswerIndex = -1;
+                    if (optionType === 'text') {
+                        correctAnswerIndex = options.findIndex((opt) => opt === correctAnswer);
+                        if (correctAnswerIndex === -1) {
+                            toast.error(`Row ${rowNumber}: Correct answer must match one of the text options exactly`);
+                            hasErrors = true;
+                            return;
+                        }
+                    } else {
+                        const correctAnswerNumber = parseInt(correctAnswer);
+                        if (correctAnswerNumber >= 1 && correctAnswerNumber <= 4) {
+                            correctAnswerIndex = correctAnswerNumber - 1;
+                        } else {
+                            toast.error(`Row ${rowNumber}: For image options, Correct Answer must be 1, 2, 3, or 4`);
+                            hasErrors = true;
+                            return;
+                        }
                     }
 
                     importedQuestions.push({
                         id: Date.now() + index,
-                        question: row['Question'].toString().trim(),
-                        options: options,
-                        correctAnswer: correctAnswerIndex
+                        question: questionType === 'text' ? (row['Question']?.toString().trim() || '') : '',
+                        questionImage: questionType === 'image' ? (row['Question Image URL']?.toString().trim() || null) : null,
+                        options: [
+                            { text: options[0], type: optionType, image: optionType === 'image' ? optionImages[0] : null },
+                            { text: options[1], type: optionType, image: optionType === 'image' ? optionImages[1] : null },
+                            { text: options[2], type: optionType, image: optionType === 'image' ? optionImages[2] : null },
+                            { text: options[3], type: optionType, image: optionType === 'image' ? optionImages[3] : null }
+                        ],
+                        optionImages: optionImages,
+                        correctAnswer: correctAnswerIndex,
+                        category: row['Category']?.toString().trim() || '',
+                        questionType: questionType,
+                        optionType: optionType,
+                        questionInputMode: questionType,
+                        optionsInputMode: optionType
                     });
                 });
 
@@ -816,10 +1371,11 @@ const EditUpcomingExams = () => {
                     return;
                 }
 
-                setQuestions(prevQuestions => {
+                setQuestions((prevQuestions) => {
                     const hasEmptyQuestion = prevQuestions.length === 1 &&
                         prevQuestions[0].question === '' &&
-                        prevQuestions[0].options.every(opt => opt === '') &&
+                        prevQuestions[0].questionImage === null &&
+                        prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                         prevQuestions[0].correctAnswer === null;
 
                     if (hasEmptyQuestion) {
@@ -853,18 +1409,32 @@ const EditUpcomingExams = () => {
 
                     const aiQuestions = response.data.data.map((item, index) => {
                         const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                        const opts = item.options || ['', '', '', ''];
                         return {
                             id: Date.now() + index,
                             question: item.question,
-                            options: item.options || ['', '', '', ''],
-                            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                            options: [
+                                { text: opts[0], type: 'text', image: null },
+                                { text: opts[1], type: 'text', image: null },
+                                { text: opts[2], type: 'text', image: null },
+                                { text: opts[3], type: 'text', image: null }
+                            ],
+                            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+                            category: '',
+                            questionType: 'text',
+                            optionType: 'text',
+                            questionImage: null,
+                            optionImages: [null, null, null, null],
+                            questionInputMode: 'text',
+                            optionsInputMode: 'text'
                         };
                     });
 
                     setQuestions((prevQuestions) => {
                         const hasEmptyQuestion = prevQuestions.length === 1 &&
                             prevQuestions[0].question === '' &&
-                            prevQuestions[0].options.every(opt => opt === '') &&
+                            prevQuestions[0].questionImage === null &&
+                            prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                             prevQuestions[0].correctAnswer === null;
 
                         if (hasEmptyQuestion) {
@@ -977,18 +1547,32 @@ const EditUpcomingExams = () => {
         try {
             const bankQuestions = selectedQuestionData.map((item, index) => {
                 const correctAnswerIndex = item.options ? item.options.findIndex(opt => opt === item.correctAnswer) : 0;
+                const opts = item.options || ['', '', '', ''];
                 return {
                     id: Date.now() + index,
                     question: item.question,
-                    options: item.options || ['', '', '', ''],
-                    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+                    options: [
+                        { text: opts[0], type: 'text', image: null },
+                        { text: opts[1], type: 'text', image: null },
+                        { text: opts[2], type: 'text', image: null },
+                        { text: opts[3], type: 'text', image: null }
+                    ],
+                    correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+                    category: '',
+                    questionType: 'text',
+                    optionType: 'text',
+                    questionImage: null,
+                    optionImages: [null, null, null, null],
+                    questionInputMode: 'text',
+                    optionsInputMode: 'text'
                 };
             });
 
             setQuestions((prevQuestions) => {
                 const hasEmptyQuestion = prevQuestions.length === 1 &&
                     prevQuestions[0].question === '' &&
-                    prevQuestions[0].options.every(opt => opt === '') &&
+                    prevQuestions[0].questionImage === null &&
+                    prevQuestions[0].options.every(opt => opt.text === '' && opt.image === null) &&
                     prevQuestions[0].correctAnswer === null;
 
                 if (hasEmptyQuestion) {
@@ -1010,7 +1594,24 @@ const EditUpcomingExams = () => {
     }, []);
 
     const handleResetQuestions = useCallback(() => {
-        setQuestions([{ id: 1, question: '', options: ['', '', '', ''], correctAnswer: null }]);
+        setQuestions([{
+            id: 1,
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null],
+            questionInputMode: 'text',
+            optionsInputMode: 'text'
+        }]);
         setShowQuestions(false);
         toast.success('Questions reset successfully!');
     }, []);
@@ -1043,7 +1644,7 @@ const EditUpcomingExams = () => {
                 ? {
                     ...q,
                     options: q.options.map((opt, idx) =>
-                        idx === optionIndex ? value : opt
+                        idx === optionIndex ? { ...opt, text: value } : opt
                     )
                 }
                 : q
@@ -1056,18 +1657,154 @@ const EditUpcomingExams = () => {
         ));
     }, []);
 
+    const handleCategoryChange = useCallback((questionId, category) => {
+        setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, category } : q)));
+    }, []);
+
+    const handleQuestionTypeChange = useCallback((questionId, type) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                if (type === 'text') {
+                    return { ...q, questionType: type, questionImage: null };
+                } else {
+                    return { ...q, questionType: type, question: '' };
+                }
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleOptionTypeChange = useCallback((questionId, optionIndex, type) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                const newOptions = [...q.options];
+                if (type === 'text') {
+                    newOptions[optionIndex] = { text: '', type: 'text', image: null };
+                } else {
+                    newOptions[optionIndex] = { text: '', type: 'image', image: null };
+                }
+                return { ...q, options: newOptions };
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleImageUpload = useCallback((questionId, imageType, imageData, optionIndex = null) => {
+        setQuestions((prev) => prev.map((q) => {
+            if (q.id === questionId) {
+                if (imageType === 'question') {
+                    return { ...q, questionImage: imageData };
+                } else if (imageType === 'option' && optionIndex !== null) {
+                    const newOptions = [...q.options];
+                    newOptions[optionIndex] = { ...newOptions[optionIndex], image: imageData };
+                    return { ...q, options: newOptions };
+                }
+            }
+            return q;
+        }));
+    }, []);
+
+    const handleMoveQuestion = useCallback((questionId, targetCategory) => {
+        setQuestions((prev) => prev.map((q) =>
+            q.id === questionId ? { ...q, category: targetCategory } : q
+        ));
+        toast.success('Question moved successfully');
+    }, []);
+
     const addNewQuestion = useCallback(() => {
+        const lastQuestion = questions[questions.length - 1];
         const newQuestion = {
             id: Date.now(),
             question: '',
-            options: ['', '', '', ''],
-            correctAnswer: null
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: lastQuestion?.category || '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null],
+            questionInputMode: 'text',
+            optionsInputMode: 'text'
         };
-        setQuestions(prev => [...prev, newQuestion]);
+        setQuestions((prev) => [...prev, newQuestion]);
+    }, [questions]);
+
+    const addQuestionToCategory = useCallback((categoryName) => {
+        const newQuestion = {
+            id: Date.now(),
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: categoryName,
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null],
+            questionInputMode: 'text',
+            optionsInputMode: 'text'
+        };
+        setQuestions((prev) => [...prev, newQuestion]);
+    }, []);
+
+    const addNewSection = useCallback(() => {
+        const newQuestion = {
+            id: Date.now(),
+            question: '',
+            options: [
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null },
+                { text: '', type: 'text', image: null }
+            ],
+            correctAnswer: null,
+            category: '',
+            questionType: 'text',
+            optionType: 'text',
+            questionImage: null,
+            optionImages: [null, null, null, null],
+            questionInputMode: 'text',
+            optionsInputMode: 'text'
+        };
+        setQuestions((prev) => [...prev, newQuestion]);
+        toast.info('New section created! Please enter a category name.');
     }, []);
 
     const deleteQuestion = useCallback((questionId) => {
-        setQuestions(prev => prev.filter(q => q.id !== questionId));
+        setQuestions((prev) => {
+            const filtered = prev.filter((q) => q.id !== questionId);
+            if (filtered.length === 0) {
+                setShowQuestions(false);
+                return [{
+                    id: Date.now(),
+                    question: '',
+                    options: [
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null },
+                        { text: '', type: 'text', image: null }
+                    ],
+                    correctAnswer: null,
+                    category: '',
+                    questionType: 'text',
+                    optionType: 'text',
+                    questionImage: null,
+                    optionImages: [null, null, null, null],
+                    questionInputMode: 'text',
+                    optionsInputMode: 'text'
+                }];
+            }
+            return filtered;
+        });
     }, []);
 
     const handleAddQuestions = useCallback(() => {
@@ -1096,10 +1833,6 @@ const EditUpcomingExams = () => {
             toast.error('Batch is required');
             return;
         }
-        if (!formData.examDuration || formData.examDuration <= 0) {
-            toast.error('Exam duration is required and must be greater than 0');
-            return;
-        }
         if (!formData.startTime) {
             toast.error('Start date and time is required');
             return;
@@ -1108,98 +1841,200 @@ const EditUpcomingExams = () => {
             toast.error('End date and time is required');
             return;
         }
-
         if (new Date(formData.endTime) <= new Date(formData.startTime)) {
             toast.error('End date and time must be after start date and time');
             return;
         }
 
-        const validQuestions = questions.filter(q =>
-            q.question.trim() !== '' &&
-            q.options.every(opt => opt.trim() !== '') &&
-            q.correctAnswer !== null
-        );
+        const validQuestions = questions.filter((q) => {
+            const questionInputMode = q.questionInputMode || 'text';
+            const optionsInputMode = q.optionsInputMode || 'text';
 
+            let hasQuestion = false;
+            if (questionInputMode === 'text') {
+                hasQuestion = q.question && q.question.trim() !== '';
+            } else if (questionInputMode === 'image') {
+                hasQuestion = q.questionImage !== null;
+            } else if (questionInputMode === 'both') {
+                hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+            }
+
+            const hasOptions = q.options.every((opt) => {
+                if (optionsInputMode === 'text') {
+                    return opt.text && opt.text.trim() !== '';
+                } else if (optionsInputMode === 'image') {
+                    return opt.image !== null;
+                } else if (optionsInputMode === 'both') {
+                    return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                }
+                return false;
+            });
+
+            const hasCorrectAnswer = q.correctAnswer !== null;
+            return hasQuestion && hasOptions && hasCorrectAnswer;
+        });
+
+        const invalidQuestions = questions.filter((q) => {
+            const questionInputMode = q.questionInputMode || 'text';
+            const optionsInputMode = q.optionsInputMode || 'text';
+
+            let hasQuestion = false;
+            if (questionInputMode === 'text') {
+                hasQuestion = q.question && q.question.trim() !== '';
+            } else if (questionInputMode === 'image') {
+                hasQuestion = q.questionImage !== null;
+            } else if (questionInputMode === 'both') {
+                hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+            }
+
+            const hasOptions = q.options.every((opt) => {
+                if (optionsInputMode === 'text') {
+                    return opt.text && opt.text.trim() !== '';
+                } else if (optionsInputMode === 'image') {
+                    return opt.image !== null;
+                } else if (optionsInputMode === 'both') {
+                    return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                }
+                return false;
+            });
+
+            const hasCorrectAnswer = q.correctAnswer !== null;
+            return !hasQuestion || !hasOptions || !hasCorrectAnswer;
+        });
+
+        if (invalidQuestions.length > 0) {
+            toast.error('All questions must have complete question content, all 4 options, and a correct answer selected');
+            return;
+        }
         if (validQuestions.length === 0) {
             toast.error('At least one complete question is required');
             return;
         }
-
-        if (isEditMode && !examId) {
-            toast.error('Exam ID is required for updating');
-            return;
-        }
-
         setShowDialog(true);
-    }, [formData, questions, isEditMode, examId]);
+    }, [formData, questions]);
 
     const formatDateForAPI = (dateTimeString) => {
         if (!dateTimeString) return '';
         const date = new Date(dateTimeString);
-
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         const seconds = String(date.getSeconds()).padStart(2, '0');
-
         return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000`;
     };
 
     const handleUpdate = useCallback(async () => {
         setIsLoading(true);
-
         try {
-            const validQuestions = questions.filter(q =>
-                q.question.trim() !== '' &&
-                q.options.every(opt => opt.trim() !== '') &&
-                q.correctAnswer !== null
-            );
-
-            const questionList = validQuestions.map(q => ({
-                question: q.question.trim(),
-                options: q.options.map(opt => opt.trim()),
-                correctAnswer: q.options[q.correctAnswer].trim()
-            }));
-
+            const validQuestions = questions.filter((q) => {
+                const questionInputMode = q.questionInputMode || 'text';
+                const optionsInputMode = q.optionsInputMode || 'text';
+    
+                let hasQuestion = false;
+                if (questionInputMode === 'text') {
+                    hasQuestion = q.question && q.question.trim() !== '';
+                } else if (questionInputMode === 'image') {
+                    hasQuestion = q.questionImage !== null;
+                } else if (questionInputMode === 'both') {
+                    hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
+                }
+    
+                const hasOptions = q.options.every((opt) => {
+                    if (optionsInputMode === 'text') {
+                        return opt.text && opt.text.trim() !== '';
+                    } else if (optionsInputMode === 'image') {
+                        return opt.image !== null;
+                    } else if (optionsInputMode === 'both') {
+                        return (opt.text && opt.text.trim() !== '') || opt.image !== null;
+                    }
+                    return false;
+                });
+    
+                const hasCorrectAnswer = q.correctAnswer !== null;
+                return hasQuestion && hasOptions && hasCorrectAnswer;
+            });
+    
+            const questionList = validQuestions.map((q) => {
+                const questionObj = {};
+                const questionInputMode = q.questionInputMode || 'text';
+                const optionsInputMode = q.optionsInputMode || 'text';
+    
+                if (questionInputMode === 'text') {
+                    questionObj.question = q.question.trim();
+                } else if (questionInputMode === 'image') {
+                    questionObj.questionImage = q.questionImage;
+                } else if (questionInputMode === 'both') {
+                    if (q.question && q.question.trim() !== '') {
+                        questionObj.question = q.question.trim();
+                    }
+                    if (q.questionImage) {
+                        questionObj.questionImage = q.questionImage;
+                    }
+                }
+    
+                if (optionsInputMode === 'text') {
+                    questionObj.options = q.options.map((opt) => opt.text.trim());
+                    questionObj.correctAnswer = q.options[q.correctAnswer].text.trim();
+                } else if (optionsInputMode === 'image') {
+                    questionObj.optionsImage = q.options.map((opt) => opt.image);
+                    questionObj.correctAnswer = String(q.correctAnswer + 1);
+                } else if (optionsInputMode === 'both') {
+                    const hasTextOptions = q.options.some(opt => opt.text && opt.text.trim() !== '');
+                    const hasImageOptions = q.options.some(opt => opt.image !== null);
+    
+                    if (hasTextOptions) {
+                        questionObj.options = q.options.map((opt) => opt.text.trim());
+                    }
+                    if (hasImageOptions) {
+                        questionObj.optionsImage = q.options.map((opt) => opt.image);
+                    }
+    
+                    const correctOpt = q.options[q.correctAnswer];
+                    if (correctOpt.text && correctOpt.text.trim() !== '') {
+                        questionObj.correctAnswer = correctOpt.text.trim();
+                    } else {
+                        questionObj.correctAnswer = String(q.correctAnswer + 1);
+                    }
+                }
+    
+                if (q.category && q.category.trim() !== '') {
+                    questionObj.category = q.category.trim();
+                }
+    
+                return questionObj;
+            });
+    
             const examData = {
                 questionList,
-                examDuration: formData.examDuration,
+                examDuration: formData.examDuration.toString(),
                 subjectName: formData.subjectName.trim(),
                 teacherName: formData.teacherName.trim(),
                 batch: formData.batch.trim(),
                 startTime: formatDateForAPI(formData.startTime),
                 endTime: formatDateForAPI(formData.endTime),
                 isActive: isActiveDisabled ? true : formData.isActive,
-                orgCode: localStorage.getItem('orgCode') || formData.organizationCode,
+                orgCode: localStorage.getItem('orgCode')
             };
-
+    
             if (isEditMode && examId) {
                 examData.id = examId;
             }
-
+    
             console.log('Sending exam data:', examData);
-
-            const endpoint = '/questionPaper/createQuestionPaper';
-            const response = await apiClient.post(endpoint, examData);
-
+    
+            const response = await apiClient.post('/questionPaper/createQuestionPaper', examData);
             console.log('API Response:', response.data);
-
-            toast.success(`Exam ${isEditMode ? 'updated' : 'created'} successfully!`);
+            toast.success('Exam updated successfully!');
             setShowDialog(false);
-
             setTimeout(() => {
                 navigate('/home', { state: { activeTab: 'Upcoming Exam' } });
             }, 1500);
-
         } catch (error) {
-            console.error(`Error ${isEditMode ? 'updating' : 'creating'} exam:`, error);
-
+            console.error('Error updating exam:', error);
             if (error.response) {
-                const errorMessage = error.response.data?.message ||
-                    error.response.data?.error ||
-                    `Server error: ${error.response.status}`;
+                const errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`;
                 toast.error(errorMessage);
             } else if (error.request) {
                 toast.error('Network error. Please check your connection and try again.');
@@ -1211,30 +2046,6 @@ const EditUpcomingExams = () => {
         }
     }, [formData, questions, isEditMode, examId, navigate, isActiveDisabled]);
 
-    const getCurrentDateTime = () => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
-
-    const formatDisplayDateTime = (dateTimeString) => {
-        if (!dateTimeString) return '';
-        const date = new Date(dateTimeString);
-        return date.toLocaleString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
     const getRemainingTime = useMemo(() => {
         if (pollingAttempts === 0) return '2-5 minutes';
         const elapsedMinutes = (pollingAttempts * 30) / 60;
@@ -1243,13 +2054,28 @@ const EditUpcomingExams = () => {
         return `${Math.ceil(remainingMinutes)} minute${Math.ceil(remainingMinutes) > 1 ? 's' : ''}`;
     }, [pollingAttempts]);
 
+    const minStart = nowLocalMinutes();
+    const minEnd = formData.startTime || minStart;
+
+    const groupedQuestions = useMemo(() => {
+        const groups = {};
+        questions.forEach(q => {
+            const category = q.category || 'Uncategorized';
+            if (!groups[category]) {
+                groups[category] = [];
+            }
+            groups[category].push(q);
+        });
+        return groups;
+    }, [questions]);
+
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             <HeaderComponent />
             <div className="flex flex-1 overflow-hidden">
                 <SidebarComponent activeTab="Upcoming Exam" setActiveTab={() => { }} />
-
-                <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+    
+                <div className="flex-1 flex flex-col bg-gray-50">
                     <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center gap-3">
                             <button
@@ -1275,7 +2101,7 @@ const EditUpcomingExams = () => {
                             </button>
                         </div>
                     </div>
-
+    
                     <div className="flex-1 overflow-y-auto !p-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8 !mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1331,9 +2157,9 @@ const EditUpcomingExams = () => {
                                             onChange={(e) => setBatchSearchTerm(e.target.value)}
                                             onFocus={() => setBatchDropdownOpen(true)}
                                             disabled={isLoadingBatches}
-                                            className="w-full !px-4 !py-3 !pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                            className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
                                         />
-                                        <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                             <ChevronDown className="w-5 h-5 text-gray-400" />
                                         </div>
                                         {batchDropdownOpen && (
@@ -1363,51 +2189,19 @@ const EditUpcomingExams = () => {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                        Start Date & Time
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="datetime-local"
-                                            value={formData.startTime}
-                                            onChange={(e) => handleInputChange('startTime', e.target.value)}
-                                            min={getCurrentDateTime()}
-                                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5"
-                                        />
-                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                            <Calendar className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                    </div>
-                                    {formData.startTime && (
-                                        <p className="text-xs text-gray-500 !mt-1">
-                                            Selected: {formatDisplayDateTime(formData.startTime)}
-                                        </p>
-                                    )}
-                                </div>
+                                <DateTimePicker
+                                    label="Start Date & Time"
+                                    value={formData.startTime}
+                                    onChange={(v) => handleInputChange('startTime', v)}
+                                    minDateTime={minStart}
+                                />
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                        End Date & Time
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="datetime-local"
-                                            value={formData.endTime}
-                                            onChange={(e) => handleInputChange('endTime', e.target.value)}
-                                            min={formData.startTime || getCurrentDateTime()}
-                                            className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5"
-                                        />
-                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                            <Clock className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                    </div>
-                                    {formData.endTime && (
-                                        <p className="text-xs text-gray-500 !mt-1">
-                                            Selected: {formatDisplayDateTime(formData.endTime)}
-                                        </p>
-                                    )}
-                                </div>
+                                <DateTimePicker
+                                    label="End Date & Time"
+                                    value={formData.endTime}
+                                    onChange={(v) => handleInputChange('endTime', v)}
+                                    minDateTime={minEnd}
+                                />
                             </div>
 
                             <div className="flex justify-center !mt-6">
@@ -1435,7 +2229,7 @@ const EditUpcomingExams = () => {
                                 </div>
                             </div>
 
-                            <div className="flex justify-center gap-4 !mt-8">
+                            <div className="flex justify-center gap-4 !mt-8 flex-wrap">
                                 <input
                                     type="file"
                                     ref={fileInputRef}
@@ -1472,35 +2266,43 @@ const EditUpcomingExams = () => {
                                     <RefreshCw className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {showQuestions && questions.length > 0 && (
+                                <div className="flex justify-center gap-4 !mt-6">
+                                    <button
+                                        onClick={addNewSection}
+                                        className="bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#4F46E5] hover:to-[#7C3AED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                                    >
+                                        Create New Category
+                                        <Plus className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {showQuestions && (
                             <div className="!mb-6">
-                                {questions.map((question, index) => (
-                                    <QuestionCard
-                                        key={question.id}
-                                        question={question}
-                                        questionIndex={index}
+                                {Object.keys(groupedQuestions).sort().map((category) => (
+                                    <CategoryAccordion
+                                        key={category}
+                                        category={category}
+                                        questions={groupedQuestions[category]}
                                         onQuestionChange={handleQuestionChange}
                                         onOptionChange={handleOptionChange}
                                         onCorrectAnswerChange={handleCorrectAnswerChange}
                                         onDeleteQuestion={deleteQuestion}
+                                        onCategoryChange={handleCategoryChange}
+                                        onQuestionTypeChange={handleQuestionTypeChange}
+                                        onOptionTypeChange={handleOptionTypeChange}
+                                        onImageUpload={handleImageUpload}
+                                        onMoveQuestion={handleMoveQuestion}
+                                        onAddQuestion={addQuestionToCategory}
                                     />
                                 ))}
                             </div>
                         )}
 
                         <div className="flex flex-col items-center gap-4">
-                            {showQuestions && (
-                                <button
-                                    onClick={addNewQuestion}
-                                    className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-8 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all flex items-center gap-2 shadow-lg cursor-pointer"
-                                >
-                                    Add Questions
-                                    <Plus className="w-5 h-5" />
-                                </button>
-                            )}
-
                             {!showQuestions && (
                                 <button
                                     onClick={handleAddQuestions}
@@ -1510,13 +2312,12 @@ const EditUpcomingExams = () => {
                                     <Plus className="w-5 h-5" />
                                 </button>
                             )}
-
                             <button
                                 onClick={handleSubmit}
                                 disabled={isLoading}
                                 className="bg-gradient-to-r from-[#9181F4] to-[#5038ED] text-white !px-12 !py-3 rounded-full font-medium hover:from-[#9181F4] hover:to-[#5038ED] transition-all shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Exam' : 'Create Exam')}
+                                {isLoading ? 'Updating...' : 'Update Exam'}
                             </button>
                         </div>
                     </div>
@@ -1559,7 +2360,6 @@ const EditUpcomingExams = () => {
                 <AIGeneratingDialog
                     isOpen={showAIGeneratingDialog}
                     onCancel={handleCancelAIGeneration}
-                    remainingTime={getRemainingTime}
                 />
             )}
 
