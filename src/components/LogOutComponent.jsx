@@ -15,80 +15,52 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
         }
     };
 
+    const redirectUser = (isSuperAdmin) => {
+        setTimeout(() => {
+            if (isSuperAdmin) {
+                window.location.href = '/super-admin';
+            } else {
+                window.location.href = '/';
+            }
+        }, 1000);
+    };
+
     const handleLogout = async () => {
+        const userRole = localStorage.getItem('userRole');
+        const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
+
         try {
             setIsLoggingOut(true);
-
-            const userRole = localStorage.getItem('userRole');
-            const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
 
             const logoutEndpoint = isSuperAdmin ? '/superAdmin/logOut' : '/user-secured/logOut';
 
             const response = await apiClient.post(logoutEndpoint);
 
             clearLocalStorage();
+
             if (response.data.success || response.status === 200) {
-
                 toast.success('Logout successful');
-
                 onClose();
-
                 if (onConfirm) {
                     onConfirm();
                 }
-
-                setTimeout(() => {
-                    if (isSuperAdmin) {
-                        window.location.href = '/super-admin';
-                    } else {
-                        window.location.href = '/';
-                    }
-                }, 1000);
-
+                redirectUser(isSuperAdmin);
             } else {
                 const errorMessage = response.data.message || 'Logout failed. Please try again.';
                 toast.error(errorMessage);
+                clearLocalStorage();
+                redirectUser(isSuperAdmin);
             }
         } catch (error) {
             console.error('Logout error:', error);
-            let errorMessage = 'An unexpected error occurred during logout.';
 
-            const userRole = localStorage.getItem('userRole');
-            const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
-
-            if (error.response) {
-                if (error.response.data && error.response.data.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error.response.status === 401) {
-                    errorMessage = 'Session expired. You will be logged out.';
-                    clearLocalStorage();
-                    toast.success('Logout successful');
-                    onClose();
-                    if (onConfirm) {
-                        onConfirm();
-                    }
-                    setTimeout(() => {
-                        if (isSuperAdmin) {
-                            window.location.href = '/super-admin';
-                        } else {
-                            window.location.href = '/';
-                        }
-                    }, 1000);
-                    return;
-                } else if (error.response.status === 500) {
-                    errorMessage = 'Server error. Please try again later.';
-                } else if (error.response.status === 404) {
-                    errorMessage = 'Logout service not found.';
-                } else {
-                    errorMessage = `Request failed with status ${error.response.status}`;
-                }
-            } else if (error.request) {
-                errorMessage = 'Network error. Please check your internet connection.';
-            } else if (error.code === 'ECONNABORTED') {
-                errorMessage = 'Request timeout. Please try again.';
+            clearLocalStorage();
+            toast.success('Logout successful');
+            onClose();
+            if (onConfirm) {
+                onConfirm();
             }
-
-            toast.error(errorMessage);
+            redirectUser(isSuperAdmin);
         } finally {
             setIsLoggingOut(false);
         }
