@@ -29,7 +29,9 @@ const CreateBatch = () => {
     const fetchBatches = async () => {
         setIsLoadingBatches(true);
         try {
-            const response = await apiClient.get('/user-open/getAllBatch');
+            const response = await apiClient.post('/user-open/getAllBatchByOrganization', {
+                organization: localStorage.getItem('orgCode') || ''
+            });
             if (response.data && response.data.success && response.data.data) {
                 setBatches(response.data.data);
             }
