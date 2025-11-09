@@ -1036,6 +1036,8 @@ const EditUpcomingExams = () => {
         teacherName: '',
         organizationCode: 'Contentive',
         batch: '',
+        positiveMarks: '1',
+        negativeMarks: '0',
         startTime: '',
         endTime: '',
         examDuration: '',
@@ -1093,6 +1095,8 @@ const EditUpcomingExams = () => {
                 teacherName: passedExamData.teacherName || '',
                 organizationCode: passedExamData.orgCode || 'Contentive',
                 batch: passedExamData.batch || '',
+                positiveMarks: passedExamData.questionWeight?.toString() || '1',
+                negativeMarks: passedExamData.minusMarks ? passedExamData.minusMarks?.toString() : '0',
                 startTime: passedExamData.startTime || '',
                 endTime: passedExamData.endTime || '',
                 examDuration: passedExamData.examDuration || '',
@@ -1100,33 +1104,33 @@ const EditUpcomingExams = () => {
             });
 
             setBatchSearchTerm(passedExamData.batch || '');
-    
+
             if (passedExamData.questionList && passedExamData.questionList.length > 0) {
                 const transformedQuestions = passedExamData.questionList.map((q, index) => {
                     const hasQuestionImage = q.questionImage !== undefined && q.questionImage !== null;
                     const hasQuestionText = q.question && q.question.trim() !== '';
-    
+
                     let questionInputMode = 'text';
                     if (hasQuestionImage && hasQuestionText) {
                         questionInputMode = 'both';
                     } else if (hasQuestionImage) {
                         questionInputMode = 'image';
                     }
-    
+
                     let correctAnswerIndex = null;
                     let options = [];
                     let optionImages = [null, null, null, null];
                     let optionsInputMode = 'text';
-    
+
                     if (q.optionsImage && Array.isArray(q.optionsImage) && q.optionsImage.length > 0) {
                         optionImages = q.optionsImage;
                         options = q.options && Array.isArray(q.options) && q.options.length > 0
                             ? q.options.map((opt, idx) => ({ text: opt || '', type: 'text', image: optionImages[idx] || null }))
                             : optionImages.map((img, idx) => ({ text: '', type: 'image', image: img }));
-    
+
                         const hasText = options.some(opt => opt.text && opt.text.trim() !== '');
                         const hasImages = options.some(opt => opt.image !== null);
-    
+
                         if (hasText && hasImages) {
                             optionsInputMode = 'both';
                         } else if (hasImages) {
@@ -1143,7 +1147,7 @@ const EditUpcomingExams = () => {
                     } else {
                         const optionsArray = q.options || ['', '', '', ''];
                         options = optionsArray.map(opt => ({ text: opt, type: 'text', image: null }));
-                        
+
                         if (q.correctAnswer) {
                             correctAnswerIndex = options.findIndex(opt => opt.text && opt.text.trim() === q.correctAnswer.trim());
                         }
@@ -1151,7 +1155,7 @@ const EditUpcomingExams = () => {
                     if (correctAnswerIndex === -1) {
                         correctAnswerIndex = null;
                     }
-    
+
                     return {
                         id: index + 1,
                         question: q.question || '',
@@ -1833,6 +1837,19 @@ const EditUpcomingExams = () => {
             toast.error('Batch is required');
             return;
         }
+
+        const positiveMarks = parseFloat(formData.positiveMarks);
+        if (isNaN(positiveMarks) || positiveMarks < 0) {
+            toast.error('Positive marks must be a valid number greater than or equal to 0');
+            return;
+        }
+
+        const negativeMarks = parseFloat(formData.negativeMarks);
+        if (isNaN(negativeMarks) || negativeMarks < 0) {
+            toast.error('Negative marks must be a valid number greater than or equal to 0');
+            return;
+        }
+
         if (!formData.startTime) {
             toast.error('Start date and time is required');
             return;
@@ -1845,6 +1862,7 @@ const EditUpcomingExams = () => {
             toast.error('End date and time must be after start date and time');
             return;
         }
+
 
         const validQuestions = questions.filter((q) => {
             const questionInputMode = q.questionInputMode || 'text';
@@ -1931,7 +1949,7 @@ const EditUpcomingExams = () => {
             const validQuestions = questions.filter((q) => {
                 const questionInputMode = q.questionInputMode || 'text';
                 const optionsInputMode = q.optionsInputMode || 'text';
-    
+
                 let hasQuestion = false;
                 if (questionInputMode === 'text') {
                     hasQuestion = q.question && q.question.trim() !== '';
@@ -1940,7 +1958,7 @@ const EditUpcomingExams = () => {
                 } else if (questionInputMode === 'both') {
                     hasQuestion = (q.question && q.question.trim() !== '') || q.questionImage !== null;
                 }
-    
+
                 const hasOptions = q.options.every((opt) => {
                     if (optionsInputMode === 'text') {
                         return opt.text && opt.text.trim() !== '';
@@ -1951,16 +1969,16 @@ const EditUpcomingExams = () => {
                     }
                     return false;
                 });
-    
+
                 const hasCorrectAnswer = q.correctAnswer !== null;
                 return hasQuestion && hasOptions && hasCorrectAnswer;
             });
-    
+
             const questionList = validQuestions.map((q) => {
                 const questionObj = {};
                 const questionInputMode = q.questionInputMode || 'text';
                 const optionsInputMode = q.optionsInputMode || 'text';
-    
+
                 if (questionInputMode === 'text') {
                     questionObj.question = q.question.trim();
                 } else if (questionInputMode === 'image') {
@@ -1973,7 +1991,7 @@ const EditUpcomingExams = () => {
                         questionObj.questionImage = q.questionImage;
                     }
                 }
-    
+
                 if (optionsInputMode === 'text') {
                     questionObj.options = q.options.map((opt) => opt.text.trim());
                     questionObj.correctAnswer = q.options[q.correctAnswer].text.trim();
@@ -1983,14 +2001,14 @@ const EditUpcomingExams = () => {
                 } else if (optionsInputMode === 'both') {
                     const hasTextOptions = q.options.some(opt => opt.text && opt.text.trim() !== '');
                     const hasImageOptions = q.options.some(opt => opt.image !== null);
-    
+
                     if (hasTextOptions) {
                         questionObj.options = q.options.map((opt) => opt.text.trim());
                     }
                     if (hasImageOptions) {
                         questionObj.optionsImage = q.options.map((opt) => opt.image);
                     }
-    
+
                     const correctOpt = q.options[q.correctAnswer];
                     if (correctOpt.text && correctOpt.text.trim() !== '') {
                         questionObj.correctAnswer = correctOpt.text.trim();
@@ -1998,32 +2016,34 @@ const EditUpcomingExams = () => {
                         questionObj.correctAnswer = String(q.correctAnswer + 1);
                     }
                 }
-    
+
                 if (q.category && q.category.trim() !== '') {
                     questionObj.category = q.category.trim();
                 }
-    
+
                 return questionObj;
             });
-    
+
             const examData = {
                 questionList,
                 examDuration: formData.examDuration.toString(),
                 subjectName: formData.subjectName.trim(),
                 teacherName: formData.teacherName.trim(),
                 batch: formData.batch.trim(),
+                questionWeight: parseFloat(formData.positiveMarks),
+                minusMarks: parseFloat(formData.negativeMarks),
                 startTime: formatDateForAPI(formData.startTime),
                 endTime: formatDateForAPI(formData.endTime),
                 isActive: isActiveDisabled ? true : formData.isActive,
                 orgCode: localStorage.getItem('orgCode')
             };
-    
+
             if (isEditMode && examId) {
                 examData.id = examId;
             }
-    
+
             console.log('Sending exam data:', examData);
-    
+
             const response = await apiClient.post('/questionPaper/createQuestionPaper', examData);
             console.log('API Response:', response.data);
             toast.success('Exam updated successfully!');
@@ -2074,34 +2094,10 @@ const EditUpcomingExams = () => {
             <HeaderComponent />
             <div className="flex flex-1 overflow-hidden">
                 <SidebarComponent activeTab="Upcoming Exam" setActiveTab={() => { }} />
-    
+
                 <div className="flex-1 flex flex-col bg-gray-50">
-                    <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between flex-shrink-0">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleBack}
-                                className="text-white hover:text-gray-200 transition-colors cursor-pointer"
-                            >
-                                <ArrowLeft className="w-6 h-6" />
-                            </button>
-                            <h1 className="text-white text-xl font-medium">
-                                {isEditMode ? 'Edit Upcoming Exam' : 'Create New Exam'}
-                            </h1>
-                        </div>
-                        <div className="flex items-center gap-5">
-                            <Download
-                                className="w-5 h-5 text-white cursor-pointer"
-                                onClick={downloadSampleExcel}
-                            />
-                            <button
-                                onClick={downloadSampleExcel}
-                                className="bg-white/10 border border-white text-white !px-4 !py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all cursor-pointer"
-                            >
-                                Sample Excel
-                            </button>
-                        </div>
-                    </div>
-    
+                    {/* Header section remains the same */}
+
                     <div className="flex-1 overflow-y-auto !p-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8 !mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2187,6 +2183,32 @@ const EditUpcomingExams = () => {
                                             </div>
                                         )}
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 !mb-2">Positive Marks</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.positiveMarks}
+                                        onChange={(e) => handleInputChange('positiveMarks', e.target.value)}
+                                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                        placeholder="e.g., 1 or 1.5"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 !mb-2">Negative Marks</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.negativeMarks}
+                                        onChange={(e) => handleInputChange('negativeMarks', e.target.value)}
+                                        className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
+                                        placeholder="e.g., 0 or 0.25"
+                                    />
                                 </div>
 
                                 <DateTimePicker

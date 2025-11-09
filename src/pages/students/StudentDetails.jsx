@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, Clock, Award, Eye, CheckCircle, XCircle, MinusCircle, Timer } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, Clock, Award, Eye, CheckCircle, XCircle, MinusCircle, Timer, Trophy, Target } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -19,14 +19,18 @@ const CircularLoader = () => {
     );
 };
 
-const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
+const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveMarks, negativeMarks }) => {
     const { answerList, subjectName, teacherName, startTime, endTime } = resultData;
 
     const totalQuestions = answerList.length;
     const correctAnswers = answerList.filter(item => item.userAnswer === item.correctAnswer).length;
     const wrongAnswers = answerList.filter(item => item.userAnswer && item.userAnswer !== item.correctAnswer).length;
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
-    const score = Math.round((correctAnswers / totalQuestions) * 100);
+    
+    const calculatedMarks = (correctAnswers * positiveMarks) - (wrongAnswers * negativeMarks);
+    const totalMarks = totalQuestions * positiveMarks;
+    const finalMarks = Math.max(0, calculatedMarks);
+    const score = totalMarks > 0 ? Math.round((finalMarks / totalMarks) * 100) : 0;
 
     const formatTime = (timeInSeconds) => {
         if (timeInSeconds === null || timeInSeconds === undefined) return 'N/A';
@@ -126,6 +130,128 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
         );
     };
 
+    const renderQuestionContent = (item) => {
+        const hasQuestionText = item.question && item.question.trim() !== '';
+        const hasQuestionImage = item.questionImage && item.questionImage !== null;
+
+        if (hasQuestionText && hasQuestionImage) {
+            return (
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                    <img 
+                        src={item.questionImage} 
+                        alt="Question" 
+                        className="max-w-full h-auto rounded-lg border border-gray-300"
+                        style={{ maxHeight: '300px' }}
+                    />
+                </div>
+            );
+        } else if (hasQuestionImage) {
+            return (
+                <img 
+                    src={item.questionImage} 
+                    alt="Question" 
+                    className="max-w-full h-auto rounded-lg border border-gray-300"
+                    style={{ maxHeight: '300px' }}
+                />
+            );
+        } else {
+            return <h3 className="font-semibold text-gray-800">{item.question}</h3>;
+        }
+    };
+
+    const renderOptionContent = (option, optionImage, optionIndex) => {
+        const hasText = option && option.trim() !== '';
+        const hasImage = optionImage && optionImage !== null;
+
+        if (hasText && hasImage) {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span>{option}</span>
+                        <img 
+                            src={optionImage} 
+                            alt={`Option ${optionIndex + 1}`} 
+                            className="max-w-full h-auto rounded border border-gray-300"
+                            style={{ maxHeight: '150px' }}
+                        />
+                    </div>
+                </div>
+            );
+        } else if (hasImage) {
+            return (
+                <div className="flex items-start gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <img 
+                        src={optionImage} 
+                        alt={`Option ${optionIndex + 1}`} 
+                        className="max-w-full h-auto rounded border border-gray-300"
+                        style={{ maxHeight: '150px' }}
+                    />
+                </div>
+            );
+        } else {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <span className="flex-1">{option}</span>
+                </div>
+            );
+        }
+    };
+
+    const getCorrectAnswerIdentifier = (item, optionIndex) => {
+        if (item.optionsImage && Array.isArray(item.optionsImage) && item.optionsImage.length > 0) {
+            const hasTextOptions = item.options && Array.isArray(item.options) && item.options.some(opt => opt && opt.trim() !== '');
+            const hasImageOptions = item.optionsImage.some(img => img !== null);
+
+            if (hasTextOptions && hasImageOptions) {
+                return item.options[optionIndex];
+            } else if (hasImageOptions) {
+                return String(optionIndex + 1);
+            } else {
+                return item.options[optionIndex];
+            }
+        } else {
+            return item.options[optionIndex];
+        }
+    };
+
+    const isCorrectAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.correctAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
+
+    const isUserSelectedAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+        
+        if (item.userAnswer === optionIdentifier) {
+            return true;
+        }
+        
+        if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
+            return true;
+        }
+        
+        return false;
+    };
+
     return (
         <div className="h-screen flex flex-col">
             <HeaderComponent />
@@ -175,6 +301,7 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                 </div>
                                                 <div className="text-2xl font-bold text-green-600">{correctAnswers}</div>
                                                 <div className="text-sm text-green-700">Correct</div>
+                                                <div className="text-xs text-green-600 !mt-1">+{positiveMarks} marks each</div>
                                             </div>
 
                                             <div className="text-center !p-4 bg-red-50 rounded-lg">
@@ -183,6 +310,7 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                 </div>
                                                 <div className="text-2xl font-bold text-red-600">{wrongAnswers}</div>
                                                 <div className="text-sm text-red-700">Wrong</div>
+                                                <div className="text-xs text-red-600 !mt-1">-{negativeMarks} marks each</div>
                                             </div>
 
                                             <div className="text-center !p-4 bg-gray-50 rounded-lg">
@@ -191,10 +319,11 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                 </div>
                                                 <div className="text-2xl font-bold text-gray-600">{skippedAnswers}</div>
                                                 <div className="text-sm text-gray-700">Skipped</div>
+                                                <div className="text-xs text-gray-600 !mt-1">0 marks</div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 !mb-4">
                                             <div className="flex items-center gap-2">
                                                 <Clock size={16} />
                                                 <span>Start: {new Date(startTime).toLocaleString()}</span>
@@ -202,6 +331,17 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                             <div className="flex items-center gap-2">
                                                 <Clock size={16} />
                                                 <span>End: {new Date(endTime).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                                            <div className="flex items-center gap-2">
+                                                <Trophy size={16} />
+                                                <span>Total Questions: {totalQuestions}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Target size={16} />
+                                                <span>Marks Obtained: {finalMarks.toFixed(2)} / {totalMarks}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -212,13 +352,14 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                 <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
 
                                 {answerList.map((item, index) => {
-                                    const isCorrect = item.userAnswer === item.correctAnswer;
+                                    const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer || 
+                                        (Array.isArray(item.options) && item.options.some((opt, idx) => isCorrectAnswer(item, idx) && isUserSelectedAnswer(item, idx))));
                                     const isSkipped = !item.userAnswer;
 
                                     return (
                                         <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                             <div className="flex items-start gap-4">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isCorrect
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isCorrect
                                                     ? 'bg-green-500 text-white'
                                                     : isSkipped
                                                         ? 'bg-gray-500 text-white'
@@ -229,8 +370,13 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
 
                                                 <div className="flex-1">
                                                     <div className="flex items-start justify-between !mb-4">
-                                                        <h3 className="font-semibold text-gray-800 flex-1">{item.question}</h3>
-                                                        <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg">
+                                                        <div className="flex-1">
+                                                            {item.questionImage || (item.question && item.questionImage !== undefined) ? 
+                                                                renderQuestionContent(item) : 
+                                                                <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                                                            }
+                                                        </div>
+                                                        <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg flex-shrink-0">
                                                             <Timer size={14} className="text-blue-600" />
                                                             <span className="text-sm font-medium text-blue-700">
                                                                 {formatTime(item.timeTaken)}
@@ -239,9 +385,13 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        {item.options.map((option, optionIndex) => {
-                                                            const isCorrectOption = option === item.correctAnswer;
-                                                            const isUserAnswer = option === item.userAnswer;
+                                                        {item.options && item.options.map((option, optionIndex) => {
+                                                            const optionImage = item.optionsImage && Array.isArray(item.optionsImage) 
+                                                                ? item.optionsImage[optionIndex] 
+                                                                : null;
+                                                            
+                                                            const isCorrectOption = isCorrectAnswer(item, optionIndex);
+                                                            const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
 
                                                             let bgColor = 'bg-gray-50';
                                                             let textColor = 'text-gray-700';
@@ -263,14 +413,17 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange }) => {
                                                                     className={`!p-3 border rounded-lg ${bgColor} ${textColor} ${borderColor}`}
                                                                 >
                                                                     <div className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
-                                                                                {String.fromCharCode(65 + optionIndex)}
-                                                                            </span>
-                                                                            <span className="flex-1">{option}</span>
-                                                                        </div>
+                                                                        {optionImage || (item.optionsImage && item.optionsImage[optionIndex] !== undefined) ?
+                                                                            renderOptionContent(option, optionImage, optionIndex) :
+                                                                            <div className="flex items-center gap-3 flex-1">
+                                                                                <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
+                                                                                    {String.fromCharCode(65 + optionIndex)}
+                                                                                </span>
+                                                                                <span className="flex-1">{option}</span>
+                                                                            </div>
+                                                                        }
 
-                                                                        <div className="flex items-center gap-2">
+                                                                        <div className="flex items-center gap-2 flex-shrink-0">
                                                                             {isCorrectOption && (
                                                                                 <span className="text-xs font-semibold text-green-600 bg-green-200 !px-2 !py-1 rounded flex items-center gap-1">
                                                                                     <CheckCircle size={12} />
@@ -321,6 +474,7 @@ const StudentDetails = () => {
     const [showResults, setShowResults] = useState(false);
     const [currentResults, setCurrentResults] = useState(null);
     const [loadingStates, setLoadingStates] = useState({});
+    const [examMarksConfig, setExamMarksConfig] = useState({ positiveMarks: 1, negativeMarks: 0 });
 
     const fetchUserExams = async () => {
         try {
@@ -334,7 +488,27 @@ const StudentDetails = () => {
             const response = await apiClient.post('/report/getAllExamByUserId', requestBody);
 
             if (response.data.success && response.data.data) {
-                setUserExams(response.data.data);
+                const examData = response.data.examData || response.data.data[0] || {};
+                const positiveMarks = examData.questionWeight || examData.positiveMarks || 1;
+                const negativeMarks = Math.abs(examData.minusMarks || examData.negativeMarks || 0);
+                
+                setExamMarksConfig({ positiveMarks, negativeMarks });
+
+                const transformedData = response.data.data.map((exam) => {
+                    const correctAnswers = exam.correctAnswer || 0;
+                    const incorrectAnswers = exam.incorrectAnswer || 0;
+                    const totalQuestions = exam.totalQuestion || 0;
+                    
+                    const calculatedMarks = (correctAnswers * positiveMarks) - (incorrectAnswers * negativeMarks);
+                    const marks = Math.max(0, calculatedMarks);
+
+                    return {
+                        ...exam,
+                        totalMarks: parseFloat(marks.toFixed(2))
+                    };
+                });
+
+                setUserExams(transformedData);
             } else {
                 throw new Error(response.data.message || 'Failed to fetch user exam data');
             }
@@ -437,16 +611,22 @@ const StudentDetails = () => {
         if (userExams.length === 0) return { totalExams: 0, avgScore: 0, totalMarks: 0 };
 
         const totalExams = userExams.length;
-        const totalMarksObtained = userExams.reduce((sum, exam) => sum + exam.totalMarks, 0);
+        const totalMarksObtained = userExams.reduce((sum, exam) => sum + (exam.totalMarks || 0), 0);
         const avgScore = totalMarksObtained / totalExams;
 
-        return { totalExams, avgScore: avgScore.toFixed(1), totalMarks: totalMarksObtained };
+        return { totalExams, avgScore: avgScore.toFixed(1), totalMarks: totalMarksObtained.toFixed(2) };
     };
 
     const stats = calculateStats();
 
     if (showResults && currentResults) {
-        return <QuizResultsPage resultData={currentResults} onBack={handleBackFromResults} handleSidebarTabChange={handleSidebarTabChange} />;
+        return <QuizResultsPage 
+            resultData={currentResults} 
+            onBack={handleBackFromResults} 
+            handleSidebarTabChange={handleSidebarTabChange} 
+            positiveMarks={examMarksConfig.positiveMarks}
+            negativeMarks={examMarksConfig.negativeMarks}
+        />;
     }
 
     return (

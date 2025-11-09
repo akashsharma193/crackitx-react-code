@@ -20,9 +20,9 @@ const CircularLoader = () => {
 };
 
 const StudentResultsPage = ({ resultData, onBack, studentName }) => {
-    const { finalResult, totalQuestion, correctAnswer, incorrectAnswer, totalMarks, unAttempted } = resultData;
+    const { finalResult, totalQuestion, correctAnswer, incorrectAnswer, totalMarks, unAttempted, maxMarks, positiveMarks, negativeMarks } = resultData;
 
-    const score = totalQuestion > 0 ? Math.round((correctAnswer / totalQuestion) * 100) : 0;
+    const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
 
     const formatTime = (timeInSeconds) => {
         if (!timeInSeconds || timeInSeconds === 0) return '0s';
@@ -129,9 +129,9 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
             return (
                 <div className="space-y-3">
                     <h3 className="font-semibold text-gray-800">{item.question}</h3>
-                    <img 
-                        src={item.questionImage} 
-                        alt="Question" 
+                    <img
+                        src={item.questionImage}
+                        alt="Question"
                         className="max-w-full h-auto rounded-lg border border-gray-300"
                         style={{ maxHeight: '300px' }}
                     />
@@ -139,9 +139,9 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
             );
         } else if (hasQuestionImage) {
             return (
-                <img 
-                    src={item.questionImage} 
-                    alt="Question" 
+                <img
+                    src={item.questionImage}
+                    alt="Question"
                     className="max-w-full h-auto rounded-lg border border-gray-300"
                     style={{ maxHeight: '300px' }}
                 />
@@ -163,9 +163,9 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                     </span>
                     <div className="flex flex-col gap-2 flex-1">
                         <span>{option}</span>
-                        <img 
-                            src={optionImage} 
-                            alt={`Option ${optionIndex + 1}`} 
+                        <img
+                            src={optionImage}
+                            alt={`Option ${optionIndex + 1}`}
                             className="max-w-full h-auto rounded border border-gray-300"
                             style={{ maxHeight: '150px' }}
                         />
@@ -178,9 +178,9 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                     <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
                         {String.fromCharCode(65 + optionIndex)}
                     </span>
-                    <img 
-                        src={optionImage} 
-                        alt={`Option ${optionIndex + 1}`} 
+                    <img
+                        src={optionImage}
+                        alt={`Option ${optionIndex + 1}`}
                         className="max-w-full h-auto rounded border border-gray-300"
                         style={{ maxHeight: '150px' }}
                     />
@@ -217,29 +217,29 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
 
     const isCorrectAnswer = (item, optionIndex) => {
         const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
-        
+
         if (item.correctAnswer === optionIdentifier) {
             return true;
         }
-        
+
         if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
             return true;
         }
-        
+
         return false;
     };
 
     const isUserSelectedAnswer = (item, optionIndex) => {
         const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
-        
+
         if (item.userAnswer === optionIdentifier) {
             return true;
         }
-        
+
         if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
             return true;
         }
-        
+
         return false;
     };
 
@@ -284,6 +284,7 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                         </div>
                                         <div className="text-2xl font-bold text-green-600">{correctAnswer}</div>
                                         <div className="text-sm text-green-700">Correct</div>
+                                        <div className="text-xs text-green-600 !mt-1">+{positiveMarks} marks each</div>
                                     </div>
 
                                     <div className="text-center !p-4 bg-red-50 rounded-lg">
@@ -292,6 +293,7 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                         </div>
                                         <div className="text-2xl font-bold text-red-600">{incorrectAnswer}</div>
                                         <div className="text-sm text-red-700">Wrong</div>
+                                        <div className="text-xs text-red-600 !mt-1">-{negativeMarks} marks each</div>
                                     </div>
 
                                     <div className="text-center !p-4 bg-gray-50 rounded-lg">
@@ -300,6 +302,7 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                         </div>
                                         <div className="text-2xl font-bold text-gray-600">{unAttempted}</div>
                                         <div className="text-sm text-gray-700">Skipped</div>
+                                        <div className="text-xs text-gray-600 !mt-1">0 marks</div>
                                     </div>
                                 </div>
 
@@ -310,7 +313,7 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Target size={16} />
-                                        <span>Total Marks: {totalMarks}</span>
+                                        <span>Marks Obtained: {totalMarks} / {maxMarks}</span>
                                     </div>
                                 </div>
                             </div>
@@ -321,7 +324,7 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                         <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
 
                         {finalResult.map((item, index) => {
-                            const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer || 
+                            const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer ||
                                 (Array.isArray(item.options) && item.options.some((opt, idx) => isCorrectAnswer(item, idx) && isUserSelectedAnswer(item, idx))));
                             const isSkipped = !item.userAnswer;
 
@@ -329,10 +332,10 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
                                 <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
                                     <div className="flex items-start gap-4">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isCorrect
-                                                ? 'bg-green-500 text-white'
-                                                : isSkipped
-                                                    ? 'bg-gray-500 text-white'
-                                                    : 'bg-red-500 text-white'
+                                            ? 'bg-green-500 text-white'
+                                            : isSkipped
+                                                ? 'bg-gray-500 text-white'
+                                                : 'bg-red-500 text-white'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -352,10 +355,10 @@ const StudentResultsPage = ({ resultData, onBack, studentName }) => {
 
                                             <div className="space-y-2">
                                                 {item.options && item.options.map((option, optionIndex) => {
-                                                    const optionImage = item.optionsImage && Array.isArray(item.optionsImage) 
-                                                        ? item.optionsImage[optionIndex] 
+                                                    const optionImage = item.optionsImage && Array.isArray(item.optionsImage)
+                                                        ? item.optionsImage[optionIndex]
                                                         : null;
-                                                    
+
                                                     const isCorrectOption = isCorrectAnswer(item, optionIndex);
                                                     const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
 
@@ -431,6 +434,7 @@ const ExamParticipants = () => {
     const [showResults, setShowResults] = useState(false);
     const [currentResults, setCurrentResults] = useState(null);
     const [currentStudentName, setCurrentStudentName] = useState('');
+    const [examMarksConfig, setExamMarksConfig] = useState({ positiveMarks: 1, negativeMarks: 0 });
 
     const fetchParticipants = async () => {
         try {
@@ -444,19 +448,34 @@ const ExamParticipants = () => {
             const response = await apiClient.post('/report/getAllUserByExamId', requestBody);
 
             if (response.data.success && response.data.data) {
-                const transformedData = response.data.data.map((participant, index) => ({
-                    srNo: index + 1,
-                    userId: participant.userId,
-                    name: participant.name,
-                    email: participant.email,
-                    mobile: participant.mobile,
-                    batch: participant.batch,
-                    marks: participant.marks,
-                    totalMarks: participant.totalMarks,
-                    percentage: participant.totalMarks > 0
-                        ? ((participant.marks / participant.totalMarks) * 100).toFixed(1)
-                        : '0.0'
-                }));
+                const apiData = response.data.data;
+
+                const examData = response.data.examData || response.data.data[0] || {};
+                const positiveMarks = examData.questionWeight || examData.positiveMarks || 1;
+                const negativeMarks = Math.abs(examData.minusMarks || examData.negativeMarks || 0);
+
+                setExamMarksConfig({ positiveMarks, negativeMarks });
+
+                const transformedData = apiData.map((participant, index) => {
+                    const marks = participant.marks || 0;
+                    const totalMarks = participant.totalMarks || 0;
+                    const percentage = totalMarks > 0 ? ((marks / totalMarks) * 100).toFixed(1) : '0.0';
+
+                    return {
+                        srNo: index + 1,
+                        userId: participant.userId,
+                        name: participant.name,
+                        email: participant.email,
+                        mobile: participant.mobile,
+                        batch: participant.batch,
+                        marks: marks,
+                        totalMarks: totalMarks,
+                        percentage: percentage,
+                        correctAnswer: participant.correctAnswer || 0,
+                        incorrectAnswer: participant.incorrectAnswer || 0,
+                        totalQuestion: participant.totalQuestion || 0
+                    };
+                });
 
                 setParticipants(transformedData);
             } else {
@@ -526,7 +545,26 @@ const ExamParticipants = () => {
             const response = await apiClient.post('/answerPaper/getStudentResult', requestBody);
 
             if (response.data.success && response.data.data) {
-                setCurrentResults(response.data.data);
+                const resultData = response.data.data;
+
+                const correctAnswers = resultData.correctAnswer || 0;
+                const incorrectAnswers = resultData.incorrectAnswer || 0;
+                const totalQuestions = resultData.totalQuestion || 0;
+
+                const calculatedMarks = (correctAnswers * examMarksConfig.positiveMarks) - (incorrectAnswers * examMarksConfig.negativeMarks);
+                const totalMarks = totalQuestions * examMarksConfig.positiveMarks;
+
+                const finalMarks = Math.max(0, calculatedMarks);
+
+                const updatedResultData = {
+                    ...resultData,
+                    totalMarks: parseFloat(finalMarks.toFixed(2)),
+                    maxMarks: totalMarks,
+                    positiveMarks: examMarksConfig.positiveMarks,
+                    negativeMarks: examMarksConfig.negativeMarks
+                };
+
+                setCurrentResults(updatedResultData);
                 setCurrentStudentName(participant.name);
                 setShowResults(true);
             } else {
@@ -534,11 +572,11 @@ const ExamParticipants = () => {
             }
         } catch (err) {
             console.error('Error fetching student result:', err);
-            
+
             if (err.response) {
                 const status = err.response.status;
                 const errorData = err.response.data;
-                
+
                 const errorMessage = errorData?.message ||
                     errorData?.error ||
                     errorData?.detail ||
@@ -597,8 +635,8 @@ const ExamParticipants = () => {
                         setActiveTab={handleSidebarTabChange}
                     />
                     <div className="flex-1 bg-gray-50 flex flex-col">
-                        <StudentResultsPage 
-                            resultData={currentResults} 
+                        <StudentResultsPage
+                            resultData={currentResults}
                             onBack={handleBackFromResults}
                             studentName={currentStudentName}
                         />
@@ -707,7 +745,7 @@ const ExamParticipants = () => {
                                             <tbody>
                                                 {participants.length > 0 ? (
                                                     participants
-                                                        .sort((a, b)=> parseFloat(b.percentage) - parseFloat(a.percentage))
+                                                        .sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage))
                                                         .map((participant, index) => (
                                                             <tr key={participant.userId} className="border-b hover:bg-gray-50 transition-colors">
                                                                 <td className="!px-6 !py-4 font-medium text-gray-900">{index + 1}</td>
@@ -739,8 +777,8 @@ const ExamParticipants = () => {
                                                                             onClick={() => handleViewClick(participant)}
                                                                             disabled={loadingStates[participant.userId]}
                                                                             className={`transition-colors ${loadingStates[participant.userId]
-                                                                                    ? 'text-gray-400 cursor-not-allowed'
-                                                                                    : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
+                                                                                ? 'text-gray-400 cursor-not-allowed'
+                                                                                : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
                                                                                 }`}
                                                                         >
                                                                             {loadingStates[participant.userId] ? (
