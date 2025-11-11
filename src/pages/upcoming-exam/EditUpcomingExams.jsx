@@ -2096,7 +2096,31 @@ const EditUpcomingExams = () => {
                 <SidebarComponent activeTab="Upcoming Exam" setActiveTab={() => { }} />
 
                 <div className="flex-1 flex flex-col bg-gray-50">
-                    {/* Header section remains the same */}
+                    <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 flex items-center justify-between flex-shrink-0">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleBack}
+                                className="text-white hover:text-gray-200 transition-colors cursor-pointer"
+                            >
+                                <ArrowLeft className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-white text-xl font-medium">
+                                {isEditMode ? 'Edit Upcoming Exam' : 'Create New Exam'}
+                            </h1>
+                        </div>
+                        <div className="flex items-center gap-5">
+                            <Download
+                                className="w-5 h-5 text-white cursor-pointer"
+                                onClick={downloadSampleExcel}
+                            />
+                            <button
+                                onClick={downloadSampleExcel}
+                                className="bg-white/10 border border-white text-white !px-4 !py-2 rounded-full text-sm font-medium hover:bg-white/20 transition-all cursor-pointer"
+                            >
+                                Sample Excel
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="flex-1 overflow-y-auto !p-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8 !mb-6">
