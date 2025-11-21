@@ -5,7 +5,11 @@ import apiClient from '../../api/axiosConfig';
 const CreateOrganization = () => {
     const [formData, setFormData] = useState({
         name: '',
-        description: ''
+        description: '',
+        examHistory: false,
+        examStrat: false,
+        examComplete: false,
+        bannerOngointTest: false
     });
     const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -61,6 +65,13 @@ const CreateOrganization = () => {
         }
     };
 
+    const handleSwitchChange = (name) => {
+        setFormData(prev => ({
+            ...prev,
+            [name]: !prev[name]
+        }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -73,7 +84,11 @@ const CreateOrganization = () => {
         try {
             const requestBody = {
                 name: formData.name,
-                description: formData.description
+                description: formData.description,
+                examHistory: formData.examHistory,
+                examStrat: formData.examStrat,
+                examComplete: formData.examComplete,
+                bannerOngointTest: formData.bannerOngointTest
             };
 
             const response = await apiClient.post('/organization/createOrganization', requestBody);
@@ -83,7 +98,11 @@ const CreateOrganization = () => {
 
                 setFormData({
                     name: '',
-                    description: ''
+                    description: '',
+                    examHistory: false,
+                    examStrat: false,
+                    examComplete: false,
+                    bannerOngointTest: false
                 });
 
                 fetchOrganizations();
@@ -164,6 +183,82 @@ const CreateOrganization = () => {
                                     </div>
                                 </div>
 
+                                <h3 className="text-lg font-semibold text-gray-800 !mb-4">Configuration</h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 !mb-6">
+                                    <div className="flex items-center justify-between border border-gray-200 rounded-md !px-4 !py-3">
+                                        <label className="text-sm text-gray-700 font-medium">
+                                            Exam History
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchChange('examHistory')}
+                                            disabled={loading}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.examHistory ? 'bg-[#7966F1]' : 'bg-gray-300'
+                                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.examHistory ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between border border-gray-200 rounded-md !px-4 !py-3">
+                                        <label className="text-sm text-gray-700 font-medium">
+                                            Exam Start
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchChange('examStrat')}
+                                            disabled={loading}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.examStrat ? 'bg-[#7966F1]' : 'bg-gray-300'
+                                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.examStrat ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between border border-gray-200 rounded-md !px-4 !py-3">
+                                        <label className="text-sm text-gray-700 font-medium">
+                                            Exam Complete
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchChange('examComplete')}
+                                            disabled={loading}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.examComplete ? 'bg-[#7966F1]' : 'bg-gray-300'
+                                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.examComplete ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between border border-gray-200 rounded-md !px-4 !py-3">
+                                        <label className="text-sm text-gray-700 font-medium">
+                                            Banner Ongoing Test
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchChange('bannerOngointTest')}
+                                            disabled={loading}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.bannerOngointTest ? 'bg-[#7966F1]' : 'bg-gray-300'
+                                                } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.bannerOngointTest ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="flex justify-center">
                                     <button
                                         type="submit"
@@ -192,6 +287,10 @@ const CreateOrganization = () => {
                                                 <tr className="border-b border-gray-200">
                                                     <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Name</th>
                                                     <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Description</th>
+                                                    <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Exam History</th>
+                                                    <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Exam Start</th>
+                                                    <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Exam Complete</th>
+                                                    <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Banner Test</th>
                                                     <th className="text-left !px-4 !py-3 text-sm font-semibold text-gray-700">Status</th>
                                                 </tr>
                                             </thead>
@@ -200,6 +299,38 @@ const CreateOrganization = () => {
                                                     <tr key={org.id} className="border-b border-gray-100 hover:bg-gray-50">
                                                         <td className="!px-4 !py-3 text-sm text-gray-800">{org.name}</td>
                                                         <td className="!px-4 !py-3 text-sm text-gray-600">{org.description}</td>
+                                                        <td className="!px-4 !py-3">
+                                                            <span className={`text-xs font-medium !px-2 !py-1 rounded-full ${org.examHistory
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {org.examHistory ? 'Yes' : 'No'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="!px-4 !py-3">
+                                                            <span className={`text-xs font-medium !px-2 !py-1 rounded-full ${org.examStrat
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {org.examStrat ? 'Yes' : 'No'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="!px-4 !py-3">
+                                                            <span className={`text-xs font-medium !px-2 !py-1 rounded-full ${org.examComplete
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {org.examComplete ? 'Yes' : 'No'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="!px-4 !py-3">
+                                                            <span className={`text-xs font-medium !px-2 !py-1 rounded-full ${org.bannerOngointTest
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {org.bannerOngointTest ? 'Yes' : 'No'}
+                                                            </span>
+                                                        </td>
                                                         <td className="!px-4 !py-3">
                                                             <span className={`text-xs font-medium !px-2 !py-1 rounded-full ${org.isActive
                                                                 ? 'bg-green-100 text-green-700'

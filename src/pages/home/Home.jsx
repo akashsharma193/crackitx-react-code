@@ -31,6 +31,8 @@ import Compliance from '../super-admin/Compliance';
 import CreateAdmin from '../super-admin/CreateAdmin';
 import Feedback from '../feedback/Feedback';
 import SendNotification from '../super-admin/SendNotification';
+import CreateSubject from '../super-admin/CreateSubject';
+import CreateTopic from '../super-admin/CreateTopic';
 
 const EResources = () => (
     <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
@@ -156,6 +158,12 @@ const Home = () => {
                 case 'Create Organization':
                     component = <CreateOrganization />;
                     break;
+                case 'Subject':
+                    component = <CreateSubject />;
+                    break;
+                case 'Topic':
+                    component = <CreateTopic />;
+                    break;
                 case 'Compliance':
                     component = <Compliance />;
                     break;
@@ -261,7 +269,7 @@ const Home = () => {
 
         let tabs;
         if (isSuperAdmin) {
-            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Compliance', 'Notification'];
+            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Subject', 'Topic', 'Compliance', 'Notification'];
         } else if (isAdmin) {
             tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Feedback', 'Upcoming Exam', 'E-Resources'];
         } else {
