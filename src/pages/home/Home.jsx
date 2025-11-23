@@ -33,12 +33,8 @@ import Feedback from '../feedback/Feedback';
 import SendNotification from '../super-admin/SendNotification';
 import CreateSubject from '../super-admin/CreateSubject';
 import CreateTopic from '../super-admin/CreateTopic';
-
-const EResources = () => (
-    <div className="flex justify-center items-center h-full text-3xl font-semibold text-[#7966F1]">
-        Coming Soon
-    </div>
-);
+import AdminEResources from '../e-resources/AdminEResources';
+import StudentEResources from '../e-resources/StudentEResources';
 
 const ComponentWrapper = ({ children, isActive }) => (
     <div
@@ -203,7 +199,7 @@ const Home = () => {
                     component = <UpcomingExam />;
                     break;
                 case 'E-Resources':
-                    component = <EResources />;
+                    component = <AdminEResources />;
                     break;
                 default:
                     component = <div className='p-6'>No Content</div>;
@@ -236,6 +232,9 @@ const Home = () => {
                     break;
                 case 'Failed Exam':
                     component = <UserFailedExams />;
+                    break;
+                case 'E-Resources':
+                    component = <StudentEResources />;
                     break;
                 default:
                     component = <div className='p-6'>No Content</div>;
@@ -273,7 +272,7 @@ const Home = () => {
         } else if (isAdmin) {
             tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Feedback', 'Upcoming Exam', 'E-Resources'];
         } else {
-            tabs = ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam'];
+            tabs = ['Dashboard', 'All Test', 'Active Exam', 'Exam History', 'Ranking', 'Upcoming Exam', 'Missed Exam', 'Passed Exam', 'Failed Exam', 'E-Resources'];
         }
 
         return (

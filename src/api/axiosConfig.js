@@ -67,6 +67,7 @@ apiClient.interceptors.request.use(
 
         const token = localStorage.getItem('authToken');
         const deviceId = localStorage.getItem('deviceId');
+        console.log(token);
 
         if (!config.url.includes('/user-open/')) {
             if (token) {
@@ -76,6 +77,19 @@ apiClient.interceptors.request.use(
 
         if (deviceId) {
             config.headers['deviceId'] = deviceId;
+        }
+
+        const isFormData = config.data instanceof FormData;
+        
+        if (isFormData) {
+            console.log('FormData detected, skipping encoding');
+            config.headers['encDisabled'] = 'true';
+            delete config.headers['Content-Type'];
+            delete config.headers['Accept'];
+            delete config.headers['Accept-Charset'];
+            config._skipEncoding = true;
+            config._requestKey = requestKey;
+            return config;
         }
 
         config.headers['encDisabled'] = 'false';

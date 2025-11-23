@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, XCircle, CheckCircle, Clock, CalendarClock } from 'lucide-react';
 import dashboardIcon from '/src/assets/icons/dashboard-icon.png';
 import studentsIcon from '/src/assets/icons/students-icon.png';
 import examhistoryIcon from '/src/assets/icons/exam-history-icon.png';
@@ -13,10 +13,11 @@ const sidebarItems = [
     { label: 'Active Exam', icon: activeExamIcon },
     { label: 'Exam History', icon: examhistoryIcon },
     { label: 'Ranking', icon: 'lucide', lucideIcon: Trophy },
-    { label: 'Upcoming Exam', icon: activeExamIcon },
-    { label: 'Missed Exam', icon: activeExamIcon },
-    { label: 'Passed Exam', icon: resourcesIcon },
-    { label: 'Failed Exam', icon: resourcesIcon },
+    { label: 'Upcoming Exam', icon: 'lucide', lucideIcon: CalendarClock },
+    { label: 'Missed Exam', icon: 'lucide', lucideIcon: Clock },
+    { label: 'Passed Exam', icon: 'lucide', lucideIcon: CheckCircle },
+    { label: 'Failed Exam', icon: 'lucide', lucideIcon: XCircle },
+    { label: 'E-Resources', icon: resourcesIcon },
     { label: 'Log Out', icon: logOutIcon },
 ];
 
