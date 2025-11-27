@@ -338,7 +338,7 @@ const AdminEResources = () => {
 
         try {
             setDeleteLoading(true);
-            await apiClient.delete(`/ereources/delete/${resourceToDelete.id}`);
+            await apiClient.post(`/ereources/delete/${resourceToDelete.id}`);
             toast.success('Resource deleted successfully');
             setShowDeleteDialog(false);
             setResourceToDelete(null);
@@ -432,7 +432,7 @@ const AdminEResources = () => {
             <div className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] !px-6 !py-4 !mb-6">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <h2 className="text-2xl font-bold text-white">E-Resources</h2>
-                    
+
                     <div className="flex items-center gap-4 flex-wrap">
                         <div className="relative min-w-[320px]">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -484,8 +484,8 @@ const AdminEResources = () => {
                             {debouncedSearchTerm ? 'No Resources Found' : 'No Resources Found'}
                         </h3>
                         <p className="text-gray-500">
-                            {debouncedSearchTerm 
-                                ? 'No resources match your search criteria' 
+                            {debouncedSearchTerm
+                                ? 'No resources match your search criteria'
                                 : 'Click "Add Resource" to upload your first resource'}
                         </p>
                     </div>
@@ -518,14 +518,16 @@ const AdminEResources = () => {
                                                     <td className="!px-6 !py-4 text-gray-600">{resource.batch}</td>
                                                     <td className="!px-6 !py-4">
                                                         {hasUrl ? (
-                                                            <a
-                                                                href={resource.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-[#7966F1] hover:underline truncate block max-w-xs"
-                                                            >
-                                                                {resource.url}
-                                                            </a>
+                                                            <>
+                                                                <a
+                                                                    href={resource.url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-[#7966F1] hover:underline truncate block max-w-xs"
+                                                                >
+                                                                    {resource.url}
+                                                                </a>
+                                                            </>
                                                         ) : (
                                                             <span className="text-gray-400">-</span>
                                                         )}
@@ -552,217 +554,217 @@ const AdminEResources = () => {
                                                         </button>
                                                     </td>
                                                 </tr>
-                                            );
+                                    );
                                         })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-
-                        {pagination.totalPages > 1 && (
-                            <div className="flex justify-center items-center gap-2 !mt-6">
-                                <button
-                                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                                    disabled={pagination.currentPage === 0}
-                                    className="!px-4 !py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                                >
-                                    Previous
-                                </button>
-                                <span className="!px-4 !py-2 text-gray-700 font-medium">
-                                    Page {pagination.currentPage + 1} of {pagination.totalPages}
-                                </span>
-                                <button
-                                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                                    disabled={pagination.currentPage === pagination.totalPages - 1}
-                                    className="!px-4 !py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
-                    <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200 max-h-[90vh] overflow-y-auto">
-                        <div className="text-center !mb-6">
-                            <h2 className="text-[#7966F1] text-xl font-bold !mb-3">Add New Resource</h2>
-                            <p className="text-gray-600">Upload a file or provide a URL</p>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    Batch <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative" ref={batchDropdownRef}>
-                                    <input
-                                        type="text"
-                                        placeholder="Search Batch"
-                                        value={batchSearchTerm}
-                                        onChange={(e) => setBatchSearchTerm(e.target.value)}
-                                        onFocus={() => setBatchDropdownOpen(true)}
-                                        disabled={uploading || isLoadingBatches}
-                                        className={`w-full !px-4 !py-3 !pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.batch
-                                            ? 'border-red-500 focus:ring-red-500'
-                                            : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
-                                            }`}
-                                    />
-                                    <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
-                                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                                    </div>
-                                    {batchDropdownOpen && (
-                                        <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
-                                            {isLoadingBatches ? (
-                                                <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
-                                                    Loading batches...
-                                                </div>
-                                            ) : filteredBatches.length > 0 ? (
-                                                filteredBatches.map((batch) => (
-                                                    <div
-                                                        key={batch.id}
-                                                        onClick={() => handleBatchSelect(batch)}
-                                                        className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
-                                                    >
-                                                        <div className="font-medium text-gray-900">{batch.name}</div>
-                                                        <div className="text-sm text-gray-500">{batch.description}</div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
-                                                    No batches found
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {errors.batch && <p className="text-red-500 text-xs !mt-1">{errors.batch}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    Name <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.name
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
-                                        }`}
-                                    placeholder="Enter resource name"
-                                    disabled={uploading}
-                                />
-                                {errors.name && <p className="text-red-500 text-xs !mt-1">{errors.name}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    Description <span className="text-red-500">*</span>
-                                </label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    rows="3"
-                                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 resize-none ${errors.description
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
-                                        }`}
-                                    placeholder="Enter resource description"
-                                    disabled={uploading}
-                                />
-                                {errors.description && <p className="text-red-500 text-xs !mt-1">{errors.description}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    Topic <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="topic"
-                                    value={formData.topic}
-                                    onChange={handleInputChange}
-                                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.topic
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
-                                        }`}
-                                    placeholder="Enter topic name"
-                                    disabled={uploading}
-                                />
-                                {errors.topic && <p className="text-red-500 text-xs !mt-1">{errors.topic}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    URL <span className="text-gray-500 text-xs">(Optional)</span>
-                                </label>
-                                <input
-                                    type="url"name="url"
-                                    value={formData.url}
-                                    onChange={handleInputChange}
-                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] bg-[#5E48EF]/5"
-                                    placeholder="https://example.com/resource"
-                                    disabled={uploading}
-                                />
-                            </div>
-    
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 !mb-2">
-                                    File <span className="text-gray-500 text-xs">(Optional)</span>
-                                </label>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] bg-[#5E48EF]/5"
-                                    disabled={uploading}
-                                />
-                                {errors.file && <p className="text-red-500 text-xs !mt-1">{errors.file}</p>}
-                                {formData.file && (
-                                    <p className="text-sm text-gray-600 !mt-2">
-                                        Selected: {formData.file.name}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-    
-                        <div className="flex justify-center gap-4 !mt-8">
-                            <button
-                                type="button"
-                                onClick={handleCloseModal}
-                                disabled={uploading}
-                                className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={uploading}
-                                className={`bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md transition cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                                    }`}
-                            >
-                                {uploading ? 'Uploading...' : 'Upload Resource'}
-                            </button>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-            )}
-    
-            <DeleteResourceDialog
-                isOpen={showDeleteDialog}
-                onClose={handleDeleteCancel}
-                onConfirm={handleDeleteConfirm}
-                loading={deleteLoading}
-                resourceName={resourceToDelete?.name || ''}
-            />
+
+
+                {pagination.totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 !mt-6">
+                        <button
+                            onClick={() => handlePageChange(pagination.currentPage - 1)}
+                            disabled={pagination.currentPage === 0}
+                            className="!px-4 !py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <span className="!px-4 !py-2 text-gray-700 font-medium">
+                            Page {pagination.currentPage + 1} of {pagination.totalPages}
+                        </span>
+                        <button
+                            onClick={() => handlePageChange(pagination.currentPage + 1)}
+                            disabled={pagination.currentPage === pagination.totalPages - 1}
+                            className="!px-4 !py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
+            </>
+                )}
         </div>
-    );
-};
+
+            {
+        showModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+                <div className="bg-white rounded-2xl shadow-xl !px-6 !py-8 max-w-md w-full mx-4 border border-gray-200 max-h-[90vh] overflow-y-auto">
+                    <div className="text-center !mb-6">
+                        <h2 className="text-[#7966F1] text-xl font-bold !mb-3">Add New Resource</h2>
+                        <p className="text-gray-600">Upload a file or provide a URL</p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                Batch <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative" ref={batchDropdownRef}>
+                                <input
+                                    type="text"
+                                    placeholder="Search Batch"
+                                    value={batchSearchTerm}
+                                    onChange={(e) => setBatchSearchTerm(e.target.value)}
+                                    onFocus={() => setBatchDropdownOpen(true)}
+                                    disabled={uploading || isLoadingBatches}
+                                    className={`w-full !px-4 !py-3 !pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.batch
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
+                                        }`}
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center" style={{ paddingRight: '12px', pointerEvents: 'none' }}>
+                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                </div>
+                                {batchDropdownOpen && (
+                                    <div className="absolute w-full !mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
+                                        {isLoadingBatches ? (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                Loading batches...
+                                            </div>
+                                        ) : filteredBatches.length > 0 ? (
+                                            filteredBatches.map((batch) => (
+                                                <div
+                                                    key={batch.id}
+                                                    onClick={() => handleBatchSelect(batch)}
+                                                    className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                >
+                                                    <div className="font-medium text-gray-900">{batch.name}</div>
+                                                    <div className="text-sm text-gray-500">{batch.description}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="!px-4 !py-3 text-sm text-gray-500 text-center">
+                                                No batches found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {errors.batch && <p className="text-red-500 text-xs !mt-1">{errors.batch}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.name
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
+                                    }`}
+                                placeholder="Enter resource name"
+                                disabled={uploading}
+                            />
+                            {errors.name && <p className="text-red-500 text-xs !mt-1">{errors.name}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                Description <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                name="description"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                rows="3"
+                                className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 resize-none ${errors.description
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
+                                    }`}
+                                placeholder="Enter resource description"
+                                disabled={uploading}
+                            />
+                            {errors.description && <p className="text-red-500 text-xs !mt-1">{errors.description}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                Topic <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="topic"
+                                value={formData.topic}
+                                onChange={handleInputChange}
+                                className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 ${errors.topic
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-[#5E48EF] focus:ring-[#5E48EF] bg-[#5E48EF]/5'
+                                    }`}
+                                placeholder="Enter topic name"
+                                disabled={uploading}
+                            />
+                            {errors.topic && <p className="text-red-500 text-xs !mt-1">{errors.topic}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                URL <span className="text-gray-500 text-xs">(Optional)</span>
+                            </label>
+                            <input
+                                type="url"
+                                name="url"
+                                value={formData.url}
+                                onChange={handleInputChange}
+                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] bg-[#5E48EF]/5"
+                                placeholder="https://example.com/resource"
+                                disabled={uploading}
+                            />
+                        </div><div>
+                            <label className="block text-sm font-medium text-gray-600 !mb-2">
+                                File <span className="text-gray-500 text-xs">(Optional)</span>
+                            </label>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] bg-[#5E48EF]/5"
+                                disabled={uploading}
+                            />
+                            {errors.file && <p className="text-red-500 text-xs !mt-1">{errors.file}</p>}
+                            {formData.file && (
+                                <p className="text-sm text-gray-600 !mt-2">
+                                    Selected: {formData.file.name}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center gap-4 !mt-8">
+                        <button
+                            type="button"
+                            onClick={handleCloseModal}
+                            disabled={uploading}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSubmit}
+                            disabled={uploading}
+                            className={`bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md transition cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                                }`}
+                        >
+                            {uploading ? 'Uploading...' : 'Upload Resource'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    <DeleteResourceDialog
+        isOpen={showDeleteDialog}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        loading={deleteLoading}
+        resourceName={resourceToDelete?.name || ''}
+    />
+    </div >
+);};
 export default AdminEResources;

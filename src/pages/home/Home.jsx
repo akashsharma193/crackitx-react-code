@@ -35,6 +35,7 @@ import CreateSubject from '../super-admin/CreateSubject';
 import CreateTopic from '../super-admin/CreateTopic';
 import AdminEResources from '../e-resources/AdminEResources';
 import StudentEResources from '../e-resources/StudentEResources';
+import AddQuestion from '../super-admin/AddQuestion';
 
 const ComponentWrapper = ({ children, isActive }) => (
     <div
@@ -160,6 +161,9 @@ const Home = () => {
                 case 'Topic':
                     component = <CreateTopic />;
                     break;
+                case 'Question Setter':
+                    component = <AddQuestion />;
+                    break;
                 case 'Compliance':
                     component = <Compliance />;
                     break;
@@ -268,7 +272,7 @@ const Home = () => {
 
         let tabs;
         if (isSuperAdmin) {
-            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Subject', 'Topic', 'Compliance', 'Notification'];
+            tabs = ['Dashboard', 'Configuration', 'Create Admin', 'Create Organization', 'Subject', 'Topic', 'Question Setter', 'Compliance', 'Notification'];
         } else if (isAdmin) {
             tabs = ['Dashboard', 'Students', 'Create Batch', 'Create Exam', 'Active Exam', 'Exam History', 'Ranking', 'Feedback', 'Upcoming Exam', 'E-Resources'];
         } else {
