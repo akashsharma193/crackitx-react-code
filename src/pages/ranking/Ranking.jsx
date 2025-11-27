@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Search, Trophy, Medal, Award, X, ChevronDown } from 'lucide-react';
+import { Search, Trophy, Medal, Award, X, ChevronDown, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 
@@ -27,6 +27,7 @@ const Ranking = () => {
     const [isLoadingBatches, setIsLoadingBatches] = useState(false);
     const [batchDropdownOpen, setBatchDropdownOpen] = useState(false);
     const [batchSearchTerm, setBatchSearchTerm] = useState('');
+    const [downloadLoading, setDownloadLoading] = useState(false);
     const batchDropdownRef = useRef(null);
 
     useEffect(() => {
@@ -174,10 +175,76 @@ const Ranking = () => {
         setStudentSearch('');
     };
 
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Rank', 'Student Name', 'Email', 'Marks Obtained', 'Total Marks', 'Percentage'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        data.forEach((student) => {
+            const row = [
+                student.rank,
+                `"${(student.name || 'N/A').replace(/"/g, '""')}"`,
+                `"${(student.email || 'N/A').replace(/"/g, '""')}"`,
+                student.marks || 0,
+                student.totalMarks || 0,
+                `${student.percentage}%`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            const dataToDownload = filteredRankingData.length > 0 ? filteredRankingData : rankingData;
+
+            if (!dataToDownload || dataToDownload.length === 0) {
+                toast.warning('No ranking data to download');
+                return;
+            }
+
+            const csv = convertToCSV(dataToDownload);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const batchName = batchCode.replace(/\s+/g, '_');
+            const questionIdSuffix = questionId ? `_${questionId}` : '';
+            const fileName = `rankings_${batchName}${questionIdSuffix}_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col">
             <div className="bg-[#7966F1] flex flex-wrap items-center justify-between !px-6 !py-4.5 flex-shrink-0">
-                <div className="flex items-center gap-4 flex-wrap w-full">
+                <div className="flex items-center gap-4 flex-wrap">
                     <div className="relative min-w-[280px]" ref={batchDropdownRef}>
                         <input
                             type="text"
@@ -234,6 +301,20 @@ const Ranking = () => {
                     >
                         <Search size={18} />
                         Search Rankings
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-4 mt-4 md:mt-0">
+                    <button
+                        onClick={handleDownloadCSV}
+                        disabled={downloadLoading || rankingData.length === 0}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
+                    >
+                        {downloadLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Download size={20} />
+                        )}
                     </button>
                 </div>
             </div>

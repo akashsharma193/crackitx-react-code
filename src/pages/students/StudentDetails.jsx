@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, Clock, Award, Eye, CheckCircle, XCircle, MinusCircle, Timer, Trophy, Target } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, Clock, Award, Eye, CheckCircle, XCircle, MinusCircle, Timer, Trophy, Target, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -26,7 +26,7 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
     const correctAnswers = answerList.filter(item => item.userAnswer === item.correctAnswer).length;
     const wrongAnswers = answerList.filter(item => item.userAnswer && item.userAnswer !== item.correctAnswer).length;
     const skippedAnswers = answerList.filter(item => !item.userAnswer).length;
-    
+
     const calculatedMarks = (correctAnswers * positiveMarks) - (wrongAnswers * negativeMarks);
     const totalMarks = totalQuestions * positiveMarks;
     const finalMarks = Math.max(0, calculatedMarks);
@@ -138,9 +138,9 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
             return (
                 <div className="space-y-3">
                     <h3 className="font-semibold text-gray-800">{item.question}</h3>
-                    <img 
-                        src={item.questionImage} 
-                        alt="Question" 
+                    <img
+                        src={item.questionImage}
+                        alt="Question"
                         className="max-w-full h-auto rounded-lg border border-gray-300"
                         style={{ maxHeight: '300px' }}
                     />
@@ -148,9 +148,9 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
             );
         } else if (hasQuestionImage) {
             return (
-                <img 
-                    src={item.questionImage} 
-                    alt="Question" 
+                <img
+                    src={item.questionImage}
+                    alt="Question"
                     className="max-w-full h-auto rounded-lg border border-gray-300"
                     style={{ maxHeight: '300px' }}
                 />
@@ -172,9 +172,9 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
                     </span>
                     <div className="flex flex-col gap-2 flex-1">
                         <span>{option}</span>
-                        <img 
-                            src={optionImage} 
-                            alt={`Option ${optionIndex + 1}`} 
+                        <img
+                            src={optionImage}
+                            alt={`Option ${optionIndex + 1}`}
                             className="max-w-full h-auto rounded border border-gray-300"
                             style={{ maxHeight: '150px' }}
                         />
@@ -187,9 +187,9 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
                     <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
                         {String.fromCharCode(65 + optionIndex)}
                     </span>
-                    <img 
-                        src={optionImage} 
-                        alt={`Option ${optionIndex + 1}`} 
+                    <img
+                        src={optionImage}
+                        alt={`Option ${optionIndex + 1}`}
                         className="max-w-full h-auto rounded border border-gray-300"
                         style={{ maxHeight: '150px' }}
                     />
@@ -226,29 +226,29 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
 
     const isCorrectAnswer = (item, optionIndex) => {
         const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
-        
+
         if (item.correctAnswer === optionIdentifier) {
             return true;
         }
-        
+
         if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
             return true;
         }
-        
+
         return false;
     };
 
     const isUserSelectedAnswer = (item, optionIndex) => {
         const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
-        
+
         if (item.userAnswer === optionIdentifier) {
             return true;
         }
-        
+
         if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
             return true;
         }
-        
+
         return false;
     };
 
@@ -352,7 +352,7 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
                                 <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
 
                                 {answerList.map((item, index) => {
-                                    const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer || 
+                                    const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer ||
                                         (Array.isArray(item.options) && item.options.some((opt, idx) => isCorrectAnswer(item, idx) && isUserSelectedAnswer(item, idx))));
                                     const isSkipped = !item.userAnswer;
 
@@ -371,8 +371,8 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
                                                 <div className="flex-1">
                                                     <div className="flex items-start justify-between !mb-4">
                                                         <div className="flex-1">
-                                                            {item.questionImage || (item.question && item.questionImage !== undefined) ? 
-                                                                renderQuestionContent(item) : 
+                                                            {item.questionImage || (item.question && item.questionImage !== undefined) ?
+                                                                renderQuestionContent(item) :
                                                                 <h3 className="font-semibold text-gray-800">{item.question}</h3>
                                                             }
                                                         </div>
@@ -386,10 +386,10 @@ const QuizResultsPage = ({ resultData, onBack, handleSidebarTabChange, positiveM
 
                                                     <div className="space-y-2">
                                                         {item.options && item.options.map((option, optionIndex) => {
-                                                            const optionImage = item.optionsImage && Array.isArray(item.optionsImage) 
-                                                                ? item.optionsImage[optionIndex] 
+                                                            const optionImage = item.optionsImage && Array.isArray(item.optionsImage)
+                                                                ? item.optionsImage[optionIndex]
                                                                 : null;
-                                                            
+
                                                             const isCorrectOption = isCorrectAnswer(item, optionIndex);
                                                             const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
 
@@ -475,6 +475,7 @@ const StudentDetails = () => {
     const [currentResults, setCurrentResults] = useState(null);
     const [loadingStates, setLoadingStates] = useState({});
     const [examMarksConfig, setExamMarksConfig] = useState({ positiveMarks: 1, negativeMarks: 0 });
+    const [downloadLoading, setDownloadLoading] = useState(false);
 
     const fetchUserExams = async () => {
         try {
@@ -491,14 +492,14 @@ const StudentDetails = () => {
                 const examData = response.data.examData || response.data.data[0] || {};
                 const positiveMarks = examData.questionWeight || examData.positiveMarks || 1;
                 const negativeMarks = Math.abs(examData.minusMarks || examData.negativeMarks || 0);
-                
+
                 setExamMarksConfig({ positiveMarks, negativeMarks });
 
                 const transformedData = response.data.data.map((exam) => {
                     const correctAnswers = exam.correctAnswer || 0;
                     const incorrectAnswers = exam.incorrectAnswer || 0;
                     const totalQuestions = exam.totalQuestion || 0;
-                    
+
                     const calculatedMarks = (correctAnswers * positiveMarks) - (incorrectAnswers * negativeMarks);
                     const marks = Math.max(0, calculatedMarks);
 
@@ -570,6 +571,83 @@ const StudentDetails = () => {
         setCurrentResults(null);
     };
 
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Sr.No.', 'Subject Name', 'Teacher', 'Start Date', 'End Date', 'Total Questions', 'Total Marks', 'Performance'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        data.forEach((exam, index) => {
+            const totalQuestions = exam.totalQuestion || 0;
+            const correctAnswers = exam.correctAnswer || 0;
+            const percentage = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+
+            let performance = 'No Data';
+            if (totalQuestions > 0) {
+                if (percentage >= 80) performance = 'Excellent';
+                else if (percentage >= 60) performance = 'Good';
+                else if (percentage >= 40) performance = 'Average';
+                else performance = 'Needs Improvement';
+            }
+
+            const row = [
+                index + 1,
+                `"${(exam.subjectName || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.teacherName || 'N/A').replace(/"/g, '""')}"`,
+                `"${formatDate(exam.startTime)} ${formatTime(exam.startTime)}"`,
+                `"${formatDate(exam.endTime)} ${formatTime(exam.endTime)}"`,
+                totalQuestions,
+                exam.totalMarks || 0,
+                `"${performance}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            if (!userExams || userExams.length === 0) {
+                toast.warning('No exam data to download');
+                return;
+            }
+
+            const csv = convertToCSV(userExams);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const userName = userInfo?.name?.replace(/\s+/g, '_') || userId;
+            const fileName = `${userName}_exam_history_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         const date = new Date(dateString);
@@ -619,7 +697,7 @@ const StudentDetails = () => {
 
     const stats = calculateStats();
 
-    if (showResults && currentResults) {
+if (showResults && currentResults) {
         return <QuizResultsPage 
             resultData={currentResults} 
             onBack={handleBackFromResults} 
@@ -627,187 +705,197 @@ const StudentDetails = () => {
             positiveMarks={examMarksConfig.positiveMarks}
             negativeMarks={examMarksConfig.negativeMarks}
         />;
-    }
+}
 
-    return (
-        <div className="h-screen flex flex-col">
-            <HeaderComponent />
-            <div className="flex flex-1 overflow-hidden">
-                <SidebarComponent
-                    activeTab="Students"
-                    setActiveTab={handleSidebarTabChange}
-                />
+return (
+    <div className="h-screen flex flex-col">
+        <HeaderComponent />
+        <div className="flex flex-1 overflow-hidden">
+            <SidebarComponent
+                activeTab="Students"
+                setActiveTab={handleSidebarTabChange}
+            />
 
-                <div className="flex-1 flex flex-col bg-gray-50">
-                    <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5 flex-shrink-0">
-                        <div className="flex items-center gap-3">
-                            <ArrowLeft className="cursor-pointer" size={20} onClick={handleBack} />
-                            <h2 className="text-lg font-semibold">
-                                User Details - {userInfo?.name || userId}
-                            </h2>
-                        </div>
+            <div className="flex-1 flex flex-col bg-gray-50">
+                <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <ArrowLeft className="cursor-pointer" size={20} onClick={handleBack} />
+                        <h2 className="text-lg font-semibold">
+                            User Details - {userInfo?.name || userId}
+                        </h2>
                     </div>
-
-                    <div className="flex-1 overflow-y-auto !p-6">
-                        {loading && <CircularLoader />}
-
-                        {!loading && error && (
-                            <div className="flex items-center justify-center h-64">
-                                <div className="text-red-500 text-lg">Error: {error}</div>
-                            </div>
+                    <button
+                        onClick={handleDownloadCSV}
+                        disabled={downloadLoading || userExams.length === 0}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
+                    >
+                        {downloadLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Download size={20} />
                         )}
+                    </button>
+                </div>
 
-                        {!loading && !error && (
-                            <>
-                                {userInfo && (
-                                    <div className="bg-white rounded-xl shadow-md !p-6 !mb-6 border border-gray-200">
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-[#7966F1] bg-opacity-10 !p-4 rounded-full">
-                                                <User className="text-[#7966F1]" size={32} />
-                                            </div>
+                <div className="flex-1 overflow-y-auto !p-6">
+                    {loading && <CircularLoader />}
+
+                    {!loading && error && (
+                        <div className="flex items-center justify-center h-64">
+                            <div className="text-red-500 text-lg">Error: {error}</div>
+                        </div>
+                    )}
+
+                    {!loading && !error && (
+                        <>
+                            {userInfo && (
+                                <div className="bg-white rounded-xl shadow-md !p-6 !mb-6 border border-gray-200">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-[#7966F1] bg-opacity-10 !p-4 rounded-full">
+                                            <User className="text-[#7966F1]" size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold text-gray-900">{userInfo.name}</h3>
+                                            <p className="text-gray-600">{userInfo.email}</p>
+                                            <p className="text-gray-600">{userInfo.mobile}</p>
+                                            <p className="text-gray-600">Batch: {userInfo.batch}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {userExams.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 !mb-8">
+                                    <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                        <div className="flex items-center justify-between">
                                             <div>
-                                                <h3 className="text-xl font-bold text-gray-900">{userInfo.name}</h3>
-                                                <p className="text-gray-600">{userInfo.email}</p>
-                                                <p className="text-gray-600">{userInfo.mobile}</p>
-                                                <p className="text-gray-600">Batch: {userInfo.batch}</p>
+                                                <p className="text-gray-600 text-sm font-medium">Total Exams</p>
+                                                <p className="text-3xl font-bold text-gray-900">{stats.totalExams}</p>
+                                            </div>
+                                            <div className="bg-[#7966F1] bg-opacity-10 !p-3 rounded-full">
+                                                <BookOpen className="text-[#7966F1]" size={24} />
                                             </div>
                                         </div>
                                     </div>
-                                )}
 
-                                {userExams.length > 0 && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 !mb-8">
-                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-gray-600 text-sm font-medium">Total Exams</p>
-                                                    <p className="text-3xl font-bold text-gray-900">{stats.totalExams}</p>
-                                                </div>
-                                                <div className="bg-[#7966F1] bg-opacity-10 !p-3 rounded-full">
-                                                    <BookOpen className="text-[#7966F1]" size={24} />
-                                                </div>
+                                    <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-gray-600 text-sm font-medium">Average Score</p>
+                                                <p className="text-3xl font-bold text-blue-600">{stats.avgScore}</p>
                                             </div>
-                                        </div>
-
-                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-gray-600 text-sm font-medium">Average Score</p>
-                                                    <p className="text-3xl font-bold text-blue-600">{stats.avgScore}</p>
-                                                </div>
-                                                <div className="bg-blue-100 !p-3 rounded-full">
-                                                    <Award className="text-blue-600" size={24} />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-gray-600 text-sm font-medium">Total Marks</p>
-                                                    <p className="text-3xl font-bold text-green-600">{stats.totalMarks}</p>
-                                                </div>
-                                                <div className="bg-green-100 !p-3 rounded-full">
-                                                    <Award className="text-green-600" size={24} />
-                                                </div>
+                                            <div className="bg-blue-100 !p-3 rounded-full">
+                                                <Award className="text-blue-600" size={24} />
                                             </div>
                                         </div>
                                     </div>
-                                )}
 
-                                <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                                    <div className="bg-[#7966F1] !px-6 !py-4">
-                                        <h2 className="text-xl font-bold text-white">Exam History</h2>
+                                    <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-gray-600 text-sm font-medium">Total Marks</p>
+                                                <p className="text-3xl font-bold text-green-600">{stats.totalMarks}</p>
+                                            </div>
+                                            <div className="bg-green-100 !p-3 rounded-full">
+                                                <Award className="text-green-600" size={24} />
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
+                            )}
 
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-left text-sm">
-                                            <thead className="bg-gray-50 border-b">
-                                                <tr>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Sr.No.</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Subject Name</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Teacher</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Start Date</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">End Date</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Total Questions</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
-                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">View</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {userExams.length > 0 ? (
-                                                    userExams.map((exam, index) => (
-                                                        <tr key={exam.questionId || index} className="border-b hover:bg-gray-50 transition-colors">
-                                                            <td className="!px-6 !py-4 font-medium text-gray-900">{index + 1}</td>
-                                                            <td className="!px-6 !py-4 text-gray-900 font-medium">{exam.subjectName || 'N/A'}</td>
-                                                            <td className="!px-6 !py-4 text-gray-600">{exam.teacherName || 'N/A'}</td>
-                                                            <td className="!px-6 !py-4 text-gray-600">
-                                                                <div>
-                                                                    <div>{formatDate(exam.startTime)}</div>
-                                                                    <div className="text-xs text-gray-500">{formatTime(exam.startTime)}</div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="!px-6 !py-4 text-gray-600">
-                                                                <div>
-                                                                    <div>{formatDate(exam.endTime)}</div>
-                                                                    <div className="text-xs text-gray-500">{formatTime(exam.endTime)}</div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="!px-6 !py-4 text-center text-gray-600 font-semibold">{exam.totalQuestion || 0}</td>
-                                                            <td className="!px-6 !py-4 text-center text-gray-900 font-bold text-lg">{exam.totalMarks || 0}</td>
-                                                            <td className="!px-6 !py-4">
-                                                                <span className={`!px-3 !py-1 rounded-full text-sm font-medium ${getPerformanceColor(exam.correctAnswer, exam.totalQuestion)}`}>
-                                                                    {getPerformanceLabel(exam.correctAnswer, exam.totalQuestion)}
-                                                                </span>
-                                                            </td>
-                                                            <td className="!px-6 !py-4">
-                                                                <div className="relative group inline-block">
-                                                                    <button
-                                                                        onClick={() => handleViewExamDetails(exam)}
-                                                                        disabled={loadingStates[exam.questionId]}
-                                                                        className={`transition-colors ${loadingStates[exam.questionId]
-                                                                            ? 'text-gray-400 cursor-not-allowed'
-                                                                            : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
-                                                                            }`}
-                                                                    >
-                                                                        {loadingStates[exam.questionId] ? (
-                                                                            <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
-                                                                        ) : (
-                                                                            <Eye size={20} />
-                                                                        )}
-                                                                    </button>
-                                                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                                                        View Details
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                ) : (
-                                                    <tr>
-                                                        <td colSpan="9" className="!px-6 !py-12 text-center text-gray-500">
-                                                            <div className="flex flex-col items-center gap-3">
-                                                                <BookOpen className="text-gray-300" size={48} />
-                                                                <div>
-                                                                    <p className="text-lg font-medium">No exam data found</p>
-                                                                    <p className="text-sm">This user has not taken any exams yet.</p>
+                            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                                <div className="bg-[#7966F1] !px-6 !py-4">
+                                    <h2 className="text-xl font-bold text-white">Exam History</h2>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-left text-sm">
+                                        <thead className="bg-gray-50 border-b">
+                                            <tr>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Sr.No.</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Subject Name</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Teacher</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Start Date</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">End Date</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Total Questions</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
+                                                <th className="!px-6 !py-4 font-semibold text-gray-900">View</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {userExams.length > 0 ? (
+                                                userExams.map((exam, index) => (
+                                                    <tr key={exam.questionId || index} className="border-b hover:bg-gray-50 transition-colors">
+                                                        <td className="!px-6 !py-4 font-medium text-gray-900">{index + 1}</td>
+                                                        <td className="!px-6 !py-4 text-gray-900 font-medium">{exam.subjectName || 'N/A'}</td>
+                                                        <td className="!px-6 !py-4 text-gray-600">{exam.teacherName || 'N/A'}</td>
+                                                        <td className="!px-6 !py-4 text-gray-600">
+                                                            <div>
+                                                                <div>{formatDate(exam.startTime)}</div>
+                                                                <div className="text-xs text-gray-500">{formatTime(exam.startTime)}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="!px-6 !py-4 text-gray-600">
+                                                            <div>
+                                                                <div>{formatDate(exam.endTime)}</div>
+                                                                <div className="text-xs text-gray-500">{formatTime(exam.endTime)}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="!px-6 !py-4 text-center text-gray-600 font-semibold">{exam.totalQuestion || 0}</td>
+                                                        <td className="!px-6 !py-4 text-center text-gray-900 font-bold text-lg">{exam.totalMarks || 0}</td>
+                                                        <td className="!px-6 !py-4">
+                                                            <span className={`!px-3 !py-1 rounded-full text-sm font-medium ${getPerformanceColor(exam.correctAnswer, exam.totalQuestion)}`}>
+                                                                {getPerformanceLabel(exam.correctAnswer, exam.totalQuestion)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="!px-6 !py-4">
+                                                            <div className="relative group inline-block">
+                                                                <button
+                                                                    onClick={() => handleViewExamDetails(exam)}
+                                                                    disabled={loadingStates[exam.questionId]}
+                                                                    className={`transition-colors ${loadingStates[exam.questionId]
+                                                                        ? 'text-gray-400 cursor-not-allowed'
+                                                                        : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
+                                                                        }`}
+                                                                >
+                                                                    {loadingStates[exam.questionId] ? (
+                                                                        <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
+                                                                    ) : (
+                                                                        <Eye size={20} />
+                                                                    )}
+                                                                </button>
+                                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                                    View Details
                                                                 </div>
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="9" className="!px-6 !py-12 text-center text-gray-500">
+                                                        <div className="flex flex-col items-center gap-3">
+                                                            <BookOpen className="text-gray-300" size={48} />
+                                                            <div>
+                                                                <p className="text-lg font-medium">No exam data found</p>
+                                                                <p className="text-sm">This user has not taken any exams yet.</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </>
-                        )}
-                    </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 };
-
 export default StudentDetails;

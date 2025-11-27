@@ -70,6 +70,7 @@ const Students = () => {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [downloadLoading, setDownloadLoading] = useState(false);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -139,6 +140,104 @@ const Students = () => {
             setCurrentPage(0);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAllStudentsForDownload = async () => {
+        try {
+            const filterObj = {};
+
+            if (debouncedSearchTerm.trim()) {
+                filterObj.name = debouncedSearchTerm.trim();
+            }
+
+            if (debouncedFilterTerm.trim()) {
+                filterObj.batch = debouncedFilterTerm.trim();
+            }
+
+            const requestBody = {
+                pageSize: totalElements || 10000,
+                pageNumber: 0,
+                filter: filterObj
+            };
+
+            const endpoint = activeTab === 'active' ? '/admin-secured/getAllUser' : '/admin-secured/getAllInactiveUser';
+
+            const response = await apiClient.post(endpoint, requestBody);
+
+            if (response.data.success) {
+                const responseData = response.data.data;
+                const content = Array.isArray(responseData.content) ? responseData.content : [];
+                return content;
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch students');
+            }
+        } catch (error) {
+            console.error('Error fetching all students:', error);
+            throw error;
+        }
+    };
+
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Sr.No.', 'Name', 'Email', 'Phone Number', 'Batch'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        data.forEach((student, index) => {
+            const row = [
+                index + 1,
+                `"${(student.name || 'N/A').replace(/"/g, '""')}"`,
+                `"${(student.email || 'N/A').replace(/"/g, '""')}"`,
+                `"${(student.mobile || 'N/A').replace(/"/g, '""')}"`,
+                `"${(student.batch || 'N/A').replace(/"/g, '""')}"`,
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            const allStudents = await fetchAllStudentsForDownload();
+
+            if (!allStudents || allStudents.length === 0) {
+                toast.warning('No students data to download');
+                return;
+            }
+
+            const csv = convertToCSV(allStudents);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fileName = `students_${activeTab}_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
         }
     };
 
@@ -332,8 +431,16 @@ const Students = () => {
                     >
                         Create Student
                     </button>
-                    <button className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer">
-                        <Download size={20} />
+                    <button 
+                        onClick={handleDownloadCSV}
+                        disabled={downloadLoading || students.length === 0}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
+                    >
+                        {downloadLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Download size={20} />
+                        )}
                     </button>
                 </div>
             </div>

@@ -25,6 +25,7 @@ const PastExams = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTerm, setFilterTerm] = useState('');
+    const [downloadLoading, setDownloadLoading] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -86,6 +87,110 @@ const PastExams = () => {
         }
     };
 
+    const fetchAllPastExamsForDownload = async () => {
+        try {
+            const filterObj = {};
+
+            if (searchTerm.trim()) {
+                filterObj.subjectName = searchTerm.trim();
+            }
+
+            if (filterTerm.trim()) {
+                filterObj.teacherName = filterTerm.trim();
+            }
+
+            const requestBody = {
+                pageSize: totalElements || 10000,
+                pageNumber: 0,
+                filter: filterObj
+            };
+
+            const response = await apiClient.post('/questionPaper/getPastExam', requestBody);
+
+            if (response.data.success && response.data.data) {
+                const transformedData = response.data.data.content.map((item) => ({
+                    testName: item.subjectName || 'N/A',
+                    batch: item.batch || 'N/A',
+                    conductedBy: item.teacherName || 'N/A',
+                    examDuration: item.examDuration ? `${item.examDuration} mins` : 'N/A',
+                    startTime: item.startTime ? new Date(item.startTime).toLocaleString() : 'N/A',
+                    endTime: item.endTime ? new Date(item.endTime).toLocaleString() : 'N/A'
+                }));
+                return transformedData;
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch past exams');
+            }
+        } catch (error) {
+            console.error('Error fetching all past exams:', error);
+            throw error;
+        }
+    };
+
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Sr.No.', 'Test Name', 'Batch', 'Conducted By', 'Exam Duration', 'Start Time', 'End Time'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        data.forEach((exam, index) => {
+            const row = [
+                index + 1,
+                `"${(exam.testName || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.batch || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.conductedBy || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.examDuration || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.startTime || 'N/A').replace(/"/g, '""')}"`,
+                `"${(exam.endTime || 'N/A').replace(/"/g, '""')}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            const allExams = await fetchAllPastExamsForDownload();
+
+            if (!allExams || allExams.length === 0) {
+                toast.warning('No past exams data to download');
+                return;
+            }
+
+            const csv = convertToCSV(allExams);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fileName = `past_exams_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -144,10 +249,6 @@ const PastExams = () => {
             fetchPastExamData(0, searchTerm, filterTerm);
         }
     }, [searchTerm, filterTerm]);
-
-    const handleDownload = useCallback(() => {
-        toast.info('Download functionality coming soon!');
-    }, []);
 
     const generatePaginationButtons = useCallback(() => {
         const buttons = [];
@@ -227,10 +328,15 @@ const PastExams = () => {
 
                 <div className="flex items-center gap-4 mt-4 md:mt-0">
                     <button
-                        onClick={handleDownload}
-                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer"
+                        onClick={handleDownloadCSV}
+                        disabled={downloadLoading || examData.length === 0}
+                        className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
                     >
-                        <Download size={20} />
+                        {downloadLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Download size={20} />
+                        )}
                     </button>
                 </div>
             </div>

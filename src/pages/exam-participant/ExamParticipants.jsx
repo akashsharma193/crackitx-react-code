@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, User, Trophy, Target, Eye, Clock, CheckCircle, XCircle, MinusCircle, Timer } from 'lucide-react';
+import { ArrowLeft, User, Trophy, Target, Eye, Clock, CheckCircle, XCircle, MinusCircle, Timer, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../../api/axiosConfig';
 import HeaderComponent from '../../components/HeaderComponent';
@@ -435,6 +435,7 @@ const ExamParticipants = () => {
     const [currentResults, setCurrentResults] = useState(null);
     const [currentStudentName, setCurrentStudentName] = useState('');
     const [examMarksConfig, setExamMarksConfig] = useState({ positiveMarks: 1, negativeMarks: 0 });
+    const [downloadLoading, setDownloadLoading] = useState(false);
 
     const fetchParticipants = async () => {
         try {
@@ -529,6 +530,77 @@ const ExamParticipants = () => {
             state: { activeTab: newTab },
             replace: false
         });
+    };
+
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Sr.No.', 'User ID', 'Name', 'Marks Obtained', 'Total Marks', 'Percentage', 'Performance'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        const sortedData = [...data].sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage));
+
+        sortedData.forEach((participant, index) => {
+            const percentage = parseFloat(participant.percentage);
+            let performance = 'Needs Improvement';
+            if (percentage >= 80) performance = 'Excellent';
+            else if (percentage >= 60) performance = 'Good';
+            else if (percentage >= 40) performance = 'Average';
+
+            const row = [
+                index + 1,
+                `"${(participant.userId || 'N/A').replace(/"/g, '""')}"`,
+                `"${(participant.name || 'N/A').replace(/"/g, '""')}"`,
+                participant.marks || 0,
+                participant.totalMarks || 0,
+                `${participant.percentage}%`,
+                `"${performance}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            if (!participants || participants.length === 0) {
+                toast.warning('No participants data to download');
+                return;
+            }
+
+            const csv = convertToCSV(participants);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fileName = `exam_participants_${id}_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
+        }
     };
 
     const handleViewClick = async (participant) => {
@@ -663,9 +735,18 @@ const ExamParticipants = () => {
                                 Exam Participants
                             </h2>
                         </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto !p-6">
+                        <button
+                            onClick={handleDownloadCSV}
+                            disabled={downloadLoading || participants.length === 0}
+                            className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
+                        >
+                            {downloadLoading ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <Download size={20} />
+                            )}
+                        </button>
+                    </div><div className="flex-1 overflow-y-auto !p-6">
                         {loading && <CircularLoader />}
 
                         {!loading && error && (
@@ -819,5 +900,4 @@ const ExamParticipants = () => {
         </div>
     );
 };
-
 export default ExamParticipants;
