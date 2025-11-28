@@ -222,7 +222,7 @@ const AddQuestion = () => {
 
         try {
             const questionData = {
-                id: '',
+                // id: '',
                 question: questionInputMode === 'text' || questionInputMode === 'both' ? formData.question : '',
                 isImage: questionInputMode === 'image',
                 color: formData.color,
