@@ -1,0 +1,903 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, User, Trophy, Target, Eye, Clock, CheckCircle, XCircle, MinusCircle, Timer, Download } from 'lucide-react';
+import { toast } from 'react-toastify';
+import apiClient from '../../api/axiosConfig';
+import HeaderComponent from '../../components/HeaderComponent';
+import SidebarComponent from '../../components/SidebarComponenet';
+
+const CircularLoader = () => {
+    return (
+        <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 border-4 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
+                <div className="text-[#7966F1] text-lg font-semibold">
+                    Loading Participants...
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StudentResultsPage = ({ resultData, onBack, studentName }) => {
+    const { finalResult, totalQuestion, correctAnswer, incorrectAnswer, totalMarks, unAttempted, maxMarks, positiveMarks, negativeMarks } = resultData;
+
+    const score = maxMarks > 0 ? Math.round((totalMarks / maxMarks) * 100) : 0;
+
+    const formatTime = (timeInSeconds) => {
+        if (!timeInSeconds || timeInSeconds === 0) return '0s';
+        const seconds = Math.round(timeInSeconds);
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+    };
+
+    const PieChart = ({ correct, wrong, skipped, total }) => {
+        const correctPercentage = (correct / total) * 100;
+        const wrongPercentage = (wrong / total) * 100;
+        const skippedPercentage = (skipped / total) * 100;
+
+        const correctAngle = (correctPercentage / 100) * 360;
+        const wrongAngle = (wrongPercentage / 100) * 360;
+        const skippedAngle = (skippedPercentage / 100) * 360;
+
+        const radius = 80;
+        const circumference = 2 * Math.PI * radius;
+
+        const correctStrokeDasharray = `${(correctAngle / 360) * circumference} ${circumference}`;
+        const wrongStrokeDasharray = `${(wrongAngle / 360) * circumference} ${circumference}`;
+        const skippedStrokeDasharray = `${(skippedAngle / 360) * circumference} ${circumference}`;
+
+        const correctOffset = 0;
+        const wrongOffset = -((correctAngle / 360) * circumference);
+        const skippedOffset = -(((correctAngle + wrongAngle) / 360) * circumference);
+
+        return (
+            <div className="relative">
+                <svg width="200" height="200" className="transform -rotate-90">
+                    <circle
+                        cx="100"
+                        cy="100"
+                        r={radius}
+                        fill="none"
+                        stroke="#e5e7eb"
+                        strokeWidth="20"
+                    />
+
+                    {correct > 0 && (
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="20"
+                            strokeDasharray={correctStrokeDasharray}
+                            strokeDashoffset={correctOffset}
+                            strokeLinecap="round"
+                        />
+                    )}
+
+                    {wrong > 0 && (
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke="#ef4444"
+                            strokeWidth="20"
+                            strokeDasharray={wrongStrokeDasharray}
+                            strokeDashoffset={wrongOffset}
+                            strokeLinecap="round"
+                        />
+                    )}
+
+                    {skipped > 0 && (
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke="#9ca3af"
+                            strokeWidth="20"
+                            strokeDasharray={skippedStrokeDasharray}
+                            strokeDashoffset={skippedOffset}
+                            strokeLinecap="round"
+                        />
+                    )}
+                </svg>
+
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-3xl font-bold text-[#7966F1]">{score}%</div>
+                        <div className="text-sm text-gray-600">Score</div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderQuestionContent = (item) => {
+        const hasQuestionText = item.question && item.question.trim() !== '';
+        const hasQuestionImage = item.questionImage && item.questionImage !== null;
+
+        if (hasQuestionText && hasQuestionImage) {
+            return (
+                <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-800">{item.question}</h3>
+                    <img
+                        src={item.questionImage}
+                        alt="Question"
+                        className="max-w-full h-auto rounded-lg border border-gray-300"
+                        style={{ maxHeight: '300px' }}
+                    />
+                </div>
+            );
+        } else if (hasQuestionImage) {
+            return (
+                <img
+                    src={item.questionImage}
+                    alt="Question"
+                    className="max-w-full h-auto rounded-lg border border-gray-300"
+                    style={{ maxHeight: '300px' }}
+                />
+            );
+        } else {
+            return <h3 className="font-semibold text-gray-800">{item.question}</h3>;
+        }
+    };
+
+    const renderOptionContent = (option, optionImage, optionIndex) => {
+        const hasText = option && option.trim() !== '';
+        const hasImage = optionImage && optionImage !== null;
+
+        if (hasText && hasImage) {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span>{option}</span>
+                        <img
+                            src={optionImage}
+                            alt={`Option ${optionIndex + 1}`}
+                            className="max-w-full h-auto rounded border border-gray-300"
+                            style={{ maxHeight: '150px' }}
+                        />
+                    </div>
+                </div>
+            );
+        } else if (hasImage) {
+            return (
+                <div className="flex items-start gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold flex-shrink-0 !mt-1">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <img
+                        src={optionImage}
+                        alt={`Option ${optionIndex + 1}`}
+                        className="max-w-full h-auto rounded border border-gray-300"
+                        style={{ maxHeight: '150px' }}
+                    />
+                </div>
+            );
+        } else {
+            return (
+                <div className="flex items-center gap-3 flex-1">
+                    <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-semibold">
+                        {String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <span className="flex-1">{option}</span>
+                </div>
+            );
+        }
+    };
+
+    const getCorrectAnswerIdentifier = (item, optionIndex) => {
+        if (item.optionsImage && Array.isArray(item.optionsImage) && item.optionsImage.length > 0) {
+            const hasTextOptions = item.options && Array.isArray(item.options) && item.options.some(opt => opt && opt.trim() !== '');
+            const hasImageOptions = item.optionsImage.some(img => img !== null);
+
+            if (hasTextOptions && hasImageOptions) {
+                return item.options[optionIndex];
+            } else if (hasImageOptions) {
+                return String(optionIndex + 1);
+            } else {
+                return item.options[optionIndex];
+            }
+        } else {
+            return item.options[optionIndex];
+        }
+    };
+
+    const isCorrectAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+
+        if (item.correctAnswer === optionIdentifier) {
+            return true;
+        }
+
+        if (!isNaN(parseInt(item.correctAnswer)) && parseInt(item.correctAnswer) === optionIndex + 1) {
+            return true;
+        }
+
+        return false;
+    };
+
+    const isUserSelectedAnswer = (item, optionIndex) => {
+        const optionIdentifier = getCorrectAnswerIdentifier(item, optionIndex);
+
+        if (item.userAnswer === optionIdentifier) {
+            return true;
+        }
+
+        if (!isNaN(parseInt(item.userAnswer)) && parseInt(item.userAnswer) === optionIndex + 1) {
+            return true;
+        }
+
+        return false;
+    };
+
+    return (
+        <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 !px-3 !py-2 rounded-lg transition-colors cursor-pointer"
+                        >
+                            <ArrowLeft size={16} />
+                            <span className="text-sm">Back</span>
+                        </button>
+                    )}
+                    <div>
+                        <h1 className="text-xl font-bold">Student Results - {studentName}</h1>
+                        <p className="text-sm opacity-90">Exam Performance Report</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto !p-6">
+                <div className="max-w-6xl !mx-auto">
+                    <div className="bg-white rounded-lg !p-8 shadow-md !mb-8">
+                        <div className="flex flex-col lg:flex-row items-center gap-8">
+                            <div className="flex justify-center">
+                                <PieChart
+                                    correct={correctAnswer}
+                                    wrong={incorrectAnswer}
+                                    skipped={unAttempted}
+                                    total={totalQuestion}
+                                />
+                            </div>
+
+                            <div className="flex-1">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 !mb-6">
+                                    <div className="text-center !p-4 bg-green-50 rounded-lg">
+                                        <div className="flex items-center justify-center !mb-2">
+                                            <CheckCircle className="text-green-600" size={24} />
+                                        </div>
+                                        <div className="text-2xl font-bold text-green-600">{correctAnswer}</div>
+                                        <div className="text-sm text-green-700">Correct</div>
+                                        <div className="text-xs text-green-600 !mt-1">+{positiveMarks} marks each</div>
+                                    </div>
+
+                                    <div className="text-center !p-4 bg-red-50 rounded-lg">
+                                        <div className="flex items-center justify-center !mb-2">
+                                            <XCircle className="text-red-600" size={24} />
+                                        </div>
+                                        <div className="text-2xl font-bold text-red-600">{incorrectAnswer}</div>
+                                        <div className="text-sm text-red-700">Wrong</div>
+                                        <div className="text-xs text-red-600 !mt-1">-{negativeMarks} marks each</div>
+                                    </div>
+
+                                    <div className="text-center !p-4 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center justify-center !mb-2">
+                                            <MinusCircle className="text-gray-600" size={24} />
+                                        </div>
+                                        <div className="text-2xl font-bold text-gray-600">{unAttempted}</div>
+                                        <div className="text-sm text-gray-700">Skipped</div>
+                                        <div className="text-xs text-gray-600 !mt-1">0 marks</div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                        <Trophy size={16} />
+                                        <span>Total Questions: {totalQuestion}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Target size={16} />
+                                        <span>Marks Obtained: {totalMarks} / {maxMarks}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold text-gray-800 !mb-4">Question Review</h2>
+
+                        {finalResult.map((item, index) => {
+                            const isCorrect = item.userAnswer && (item.userAnswer === item.correctAnswer ||
+                                (Array.isArray(item.options) && item.options.some((opt, idx) => isCorrectAnswer(item, idx) && isUserSelectedAnswer(item, idx))));
+                            const isSkipped = !item.userAnswer;
+
+                            return (
+                                <div key={index} className="bg-white rounded-lg !p-6 shadow-md">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${isCorrect
+                                            ? 'bg-green-500 text-white'
+                                            : isSkipped
+                                                ? 'bg-gray-500 text-white'
+                                                : 'bg-red-500 text-white'
+                                            }`}>
+                                            {index + 1}
+                                        </div>
+
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between !mb-4">
+                                                <div className="flex-1">
+                                                    {renderQuestionContent(item)}
+                                                </div>
+                                                <div className="flex items-center gap-1 !ml-4 bg-blue-50 !px-3 !py-1 rounded-lg flex-shrink-0">
+                                                    <Timer size={14} className="text-blue-600" />
+                                                    <span className="text-sm font-medium text-blue-700">
+                                                        {formatTime(item.timeTaken)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                {item.options && item.options.map((option, optionIndex) => {
+                                                    const optionImage = item.optionsImage && Array.isArray(item.optionsImage)
+                                                        ? item.optionsImage[optionIndex]
+                                                        : null;
+
+                                                    const isCorrectOption = isCorrectAnswer(item, optionIndex);
+                                                    const isUserAnswer = isUserSelectedAnswer(item, optionIndex);
+
+                                                    let bgColor = 'bg-gray-50';
+                                                    let textColor = 'text-gray-700';
+                                                    let borderColor = 'border-gray-200';
+
+                                                    if (isCorrectOption) {
+                                                        bgColor = 'bg-green-100';
+                                                        textColor = 'text-green-800';
+                                                        borderColor = 'border-green-300';
+                                                    } else if (isUserAnswer && !isCorrectOption) {
+                                                        bgColor = 'bg-red-100';
+                                                        textColor = 'text-red-800';
+                                                        borderColor = 'border-red-300';
+                                                    }
+
+                                                    return (
+                                                        <div
+                                                            key={optionIndex}
+                                                            className={`!p-3 border rounded-lg ${bgColor} ${textColor} ${borderColor}`}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                {renderOptionContent(option, optionImage, optionIndex)}
+
+                                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                                    {isCorrectOption && (
+                                                                        <span className="text-xs font-semibold text-green-600 bg-green-200 !px-2 !py-1 rounded flex items-center gap-1">
+                                                                            <CheckCircle size={12} />
+                                                                            Correct
+                                                                        </span>
+                                                                    )}
+                                                                    {isUserAnswer && !isCorrectOption && (
+                                                                        <span className="text-xs font-semibold text-red-600 bg-red-200 !px-2 !py-1 rounded flex items-center gap-1">
+                                                                            <XCircle size={12} />
+                                                                            User Answer
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {isSkipped && (
+                                                <div className="!mt-3 text-sm text-gray-500 bg-gray-100 !p-3 rounded flex items-center gap-2">
+                                                    <MinusCircle size={16} />
+                                                    This question was not answered
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ExamParticipants = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [participants, setParticipants] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [sourceTab, setSourceTab] = useState('Active Exam');
+    const [loadingStates, setLoadingStates] = useState({});
+    const [showResults, setShowResults] = useState(false);
+    const [currentResults, setCurrentResults] = useState(null);
+    const [currentStudentName, setCurrentStudentName] = useState('');
+    const [examMarksConfig, setExamMarksConfig] = useState({ positiveMarks: 1, negativeMarks: 0 });
+    const [downloadLoading, setDownloadLoading] = useState(false);
+
+    const fetchParticipants = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const requestBody = {
+                id: id
+            };
+
+            const response = await apiClient.post('/report/getAllUserByExamId', requestBody);
+
+            if (response.data.success && response.data.data) {
+                const apiData = response.data.data;
+
+                const examData = response.data.examData || response.data.data[0] || {};
+                const positiveMarks = examData.questionWeight || examData.positiveMarks || 1;
+                const negativeMarks = Math.abs(examData.minusMarks || examData.negativeMarks || 0);
+
+                setExamMarksConfig({ positiveMarks, negativeMarks });
+
+                const transformedData = apiData.map((participant, index) => {
+                    const marks = participant.marks || 0;
+                    const totalMarks = participant.totalMarks || 0;
+                    const percentage = totalMarks > 0 ? ((marks / totalMarks) * 100).toFixed(1) : '0.0';
+
+                    return {
+                        srNo: index + 1,
+                        userId: participant.userId,
+                        name: participant.name,
+                        email: participant.email,
+                        mobile: participant.mobile,
+                        batch: participant.batch,
+                        marks: marks,
+                        totalMarks: totalMarks,
+                        percentage: percentage,
+                        correctAnswer: participant.correctAnswer || 0,
+                        incorrectAnswer: participant.incorrectAnswer || 0,
+                        totalQuestion: participant.totalQuestion || 0
+                    };
+                });
+
+                setParticipants(transformedData);
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch participants data');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch participants data');
+            console.error('Error fetching participants data:', err);
+            toast.error('Failed to fetch participants data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (id) {
+            fetchParticipants();
+        }
+
+        const determineSourceTab = () => {
+            if (location.state && location.state.sourceTab) {
+                return location.state.sourceTab;
+            }
+
+            const referrer = document.referrer;
+            if (referrer) {
+                if (referrer.includes('past-exam') || referrer.includes('exam-history')) {
+                    return 'Exam History';
+                } else if (referrer.includes('active-exam') || referrer.includes('home')) {
+                    return 'Active Exam';
+                }
+            }
+            return 'Active Exam';
+        };
+
+        const detectedSourceTab = determineSourceTab();
+        setSourceTab(detectedSourceTab);
+
+        sessionStorage.setItem('examParticipantsSource', detectedSourceTab);
+    }, [id, location]);
+
+    const handleBack = () => {
+        navigate('/home', {
+            state: { activeTab: sourceTab },
+            replace: false
+        });
+    };
+
+    const handleSidebarTabChange = (newTab) => {
+        navigate('/home', {
+            state: { activeTab: newTab },
+            replace: false
+        });
+    };
+
+    const convertToCSV = (data) => {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ['Sr.No.', 'User ID', 'Name', 'Marks Obtained', 'Total Marks', 'Percentage', 'Performance'];
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        const sortedData = [...data].sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage));
+
+        sortedData.forEach((participant, index) => {
+            const percentage = parseFloat(participant.percentage);
+            let performance = 'Needs Improvement';
+            if (percentage >= 80) performance = 'Excellent';
+            else if (percentage >= 60) performance = 'Good';
+            else if (percentage >= 40) performance = 'Average';
+
+            const row = [
+                index + 1,
+                `"${(participant.userId || 'N/A').replace(/"/g, '""')}"`,
+                `"${(participant.name || 'N/A').replace(/"/g, '""')}"`,
+                participant.marks || 0,
+                participant.totalMarks || 0,
+                `${participant.percentage}%`,
+                `"${performance}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
+    };
+
+    const handleDownloadCSV = async () => {
+        try {
+            setDownloadLoading(true);
+
+            if (!participants || participants.length === 0) {
+                toast.warning('No participants data to download');
+                return;
+            }
+
+            const csv = convertToCSV(participants);
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const fileName = `exam_participants_${id}_${timestamp}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
+
+            toast.success('CSV downloaded successfully!');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV. Please try again.');
+        } finally {
+            setDownloadLoading(false);
+        }
+    };
+
+    const handleViewClick = async (participant) => {
+        const loadingKey = participant.userId;
+
+        try {
+            setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
+
+            const requestBody = {
+                userId: participant.userId,
+                questionId: id
+            };
+
+            const response = await apiClient.post('/answerPaper/getStudentResult', requestBody);
+
+            if (response.data.success && response.data.data) {
+                const resultData = response.data.data;
+
+                const correctAnswers = resultData.correctAnswer || 0;
+                const incorrectAnswers = resultData.incorrectAnswer || 0;
+                const totalQuestions = resultData.totalQuestion || 0;
+
+                const calculatedMarks = (correctAnswers * examMarksConfig.positiveMarks) - (incorrectAnswers * examMarksConfig.negativeMarks);
+                const totalMarks = totalQuestions * examMarksConfig.positiveMarks;
+
+                const finalMarks = Math.max(0, calculatedMarks);
+
+                const updatedResultData = {
+                    ...resultData,
+                    totalMarks: parseFloat(finalMarks.toFixed(2)),
+                    maxMarks: totalMarks,
+                    positiveMarks: examMarksConfig.positiveMarks,
+                    negativeMarks: examMarksConfig.negativeMarks
+                };
+
+                setCurrentResults(updatedResultData);
+                setCurrentStudentName(participant.name);
+                setShowResults(true);
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch student result');
+            }
+        } catch (err) {
+            console.error('Error fetching student result:', err);
+
+            if (err.response) {
+                const status = err.response.status;
+                const errorData = err.response.data;
+
+                const errorMessage = errorData?.message ||
+                    errorData?.error ||
+                    errorData?.detail ||
+                    'Failed to fetch student result';
+
+                if (status === 400) {
+                    toast.error(errorMessage);
+                } else if (status === 401) {
+                    toast.error(errorMessage || 'Unauthorized access');
+                } else if (status === 404) {
+                    toast.error(errorMessage || 'Student result not found');
+                } else if (status === 422) {
+                    toast.error(errorMessage || 'Validation error - Please check your input');
+                } else if (status >= 500) {
+                    toast.error('Server error. Please try again later');
+                } else {
+                    toast.error(errorMessage);
+                }
+            } else if (err.request) {
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again.');
+            }
+        } finally {
+            setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));
+        }
+    };
+
+    const handleBackFromResults = () => {
+        setShowResults(false);
+        setCurrentResults(null);
+        setCurrentStudentName('');
+    };
+
+    const getPerformanceColor = (percentage) => {
+        if (percentage >= 80) return 'text-green-600 bg-green-100';
+        if (percentage >= 60) return 'text-blue-600 bg-blue-100';
+        if (percentage >= 40) return 'text-yellow-600 bg-yellow-100';
+        return 'text-red-600 bg-red-100';
+    };
+
+    const getPerformanceLabel = (percentage) => {
+        if (percentage >= 80) return 'Excellent';
+        if (percentage >= 60) return 'Good';
+        if (percentage >= 40) return 'Average';
+        return 'Needs Improvement';
+    };
+
+    if (showResults && currentResults) {
+        return (
+            <div className="h-screen flex flex-col">
+                <HeaderComponent />
+                <div className="flex flex-1 overflow-hidden">
+                    <SidebarComponent
+                        activeTab={sourceTab}
+                        setActiveTab={handleSidebarTabChange}
+                    />
+                    <div className="flex-1 bg-gray-50 flex flex-col">
+                        <StudentResultsPage
+                            resultData={currentResults}
+                            onBack={handleBackFromResults}
+                            studentName={currentStudentName}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-screen flex flex-col">
+            <HeaderComponent />
+            <div className="flex flex-1 overflow-hidden">
+                <SidebarComponent
+                    activeTab={sourceTab}
+                    setActiveTab={handleSidebarTabChange}
+                />
+
+                <div className="flex-1 bg-gray-50 flex flex-col">
+                    <div className="flex items-center justify-between text-white bg-[#7966F1] !px-6 !py-5 flex-shrink-0">
+                        <div className="flex items-center gap-3">
+                            <ArrowLeft className="cursor-pointer" size={20} onClick={handleBack} />
+                            <h2 className="text-lg font-semibold">
+                                Exam Participants
+                            </h2>
+                        </div>
+                        <button
+                            onClick={handleDownloadCSV}
+                            disabled={downloadLoading || participants.length === 0}
+                            className="text-white hover:text-[#7966F1] bg-white/10 hover:bg-white !p-2 rounded-full transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed relative"
+                        >
+                            {downloadLoading ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <Download size={20} />
+                            )}
+                        </button>
+                    </div><div className="flex-1 overflow-y-auto !p-6">
+                        {loading && <CircularLoader />}
+
+                        {!loading && error && (
+                            <div className="flex items-center justify-center h-64">
+                                <div className="text-red-500 text-lg">Error: {error}</div>
+                            </div>
+                        )}
+
+                        {!loading && !error && (
+                            <>
+                                {participants.length > 0 && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 !mb-8">
+                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-gray-600 text-sm font-medium">Total Participants</p>
+                                                    <p className="text-3xl font-bold text-gray-900">{participants.length}</p>
+                                                </div>
+                                                <div className="bg-[#7966F1] bg-opacity-10 !p-3 rounded-full">
+                                                    <User className="text-[#7966F1]" size={24} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-gray-600 text-sm font-medium">Highest Score</p>
+                                                    <p className="text-3xl font-bold text-green-600">
+                                                        {Math.max(...participants.map(p => parseFloat(p.percentage)))}%
+                                                    </p>
+                                                </div>
+                                                <div className="bg-green-100 !p-3 rounded-full">
+                                                    <Trophy className="text-green-600" size={24} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white rounded-xl shadow-md !p-6 border border-gray-200">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-gray-600 text-sm font-medium">Average Score</p>
+                                                    <p className="text-3xl font-bold text-blue-600">
+                                                        {participants.length > 0
+                                                            ? (participants.reduce((sum, p) => sum + parseFloat(p.percentage), 0) / participants.length).toFixed(1)
+                                                            : '0.0'
+                                                        }%
+                                                    </p>
+                                                </div>
+                                                <div className="bg-blue-100 !p-3 rounded-full">
+                                                    <Target className="text-blue-600" size={24} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+                                    <div className="bg-[#7966F1] !px-6 !py-4">
+                                        <h2 className="text-xl font-bold text-white">Participants List</h2>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-left text-sm">
+                                            <thead className="bg-gray-50 border-b">
+                                                <tr>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Sr.No.</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">User ID</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Name</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Marks Obtained</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Total Marks</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Percentage</th>
+                                                    <th className="!px-6 !py-4 font-semibold text-gray-900">Performance</th>
+                                                    <th className="!px-6 !py-4">View</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {participants.length > 0 ? (
+                                                    participants
+                                                        .sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage))
+                                                        .map((participant, index) => (
+                                                            <tr key={participant.userId} className="border-b hover:bg-gray-50 transition-colors">
+                                                                <td className="!px-6 !py-4 font-medium text-gray-900">{index + 1}</td>
+                                                                <td className="!px-6 !py-4">
+                                                                    <span className="text-gray-600 font-mono text-xs bg-gray-100 rounded !px-2 !py-1 inline-block">
+                                                                        {participant.userId}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="!px-6 !py-4 text-gray-900 font-medium">{participant.name}</td>
+                                                                <td className="!px-6 !py-4 text-gray-600 text-center font-semibold">
+                                                                    {participant.marks}
+                                                                </td>
+                                                                <td className="!px-6 !py-4 text-gray-600 text-center font-semibold">
+                                                                    {participant.totalMarks}
+                                                                </td>
+                                                                <td className="!px-6 !py-4 text-center">
+                                                                    <span className="font-bold text-lg text-gray-900">
+                                                                        {participant.percentage}%
+                                                                    </span>
+                                                                </td>
+                                                                <td className="!px-6 !py-4">
+                                                                    <span className={`!px-3 !py-1 rounded-full text-sm font-medium ${getPerformanceColor(parseFloat(participant.percentage))}`}>
+                                                                        {getPerformanceLabel(parseFloat(participant.percentage))}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="!px-6 !py-4">
+                                                                    <div className="relative group inline-block">
+                                                                        <button
+                                                                            onClick={() => handleViewClick(participant)}
+                                                                            disabled={loadingStates[participant.userId]}
+                                                                            className={`transition-colors ${loadingStates[participant.userId]
+                                                                                ? 'text-gray-400 cursor-not-allowed'
+                                                                                : 'text-[#7966F1] hover:text-[#5a4bcc] cursor-pointer'
+                                                                                }`}
+                                                                        >
+                                                                            {loadingStates[participant.userId] ? (
+                                                                                <div className="w-5 h-5 border-2 border-[#7966F1] border-t-transparent rounded-full animate-spin"></div>
+                                                                            ) : (
+                                                                                <Eye size={20} />
+                                                                            )}
+                                                                        </button>
+                                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 !mb-2 !px-2 !py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                                                            View Results
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="8" className="!px-6 !py-12 text-center text-gray-500">
+                                                            <div className="flex flex-col items-center gap-3">
+                                                                <User className="text-gray-300" size={48} />
+                                                                <div>
+                                                                    <p className="text-lg font-medium">No participants found</p>
+                                                                    <p className="text-sm">There are no participants for this exam yet.</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+export default ExamParticipants;

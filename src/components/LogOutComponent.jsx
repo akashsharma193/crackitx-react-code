@@ -1,6 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
+import apiClient from '../api/axiosConfig';
+import { useNavigate } from 'react-router-dom';
 
 const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const navigate = useNavigate();
+
+    const clearLocalStorage = () => {
+        try {
+            localStorage.clear();
+        } catch (error) {
+            console.error('Error clearing localStorage:', error);
+        }
+    };
+
+    const redirectUser = (isSuperAdmin) => {
+        setTimeout(() => {
+            if (isSuperAdmin) {
+                window.location.href = '/super-admin';
+            } else {
+                window.location.href = '/';
+            }
+        }, 1000);
+    };
+
+    const handleLogout = async () => {
+        const userRole = localStorage.getItem('userRole');
+        const isSuperAdmin = userRole === 'SuperAdmin' || userRole === 'Super Admin';
+
+        try {
+            setIsLoggingOut(true);
+
+            const logoutEndpoint = isSuperAdmin ? '/superAdmin/logOut' : '/user-secured/logOut';
+
+            const response = await apiClient.post(logoutEndpoint);
+
+            clearLocalStorage();
+
+            if (response.data.success || response.status === 200) {
+                toast.success('Logout successful');
+                onClose();
+                if (onConfirm) {
+                    onConfirm();
+                }
+                redirectUser(isSuperAdmin);
+            } else {
+                const errorMessage = response.data.message || 'Logout failed. Please try again.';
+                toast.error(errorMessage);
+                clearLocalStorage();
+                redirectUser(isSuperAdmin);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+
+            clearLocalStorage();
+            toast.success('Logout successful');
+            onClose();
+            if (onConfirm) {
+                onConfirm();
+            }
+            redirectUser(isSuperAdmin);
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -15,15 +80,21 @@ const LogoutDialog = ({ isOpen, onClose, onConfirm }) => {
                     <div className="flex justify-center gap-4">
                         <button
                             onClick={onClose}
-                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer"
+                            disabled={isLoggingOut}
+                            className="border border-[#7966F1] text-[#7966F1] font-semibold !px-6 !py-2 rounded-md hover:bg-[#f5f3ff] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancel
                         </button>
                         <button
-                            onClick={onConfirm}
-                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer"
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className="bg-gradient-to-r from-[#7966F1] to-[#9F85FF] text-white font-semibold !px-6 !py-2 rounded-md hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[80px]"
                         >
-                            Logout
+                            {isLoggingOut ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                'Logout'
+                            )}
                         </button>
                     </div>
                 </div>

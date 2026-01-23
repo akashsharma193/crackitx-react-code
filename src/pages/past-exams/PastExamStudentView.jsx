@@ -28,7 +28,7 @@ const PastExamStudentView = () => {
             <HeaderComponent />
 
             <div className="flex flex-1 overflow-hidden">
-                <SidebarComponent activeTab="Past Exams" setActiveTab={() => { }} />
+                <SidebarComponent activeTab="Exam History" setActiveTab={() => { }} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
                     {/* Top Header */}

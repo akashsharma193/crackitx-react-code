@@ -9,7 +9,7 @@ const PastExamDetails = () => {
     const navigate = useNavigate();
 
     const handleBack = () => {
-        navigate('/home', { state: { activeTab: 'Past Exams' } });
+        navigate('/home', { state: { activeTab: 'Exam History' } });
     };
 
     const examDetails = {
@@ -33,7 +33,7 @@ const PastExamDetails = () => {
         <div className="min-h-screen flex flex-col">
             <HeaderComponent />
             <div className="flex flex-1 overflow-hidden">
-                <SidebarComponent activeTab="Past Exams" setActiveTab={() => { }} />
+                <SidebarComponent activeTab="Exam History" setActiveTab={() => { }} />
 
                 <div className="flex-1 bg-gray-50 overflow-y-auto">
                     {/* Top Bar */}
