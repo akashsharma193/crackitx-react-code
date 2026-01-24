@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const pendingRequests = new Map();
 
@@ -71,9 +72,23 @@ apiClient.interceptors.request.use(
     const deviceId = localStorage.getItem("deviceId");
     console.log(token);
 
+    const isTokenExpired = (token) => {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const now = Date.now() / 1000;
+        return payload.exp && payload.exp < now;
+      } catch {
+        return true;
+      }
+    };
+
     if (!config.url.includes("/user-open/")) {
       if (token) {
-        config.headers["Authorization"] = `Bearer ${token}`;
+        if (isTokenExpired(token)) {
+          console.log("Access token expired before request");
+        } else {
+          config.headers["Authorization"] = `Bearer ${token}`;
+        }
       }
     }
 
@@ -173,7 +188,10 @@ apiClient.interceptors.response.use(
       error.response.data = decodeBase64(error.response.data.encPayloadRes);
     }
 
-    if (error.response?.status === 409 && !originalRequest._retry) {
+    if (
+      (error.response?.status === 401 || error.response?.status === 403) &&
+      !originalRequest._retry
+    ) {
       if (originalRequest.url.includes("/user-open/login")) {
         return Promise.reject(error);
       }
@@ -332,9 +350,10 @@ const handleLogout = (message = "Session expired. Please login again.") => {
   localStorage.removeItem("userId");
   localStorage.removeItem("deviceId");
 
-  alert(message);
-
-  window.location.href = "/";
+  toast.error(message);
+  setTimeout(() => {
+    window.location.href = "/";
+  }, 100);
 };
 
 export const checkTokenValidity = () => {

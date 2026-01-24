@@ -121,146 +121,121 @@ const LoginPage = ({ isSuperAdmin = false }) => {
     return true;
   };
 
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
-    const deviceId = getDeviceId();
-
-    const requestData = {
-      email: formData.email.trim(),
-      password: formData.password.trim(),
-    };
-
-    const requestHeaders = {
-      deviceId: deviceId,
-      "Content-Type": "application/json",
-    };
-
-    const loginEndpoint = isSuperAdmin
-      ? "/superAdminOpen/login"
-      : "/user-open/login";
 
     try {
-      const response = await apiClient.post(loginEndpoint, requestData, {
-        headers: requestHeaders,
+      const deviceId = getDeviceId();
+
+      const loginEndpoint = isSuperAdmin
+        ? "/superAdminOpen/login"
+        : "/user-open/login";
+
+      const response = await apiClient.post(
+        loginEndpoint,
+        {
+          email: formData.email.trim(),
+          password: formData.password.trim(),
+        },
+        {
+          headers: {
+            deviceId,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (response.status !== 200 || !response.data?.data) {
+        throw new Error("Invalid login response");
+      }
+
+      const { token, refreshToken, user } = response.data.data;
+
+      if (!token) {
+        throw new Error("Token not received");
+      }
+
+      // Store token FIRST
+      localStorage.setItem("authToken", token);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
+
+      // Check role AFTER storing token
+      const userRole = checkUserRole(token);
+
+      if (isSuperAdmin && userRole !== "Super Admin") {
+        toast.error("Access denied. Super Admin credentials required.");
+        handleLogout();
+        return;
+      }
+
+      if (!isSuperAdmin && userRole === "Super Admin") {
+        toast.error("Please use the Super Admin login portal.");
+        handleLogout();
+        return;
+      }
+
+      // Store user data
+      if (user) {
+        localStorage.setItem("userData", JSON.stringify(user));
+
+        const userId = user.userId || user.id || user.user_id || user.ID;
+
+        if (userId) {
+          localStorage.setItem("userId", userId.toString());
+        }
+      }
+
+      // Fallback: extract userId from token if missing
+      const decoded = decodeJWT(token);
+      if (decoded && !localStorage.getItem("userId")) {
+        const tokenUserId =
+          decoded.userId || decoded.id || decoded.user_id || decoded.sub;
+
+        if (tokenUserId) {
+          localStorage.setItem("userId", tokenUserId.toString());
+        }
+      }
+
+      toast.success("Login successful");
+
+      // Reset form
+      setFormData({ email: "", password: "" });
+      setPasswordValidation({
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecial: false,
+        hasMinLength: false,
       });
 
-      if (response.data && response.status === 200) {
-        const userRole = response.data.data.token
-          ? checkUserRole(response.data.data.token)
-          : null;
-
-        if (isSuperAdmin && userRole !== "Super Admin") {
-          toast.error("Access denied. Super Admin credentials required.");
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("userData");
-          localStorage.removeItem("userRole");
-          setIsLoading(false);
-          return;
-        }
-
-        if (!isSuperAdmin && userRole === "Super Admin") {
-          toast.error("Please use the Super Admin login portal.");
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("userData");
-          localStorage.removeItem("userRole");
-          setIsLoading(false);
-          return;
-        }
-
-        toast.success("Login successful!");
-
-        if (response.data.data.token) {
-          localStorage.setItem("authToken", response.data.data.token);
-        }
-        if (response.data.data.refreshToken) {
-          localStorage.setItem("refreshToken", response.data.data.refreshToken);
-        }
-
-        if (response.data.data.user) {
-          const userData = response.data.data.user;
-
-          console.log("Login Response User Data:", userData);
-
-          localStorage.setItem("userData", JSON.stringify(userData));
-
-          const userId =
-            userData.userId || userData.id || userData.user_id || userData.ID;
-          if (userId) {
-            localStorage.setItem("userId", userId.toString());
-            console.log("Stored User ID:", userId);
-          } else {
-            console.warn("No userId found in user data:", userData);
-          }
-        }
-
-        const token = localStorage.getItem("authToken");
-
-        const decodedToken = decodeJWT(token);
-        if (decodedToken) {
-          console.log("Decoded Token:", decodedToken);
-
-          const tokenUserId =
-            decodedToken.userId ||
-            decodedToken.id ||
-            decodedToken.user_id ||
-            decodedToken.sub;
-          if (tokenUserId && !localStorage.getItem("userId")) {
-            localStorage.setItem("userId", tokenUserId.toString());
-            console.log("Stored User ID from token:", tokenUserId);
-          }
-        }
-
-        setFormData({
-          email: "",
-          password: "",
-        });
-        setPasswordValidation({
-          hasUppercase: false,
-          hasLowercase: false,
-          hasNumber: false,
-          hasSpecial: false,
-          hasMinLength: false,
-        });
-
-        navigate("/home", { replace: true });
-      }
+      navigate("/home", { replace: true });
     } catch (error) {
       console.error("Login error:", error);
 
-      if (error.response) {
-        const status = error.response.status;
-        const message =
-          error.response.data?.message ||
-          error.response.data?.error ||
-          error.response.data?.detail ||
-          "Login failed";
+      const status = error.response?.status;
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Login failed";
 
-        if (status === 400) {
-          toast.error(message);
-        } else if (status === 401) {
-          toast.error(message || "Invalid email or password");
-        } else if (status === 404) {
-          toast.error(message || "User not found");
-        } else if (status === 422) {
-          toast.error(message || "Please check your input and try again");
-        } else if (status >= 500) {
-          toast.error("Server error. Please try again later");
-        } else {
-          toast.error(message);
-        }
-      } else if (error.request) {
-        toast.error("Network error. Please check your connection");
-      } else {
-        toast.error("An unexpected error occurred");
-      }
+      if (status === 400) toast.error(message);
+      else if (status === 401) toast.error("Invalid email or password");
+      else if (status === 404) toast.error("User not found");
+      else if (status === 422) toast.error("Invalid input");
+      else if (status >= 500)
+        toast.error("Server error. Please try again later");
+      else toast.error(message);
     } finally {
       setIsLoading(false);
     }
