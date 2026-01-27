@@ -1,5 +1,4 @@
 import axios from "axios";
-import { toast } from "react-toastify";
 
 const pendingRequests = new Map();
 
@@ -14,6 +13,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json; charset=utf-8",
     Accept: "application/json; charset=utf-8",
+    "Accept-Charset": "utf-8",
     encDisabled: "false",
   },
 });
@@ -70,18 +70,6 @@ apiClient.interceptors.request.use(
 
     const token = localStorage.getItem("authToken");
     const deviceId = localStorage.getItem("deviceId");
-    console.log(token);
-
-    // const isTokenExpired = (token) => {
-    //   try {
-    //     const payload = JSON.parse(atob(token.split(".")[1]));
-    //     const now = Date.now() / 1000;
-    //     return payload.exp && payload.exp < now;
-    //   } catch {
-    //     return true;
-    //   }
-    // };
-
     const isAuthFreeApi =
       config.url.includes("/user-open/login") ||
       config.url.includes("/superAdminOpen/login") ||
@@ -113,15 +101,22 @@ apiClient.interceptors.request.use(
     config.headers["Accept"] = "application/json; charset=utf-8";
     config.headers["Accept-Charset"] = "utf-8";
 
-    if (
-      (config.method === "get" || config.method === "delete") &&
-      !config.data
-    ) {
-      config.data = { encPayload: encodeBase64({}) };
+    if (config.method === "get" || config.method === "delete") {
+      if (!config.data) {
+        config.data = {
+          encPayload: encodeBase64({}),
+        };
+      }
     }
 
     if (config.data && !config.data.encPayload && !config._skipEncoding) {
-      config.data = { encPayload: encodeBase64(config.data) };
+      console.log("Encoding request data:", config.data);
+      config.data = {
+        encPayload: encodeBase64(config.data),
+      };
+      console.log("Encoded request data:", config.data);
+    } else if (config.data && config.data.encPayload) {
+      console.log("Request already has encPayload, skipping encoding");
     }
 
     console.log("API Request:", {
@@ -180,10 +175,7 @@ apiClient.interceptors.response.use(
       error.response.data = decodeBase64(error.response.data.encPayloadRes);
     }
 
-    if (
-      (error.response?.status === 401 || error.response?.status === 403) &&
-      !originalRequest._retry
-    ) {
+    if (error.response?.status === 409 && !originalRequest._retry) {
       if (originalRequest.url.includes("/user-open/login")) {
         return Promise.reject(error);
       }
@@ -342,10 +334,9 @@ const handleLogout = (message = "Session expired. Please login again.") => {
   localStorage.removeItem("userId");
   localStorage.removeItem("deviceId");
 
-  toast.error(message);
-  setTimeout(() => {
-    window.location.href = "/";
-  }, 100);
+  alert(message);
+
+  window.location.href = "/";
 };
 
 export const checkTokenValidity = () => {
