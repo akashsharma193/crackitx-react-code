@@ -72,24 +72,23 @@ apiClient.interceptors.request.use(
     const deviceId = localStorage.getItem("deviceId");
     console.log(token);
 
-    const isTokenExpired = (token) => {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const now = Date.now() / 1000;
-        return payload.exp && payload.exp < now;
-      } catch {
-        return true;
-      }
-    };
+    // const isTokenExpired = (token) => {
+    //   try {
+    //     const payload = JSON.parse(atob(token.split(".")[1]));
+    //     const now = Date.now() / 1000;
+    //     return payload.exp && payload.exp < now;
+    //   } catch {
+    //     return true;
+    //   }
+    // };
 
-    if (!config.url.includes("/user-open/")) {
-      if (token) {
-        if (isTokenExpired(token)) {
-          console.log("Access token expired before request");
-        } else {
-          config.headers["Authorization"] = `Bearer ${token}`;
-        }
-      }
+    const isAuthFreeApi =
+      config.url.includes("/user-open/login") ||
+      config.url.includes("/superAdminOpen/login") ||
+      config.url.includes("/user-open/refreshToken");
+
+    if (token && !isAuthFreeApi) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     if (deviceId) {
@@ -114,22 +113,15 @@ apiClient.interceptors.request.use(
     config.headers["Accept"] = "application/json; charset=utf-8";
     config.headers["Accept-Charset"] = "utf-8";
 
-    if (config.method === "get" || config.method === "delete") {
-      if (!config.data) {
-        config.data = {
-          encPayload: encodeBase64({}),
-        };
-      }
+    if (
+      (config.method === "get" || config.method === "delete") &&
+      !config.data
+    ) {
+      config.data = { encPayload: encodeBase64({}) };
     }
 
     if (config.data && !config.data.encPayload && !config._skipEncoding) {
-      console.log("Encoding request data:", config.data);
-      config.data = {
-        encPayload: encodeBase64(config.data),
-      };
-      console.log("Encoded request data:", config.data);
-    } else if (config.data && config.data.encPayload) {
-      console.log("Request already has encPayload, skipping encoding");
+      config.data = { encPayload: encodeBase64(config.data) };
     }
 
     console.log("API Request:", {

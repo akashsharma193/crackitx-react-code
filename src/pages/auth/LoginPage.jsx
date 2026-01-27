@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import WelcomeComponent from "../../components/auth/WelcomeComponent";
 import { useNavigate, Link } from "react-router-dom";
 import apiClient from "../../api/axiosConfig";
@@ -7,6 +7,13 @@ import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = ({ isSuperAdmin = false }) => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userRole");
+  }, []);
 
   const [formData, setFormData] = useState({
     email: "",
