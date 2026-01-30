@@ -73,7 +73,9 @@ apiClient.interceptors.request.use(
     const isAuthFreeApi =
       config.url.includes("/user-open/login") ||
       config.url.includes("/superAdminOpen/login") ||
-      config.url.includes("/user-open/refreshToken");
+      config.url.includes("/user-open/refreshToken") ||
+      config.url.includes("/user-open/getAllBatchByOrganization") ||
+      config.url.includes("/user-open/getAllOrganization");
 
     if (token && !isAuthFreeApi) {
       config.headers.Authorization = `Bearer ${token}`;

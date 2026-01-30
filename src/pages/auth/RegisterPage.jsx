@@ -11,9 +11,6 @@ import {
   Building,
   Lock,
   CheckCircle,
-  Eye,
-  EyeOff,
-  ChevronDown,
 } from "lucide-react";
 
 const RegisterPage = () => {
@@ -507,18 +504,44 @@ const RegisterPage = () => {
                   />
                 </div>
 
-                <div className="relative">
+                <div className="relative" ref={orgDropdownRef}>
                   <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search Organization"
                     value={orgSearchTerm}
-                    onChange={(e) => setOrgSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setOrgSearchTerm(e.target.value);
+                      setOrgDropdownOpen(true);
+                    }}
+                    onFocus={() => setOrgDropdownOpen(true)}
                     disabled={isLoading || isLoadingOrgs}
                     className="w-full bg-gray-100 rounded-lg border border-slate-300 text-gray-900 placeholder-gray-500
                          !pl-12 !pr-12 !py-3 sm:!py-4 text-sm
                          focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
                   />
+                  {orgDropdownOpen && (
+                    <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg p-4">
+                      {filteredOrganizations.length > 0 ? (
+                        filteredOrganizations.map((org) => (
+                          <div
+                            key={org.id}
+                            onClick={() => handleOrgSelect(org)}
+                            className="!px-4 !py-2 cursor-pointer hover:bg-gray-100 text-sm"
+                          >
+                            <div className="font-medium">{org.name}</div>
+                            <div className="text-gray-500 text-xs">
+                              {org.description}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-gray-500 text-sm">
+                          No organizations found
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="relative">
