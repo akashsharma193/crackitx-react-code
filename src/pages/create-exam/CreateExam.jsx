@@ -225,8 +225,8 @@ const ImportQuestionBankDialog = ({
 }) => {
   const [bankFormData, setBankFormData] = useState({
     subject: "",
+    topic: "",
     critical: "",
-    language: "",
   });
   const [questionList, setQuestionList] = useState([]);
   const [allSelectedQuestions, setAllSelectedQuestions] = useState([]);
@@ -237,9 +237,79 @@ const ImportQuestionBankDialog = ({
   const [pageSize] = useState(10);
   const [allQuestionsMap, setAllQuestionsMap] = useState(new Map());
 
+  const [allQuestionsCache, setAllQuestionsCache] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [topics, setTopics] = useState([]);
+
+  const [subjectDropdownOpen, setSubjectDropdownOpen] = useState(false);
+  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false);
+
+  const subjectRef = useRef(null);
+  const topicRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchSubjects = async () => {
+      try {
+        const res = await apiClient.post("/questionGenerator/getQuestionList", {
+          pageSize: 1000,
+          pageNumber: 0,
+          filter: {},
+        });
+
+        if (res.data?.success) {
+          const content = res.data.data.content || [];
+          setAllQuestionsCache(content);
+
+          const uniqueSubjects = [
+            ...new Set(content.map((q) => q.subject).filter(Boolean)),
+          ];
+
+          setSubjects(uniqueSubjects);
+        }
+      } catch (err) {
+        toast.error("Failed to load subjects");
+      }
+    };
+
+    fetchSubjects();
+  }, [isOpen]);
+
+  const handleSubjectSelect = (subject) => {
+    handleBankInputChange("subject", subject);
+    handleBankInputChange("topic", "");
+
+    const filteredTopics = [
+      ...new Set(
+        allQuestionsCache
+          .filter((q) => q.subject === subject)
+          .map((q) => q.topic)
+          .filter(Boolean),
+      ),
+    ];
+
+    setTopics(filteredTopics);
+    setSubjectDropdownOpen(false);
+  };
+
   const handleBankInputChange = (field, value) => {
     setBankFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!subjectRef.current?.contains(e.target)) {
+        setSubjectDropdownOpen(false);
+      }
+      if (!topicRef.current?.contains(e.target)) {
+        setTopicDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleSearch = async (page = 0) => {
     if (!bankFormData.subject.trim()) {
@@ -257,12 +327,12 @@ const ImportQuestionBankDialog = ({
         },
       };
 
-      if (bankFormData.critical) {
-        requestBody.filter.criticality = bankFormData.critical;
+      if (bankFormData.topic) {
+        requestBody.filter.topic = bankFormData.topic;
       }
 
-      if (bankFormData.language) {
-        requestBody.filter.language = bankFormData.language;
+      if (bankFormData.critical) {
+        requestBody.filter.criticality = bankFormData.critical;
       }
 
       const response = await apiClient.post(
@@ -399,7 +469,7 @@ const ImportQuestionBankDialog = ({
   };
 
   const resetDialog = () => {
-    setBankFormData({ subject: "", critical: "", language: "" });
+    setBankFormData({ subject: "", critical: "", topic: "" });
     setQuestionList([]);
     setAllSelectedQuestions([]);
     setCurrentPage(0);
@@ -439,13 +509,64 @@ const ImportQuestionBankDialog = ({
             <label className="block text-sm font-medium text-gray-600 !mb-2">
               Subject <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              value={bankFormData.subject}
-              onChange={(e) => handleBankInputChange("subject", e.target.value)}
-              className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-              placeholder="Enter subject name"
-            />
+            <div className="relative" ref={subjectRef}>
+              <input
+                readOnly
+                value={bankFormData.subject}
+                placeholder="Select Subject"
+                onClick={() => setSubjectDropdownOpen(true)}
+                className="w-full !px-4 !py-3 border border-[#5E48EF] focus:outline-none rounded-lg bg-[#5E48EF]/5 cursor-pointer"
+              />
+
+              {subjectDropdownOpen && (
+                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 max-h-56 overflow-y-auto shadow-lg">
+                  {subjects.map((subj) => (
+                    <div
+                      key={subj}
+                      onClick={() => handleSubjectSelect(subj)}
+                      className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {subj}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 !mb-2">
+              Topic <span className="text-red-500">*</span>
+            </label>
+            <div className="relative" ref={topicRef}>
+              <input
+                readOnly
+                disabled={!bankFormData.subject}
+                value={bankFormData.topic}
+                placeholder="Select Topic"
+                onClick={() =>
+                  bankFormData.subject && setTopicDropdownOpen(true)
+                }
+                className="w-full !px-4 !py-3 border border-[#5E48EF] focus:outline-none rounded-lg bg-[#5E48EF]/5 cursor-pointer disabled:opacity-50"
+              />
+
+              {topicDropdownOpen && (
+                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 max-h-56 overflow-y-auto shadow-lg">
+                  {topics.map((topic) => (
+                    <div
+                      key={topic}
+                      onClick={() => {
+                        handleBankInputChange("topic", topic);
+                        setTopicDropdownOpen(false);
+                      }}
+                      className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {topic}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -460,21 +581,6 @@ const ImportQuestionBankDialog = ({
               }
               className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
               placeholder="e.g., HIGH, MEDIUM, LOW"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-600 !mb-2">
-              Language (Optional)
-            </label>
-            <input
-              type="text"
-              value={bankFormData.language}
-              onChange={(e) =>
-                handleBankInputChange("language", e.target.value)
-              }
-              className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-              placeholder="e.g., English, Marathi"
             />
           </div>
         </div>
