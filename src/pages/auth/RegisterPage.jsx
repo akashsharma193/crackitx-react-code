@@ -12,6 +12,7 @@ import {
   Lock,
   CheckCircle,
 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -588,6 +589,7 @@ const RegisterPage = () => {
 
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
@@ -596,13 +598,23 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     disabled={isLoading}
                     className="w-full bg-gray-100 rounded-lg border border-slate-300 text-gray-900
-                         !pl-12 !pr-12 !py-3 sm:!py-4 text-sm
-                         focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
+      !pl-12 !pr-12 !py-3 sm:!py-4 text-sm
+      focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
                   />
+
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    disabled={isLoading}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
 
                 <div className="relative">
                   <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
@@ -611,9 +623,22 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     disabled={isLoading}
                     className="w-full bg-gray-100 rounded-lg border border-slate-300 text-gray-900
-                         !pl-12 !pr-12 !py-3 sm:!py-4 text-sm
-                         focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
+      !pl-12 !pr-12 !py-3 sm:!py-4 text-sm
+      focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
                   />
+
+                  <button
+                    type="button"
+                    onClick={toggleConfirmPasswordVisibility}
+                    disabled={isLoading}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
+                  </button>
                 </div>
               </div>
               {formData.password && (

@@ -36,18 +36,14 @@ const CreateSubject = () => {
 
       const apiData = response.data?.data;
 
-      if (apiData?.content) {
-        setSubjects(apiData.content);
-      }
+      setSubjects(apiData?.content || []);
 
-      if (apiData?.page) {
-        setPagination((prev) => ({
-          ...prev,
-          totalElements: apiData.page.totalElements || 0,
-          totalPages: apiData.page.totalPages || 0,
-        }));
-      }
-    } catch (error) {
+      setPagination((prev) => ({
+        ...prev,
+        totalElements: apiData?.page?.totalElements || 0,
+        totalPages: apiData?.page?.totalPages || 0,
+      }));
+    } catch {
       toast.error("Failed to load subjects");
     }
   };
@@ -57,16 +53,13 @@ const CreateSubject = () => {
     if (!formData.name.trim()) newErrors.name = "Subject name is required";
     if (!formData.description.trim())
       newErrors.description = "Description is required";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({ ...prev, [name]: value }));
-
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -79,16 +72,10 @@ const CreateSubject = () => {
   const createSubject = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.post("/subject/create", formData);
-
-      console.log("Subject created:", response.data);
-
+      await apiClient.post("/subject/create", formData);
       toast.success("Subject created successfully");
-
-      setPagination((prev) => ({
-        ...prev,
-        pageNumber: 0,
-      }));
+      setPagination((prev) => ({ ...prev, pageNumber: 0 }));
+      fetchSubjects();
     } catch {
       toast.error("Failed to create subject");
     } finally {
@@ -99,19 +86,13 @@ const CreateSubject = () => {
   const updateSubject = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.post("/subject/update", {
-        id: editingSubject.id,
+      await apiClient.post("/subject/update", {
+        id: editingSubject.id || editingSubject._id,
         ...formData,
       });
-
-      console.log("Subject updated:", response.data);
-
       toast.success("Subject updated successfully");
-
-      setPagination((prev) => ({
-        ...prev,
-        pageNumber: 0,
-      }));
+      setPagination((prev) => ({ ...prev, pageNumber: 0 }));
+      fetchSubjects();
     } catch {
       toast.error("Failed to update subject");
     } finally {
@@ -122,9 +103,7 @@ const CreateSubject = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     editingSubject ? updateSubject() : createSubject();
-
     setFormData({ name: "", description: "", isActive: true });
     setEditingSubject(null);
     setErrors({});
@@ -133,9 +112,9 @@ const CreateSubject = () => {
   const handleEdit = (subject) => {
     setEditingSubject(subject);
     setFormData({
-      name: subject.name,
-      description: subject.description,
-      isActive: subject.isActive,
+      name: subject.name || "",
+      description: subject.description || "",
+      isActive: Boolean(subject.isActive),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -179,7 +158,11 @@ const CreateSubject = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     disabled={loading}
-                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-opacity-50 ${errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-400 focus:ring-[#5E48EF]"}`}
+                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-opacity-50 ${
+                      errors.name
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-400 focus:ring-[#5E48EF]"
+                    }`}
                     placeholder="Enter subject name"
                   />
                   {errors.name && (
@@ -217,7 +200,11 @@ const CreateSubject = () => {
                     onChange={handleInputChange}
                     rows={4}
                     disabled={loading}
-                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-opacity-50 ${errors.description ? "border-red-500 focus:ring-red-500" : "border-gray-400 focus:ring-[#5E48EF]"}`}
+                    className={`w-full !px-4 !py-3 border rounded-lg focus:outline-none focus:ring-1 focus:ring-opacity-50 ${
+                      errors.description
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-400 focus:ring-[#5E48EF]"
+                    }`}
                     placeholder="Enter subject description"
                   />
                   {errors.description && (
@@ -289,7 +276,7 @@ const CreateSubject = () => {
                     <tbody>
                       {subjects.map((subject, index) => (
                         <tr
-                          key={subject.id}
+                          key={subject.id || subject._id}
                           className={`border-b border-gray-300 transition-colors hover:bg-gray-50 ${
                             index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
                           }`}
@@ -317,7 +304,7 @@ const CreateSubject = () => {
                           <td className="!px-6 !py-4 text-center">
                             <button
                               onClick={() => handleEdit(subject)}
-                              className="inline-flex items-center justify-center rounded-md !p-2 text-[#7966F1] bg-gray-100 hover:bg-[#7966F1]/10 transition-colors"
+                              className="relative z-10 inline-flex items-center justify-center rounded-md !p-2 text-[#7966F1] bg-gray-100 hover:bg-[#7966F1]/10 transition-colors"
                             >
                               <Edit2 size={18} />
                             </button>

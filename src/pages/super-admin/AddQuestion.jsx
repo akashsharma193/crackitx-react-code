@@ -7,7 +7,6 @@ const AddQuestion = () => {
   const [formData, setFormData] = useState({
     question: "",
     correctAnswer: null,
-    color: "#7966F1",
     subject: "",
     topic: "",
     criticality: "HIGH",
@@ -243,13 +242,11 @@ const AddQuestion = () => {
 
     try {
       const questionData = {
-        // id: '',
         question:
           questionInputMode === "text" || questionInputMode === "both"
             ? formData.question
             : "",
         isImage: questionInputMode === "image",
-        color: formData.color,
         subject: formData.subject,
         topic: formData.topic,
         criticality: formData.criticality,
@@ -295,7 +292,6 @@ const AddQuestion = () => {
         setFormData({
           question: "",
           correctAnswer: null,
-          color: "#7966F1",
           subject: "",
           topic: "",
           criticality: "HIGH",
@@ -482,27 +478,6 @@ const AddQuestion = () => {
               {errors.language && (
                 <p className="text-red-500 text-xs !mt-1">{errors.language}</p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 !mb-2">
-                Color <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => handleInputChange("color", e.target.value)}
-                  className="w-16 h-12 border border-gray-400 rounded-lg cursor-pointer !p-1"
-                />
-                <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => handleInputChange("color", e.target.value)}
-                  className="flex-1 !px-4 !py-3 text-gray-700 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
-                  placeholder="#7966F1"
-                />
-              </div>
             </div>
           </div>
 
