@@ -35,33 +35,31 @@ const AddQuestion = () => {
   const fetchSubjects = async () => {
     setIsLoadingSubjects(true);
     try {
-      const response = await apiClient.post("/subject/getAll", {
-        pageSize: 100,
-        pageNumber: 0,
-        filter: {},
-      });
-      const apiData = response.data?.data;
+      let allSubjects = [];
+      let pageNumber = 0;
+      let hasMore = true;
 
-      if (apiData?.content) {
-        setSubjects(apiData.content);
+      while (hasMore) {
+        const response = await apiClient.post("/subject/getAll", {
+          pageSize: 100,
+          pageNumber,
+          filter: {},
+        });
+
+        const apiData = response.data?.data;
+
+        if (apiData?.content?.length) {
+          allSubjects = [...allSubjects, ...apiData.content];
+          pageNumber += 1;
+          hasMore = !apiData.last; // or pageNumber < apiData.totalPages
+        } else {
+          hasMore = false;
+        }
       }
+
+      setSubjects(allSubjects);
     } catch (error) {
-      console.error("Error fetching subjects:", error);
-      if (error.response) {
-        const errorData = error.response.data;
-        const errorMessage =
-          errorData?.message ||
-          errorData?.error ||
-          errorData?.detail ||
-          "Failed to load subjects";
-        toast.error(errorMessage);
-      } else if (error.request) {
-        toast.error(
-          "Network error. Please check your connection and try again.",
-        );
-      } else {
-        toast.error("Failed to load subjects");
-      }
+      toast.error("Failed to load subjects");
     } finally {
       setIsLoadingSubjects(false);
     }
@@ -70,33 +68,31 @@ const AddQuestion = () => {
   const fetchTopics = async () => {
     setIsLoadingTopics(true);
     try {
-      const response = await apiClient.post("/topic/getAll", {
-        pageSize: 100,
-        pageNumber: 0,
-        filter: {},
-      });
-      const apiData = response.data?.data;
+      let allTopics = [];
+      let pageNumber = 0;
+      let hasMore = true;
 
-      if (apiData?.content) {
-        setTopics(apiData.content);
+      while (hasMore) {
+        const response = await apiClient.post("/topic/getAll", {
+          pageSize: 100,
+          pageNumber,
+          filter: {},
+        });
+
+        const apiData = response.data?.data;
+
+        if (apiData?.content?.length) {
+          allTopics = [...allTopics, ...apiData.content];
+          pageNumber += 1;
+          hasMore = !apiData.last;
+        } else {
+          hasMore = false;
+        }
       }
+
+      setTopics(allTopics);
     } catch (error) {
-      console.error("Error fetching topics:", error);
-      if (error.response) {
-        const errorData = error.response.data;
-        const errorMessage =
-          errorData?.message ||
-          errorData?.error ||
-          errorData?.detail ||
-          "Failed to load topics";
-        toast.error(errorMessage);
-      } else if (error.request) {
-        toast.error(
-          "Network error. Please check your connection and try again.",
-        );
-      } else {
-        toast.error("Failed to load topics");
-      }
+      toast.error("Failed to load topics");
     } finally {
       setIsLoadingTopics(false);
     }
@@ -336,20 +332,29 @@ const AddQuestion = () => {
     onChange,
     disabled,
     error,
+    searchable = true,
+    allowClear = true,
   }) => {
     const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
     const ref = useRef(null);
 
     useEffect(() => {
       const handleClickOutside = (e) => {
         if (ref.current && !ref.current.contains(e.target)) {
           setOpen(false);
+          setSearch("");
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const filteredOptions = options.filter((item) => {
+      const label = item.name || item;
+      return label.toLowerCase().includes(search.toLowerCase());
+    });
 
     return (
       <div ref={ref} className="relative w-full">
@@ -359,6 +364,7 @@ const AddQuestion = () => {
           </label>
         )}
 
+        {/* Dropdown button */}
         <button
           type="button"
           disabled={disabled}
@@ -369,37 +375,81 @@ const AddQuestion = () => {
               : "border-gray-400 focus:ring-[#5E48EF]"
           } ${disabled ? "bg-gray-100 cursor-not-allowed" : "cursor-pointer"}`}
         >
-          <span className={value ? "text-gray-700" : "text-gray-700"}>
+          <span className={value ? "text-gray-700" : "text-gray-400"}>
             {value || placeholder}
           </span>
           <ChevronDown className="w-5 h-5 text-gray-700" />
         </button>
 
         {open && !disabled && (
-          <ul className="absolute z-50 top-[5rem] w-full max-h-56 overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg">
-            {options.length === 0 ? (
-              <li className="!px-4 !py-3 text-sm text-gray-500">
-                No options available
-              </li>
-            ) : (
-              options.map((item) => (
-                <li
-                  key={item.id || item}
-                  onClick={() => {
-                    onChange(item.name || item);
-                    setOpen(false);
-                  }}
-                  className={`!px-4 !py-3 text-sm cursor-pointer hover:bg-[#F2F0FF] ${
-                    value === (item.name || item)
-                      ? "bg-[#EAE7FF] text-[#5E48EF] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  {item.name || item}
-                </li>
-              ))
+          <div className="absolute z-50 top-[5rem] w-full rounded-lg border border-gray-300 bg-white shadow-lg">
+            {/* Search bar */}
+            {searchable && (
+              <div className="flex items-center gap-2 !p-2 border-b border-gray-200">
+                <input
+                  type="text"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search..."
+                  className="flex-1 !px-3 !py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
+                />
+
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="text-gray-500 hover:text-red-500 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             )}
-          </ul>
+
+            <ul className="max-h-52 overflow-auto">
+              {/* Clear selection */}
+              {allowClear && value && (
+                <li
+                  onClick={() => {
+                    onChange("");
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className="!px-4 !py-3 text-sm cursor-pointer text-red-500 hover:bg-red-50"
+                >
+                  Clear selection
+                </li>
+              )}
+
+              {filteredOptions.length === 0 ? (
+                <li className="!px-4 !py-3 text-sm text-gray-500">
+                  No results found
+                </li>
+              ) : (
+                filteredOptions.map((item) => {
+                  const itemValue = item.name || item;
+                  return (
+                    <li
+                      key={item.id || itemValue}
+                      onClick={() => {
+                        onChange(itemValue);
+                        setOpen(false);
+                        setSearch("");
+                      }}
+                      className={`!px-4 !py-3 text-sm cursor-pointer hover:bg-[#F2F0FF] ${
+                        value === itemValue
+                          ? "bg-[#EAE7FF] text-[#5E48EF] font-medium"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {itemValue}
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
         )}
 
         {error && <p className="text-red-500 text-xs !mt-1">{error}</p>}

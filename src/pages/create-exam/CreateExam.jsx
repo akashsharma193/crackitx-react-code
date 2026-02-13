@@ -244,7 +244,19 @@ const ImportQuestionBankDialog = ({
   const [topics, setTopics] = useState([]);
   const [isTopicOpen, setIsTopicOpen] = useState(false);
   const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [topicSearch, setTopicSearch] = useState("");
+
   const topicRef = useRef(null);
+
+  const filteredSubjects = subjects.filter((s) =>
+    s.name.toLowerCase().includes(subjectSearch.toLowerCase()),
+  );
+
+  const filteredTopics = topics.filter((t) =>
+    t.name.toLowerCase().includes(topicSearch.toLowerCase()),
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -519,34 +531,75 @@ const ImportQuestionBankDialog = ({
             </label>
 
             <div className="relative" ref={subjectRef}>
-              <input
-                readOnly
-                value={bankFormData.subject}
-                placeholder="Select Subject"
-                onClick={() => setIsSubjectOpen((prev) => !prev)}
-                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-              />
+              <div className="relative">
+                <input
+                  readOnly
+                  value={bankFormData.subject}
+                  placeholder="Select Subject"
+                  onClick={() => setIsSubjectOpen((prev) => !prev)}
+                  className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg bg-[#5E48EF]/5 cursor-pointer"
+                />
+
+                {bankFormData.subject && (
+                  <button
+                    type="button"
+                    onClick={() => handleBankInputChange("subject", "")}
+                    className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
 
               {isSubjectOpen && (
-                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 max-h-56 overflow-y-auto shadow-lg">
-                  {subjects.length > 0 ? (
-                    subjects.map((subj) => (
+                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 shadow-lg">
+                  <div className="!p-2 border-b">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={subjectSearch}
+                      onChange={(e) => setSubjectSearch(e.target.value)}
+                      placeholder="Search subject..."
+                      className="w-full !px-3 !py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
+                    />
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto">
+                    {bankFormData.subject && (
                       <div
-                        key={subj.id || subj.name}
                         onClick={() => {
-                          handleBankInputChange("subject", subj.name);
+                          handleBankInputChange("subject", "");
+                          setSubjectSearch("");
                           setIsSubjectOpen(false);
                         }}
-                        className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer"
+                        className="!px-4 !py-3 text-sm text-red-500 hover:bg-red-50 cursor-pointer border-b"
                       >
-                        {subj.name}
+                        Clear selection
                       </div>
-                    ))
-                  ) : (
-                    <div className="!px-4 !py-3 text-sm text-gray-500">
-                      No subjects found
-                    </div>
-                  )}
+                    )}
+
+                    {filteredSubjects.length > 0 ? (
+                      filteredSubjects.map((subj) => (
+                        <div
+                          key={subj.id}
+                          onClick={() => {
+                            handleBankInputChange("subject", subj.name);
+                            setIsSubjectOpen(false);
+                            setSubjectSearch("");
+                          }}
+                          className="!px-4 !py-3 hover:bg-[#F2F0FF] cursor-pointer"
+                        >
+                          {subj.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="!px-4 !py-3 text-sm text-gray-500">
+                        No subjects found
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -558,36 +611,77 @@ const ImportQuestionBankDialog = ({
             </label>
 
             <div className="relative" ref={topicRef}>
-              <input
-                readOnly
-                value={bankFormData.topic}
-                placeholder={
-                  isLoadingTopics ? "Loading topics..." : "Select Topic"
-                }
-                onClick={() => setIsTopicOpen((prev) => !prev)}
-                className="w-full !px-4 !py-3 border border-[#5E48EF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E48EF] focus:border-transparent bg-[#5E48EF]/5"
-              />
+              <div className="relative">
+                <input
+                  readOnly
+                  value={bankFormData.topic}
+                  placeholder={
+                    isLoadingTopics ? "Loading topics..." : "Select Topic"
+                  }
+                  onClick={() => setIsTopicOpen((prev) => !prev)}
+                  className="w-full !px-4 !py-3 pr-10 border border-[#5E48EF] rounded-lg bg-[#5E48EF]/5 cursor-pointer"
+                />
+
+                {bankFormData.topic && (
+                  <button
+                    type="button"
+                    onClick={() => handleBankInputChange("topic", "")}
+                    className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
 
               {isTopicOpen && (
-                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 max-h-56 overflow-y-auto shadow-lg">
-                  {topics.length > 0 ? (
-                    topics.map((topic) => (
+                <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-2 shadow-lg">
+                  <div className="!p-2 border-b">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={topicSearch}
+                      onChange={(e) => setTopicSearch(e.target.value)}
+                      placeholder="Search topic..."
+                      className="w-full !px-3 !py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-[#5E48EF]"
+                    />
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto">
+                    {bankFormData.topic && (
                       <div
-                        key={topic.id || topic.name}
                         onClick={() => {
-                          handleBankInputChange("topic", topic.name);
+                          handleBankInputChange("topic", "");
+                          setTopicSearch("");
                           setIsTopicOpen(false);
                         }}
-                        className="!px-4 !py-3 hover:bg-gray-100 cursor-pointer"
+                        className="!px-4 !py-3 text-sm text-red-500 hover:bg-red-50 cursor-pointer border-b"
                       >
-                        {topic.name}
+                        Clear selection
                       </div>
-                    ))
-                  ) : (
-                    <div className="!px-4 !py-3 text-sm text-gray-500">
-                      No topics found
-                    </div>
-                  )}
+                    )}
+
+                    {filteredTopics.length > 0 ? (
+                      filteredTopics.map((topic) => (
+                        <div
+                          key={topic.id}
+                          onClick={() => {
+                            handleBankInputChange("topic", topic.name);
+                            setIsTopicOpen(false);
+                            setTopicSearch("");
+                          }}
+                          className="!px-4 !py-3 hover:bg-[#F2F0FF] cursor-pointer"
+                        >
+                          {topic.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="!px-4 !py-3 text-sm text-gray-500">
+                        No topics found
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
