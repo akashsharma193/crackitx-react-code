@@ -1,28 +1,28 @@
-import { useState } from 'react';
-import './App.css';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import Home from './pages/home/Home';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import EditStudent from './pages/students/EditStudents';
-import PastExamDetails from './pages/past-exams/PastExamDetails';
-import PastExamStudentView from './pages/past-exams/PastExamStudentView';
-import EditExam from './pages/active-exams/EditExam';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import CreateStudent from './pages/students/CreateStudent';
-import EditUpcomingExams from './pages/upcoming-exam/EditUpcomingExams';
-import ExamContainer from './components/ExamContainer';
-import PrivacyPolicy from './pages/privacy-policy/PrivacyPolicy';
-import ExamParticipants from './pages/exam-participant/ExamParticipants';
-import ActivationPage from './pages/user-activate/UserActivationPage';
-import StudentDetails from './pages/students/StudentDetails';
-import ForgotPasswordPage from './pages/auth/ForgetPasswordPage';
-import CreateAdminForm from './pages/super-admin/CreateAdminForm';
-import EditAdmin from './pages/super-admin/EditAdmin';
+import { useState } from "react";
+import "./App.css";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import Home from "./pages/home/Home";
+import { Routes, Route, Navigate } from "react-router-dom";
+import EditStudent from "./pages/students/EditStudents";
+import PastExamDetails from "./pages/past-exams/PastExamDetails";
+import PastExamStudentView from "./pages/past-exams/PastExamStudentView";
+import EditExam from "./pages/active-exams/EditExam";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import CreateStudent from "./pages/students/CreateStudent";
+import EditUpcomingExams from "./pages/upcoming-exam/EditUpcomingExams";
+import ExamContainer from "./components/ExamContainer";
+import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
+import ExamParticipants from "./pages/exam-participant/ExamParticipants";
+import ActivationPage from "./pages/user-activate/UserActivationPage";
+import StudentDetails from "./pages/students/StudentDetails";
+import ForgotPasswordPage from "./pages/auth/ForgetPasswordPage";
+import CreateAdminForm from "./pages/super-admin/CreateAdminForm";
+import EditAdmin from "./pages/super-admin/EditAdmin";
 
 const ProtectedRoute = ({ children }) => {
-  const authToken = localStorage.getItem('authToken');
+  const authToken = localStorage.getItem("authToken");
 
   if (!authToken) {
     return <Navigate to="/login" replace />;
@@ -32,7 +32,7 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const PublicRoute = ({ children }) => {
-  const authToken = localStorage.getItem('authToken');
+  const authToken = localStorage.getItem("authToken");
 
   if (authToken) {
     return <Navigate to="/home" replace />;
@@ -42,10 +42,10 @@ const PublicRoute = ({ children }) => {
 };
 
 const SuperAdminRoute = ({ children }) => {
-  const authToken = localStorage.getItem('authToken');
-  const userRole = localStorage.getItem('userRole');
+  const authToken = localStorage.getItem("authToken");
+  const userRole = localStorage.getItem("userRole");
 
-  if (authToken && userRole === 'SuperAdmin') {
+  if (authToken && userRole === "SuperAdmin") {
     return <Navigate to="/home" replace />;
   }
 
@@ -59,7 +59,7 @@ function App() {
     <>
       <Routes>
         <Route
-          path='/'
+          path="/"
           element={
             <PublicRoute>
               <LoginPage />
@@ -67,7 +67,7 @@ function App() {
           }
         />
         <Route
-          path='/login'
+          path="/login"
           element={
             <PublicRoute>
               <LoginPage />
@@ -75,7 +75,7 @@ function App() {
           }
         />
         <Route
-          path='/super-admin'
+          path="/super-admin"
           element={
             <SuperAdminRoute>
               <LoginPage isSuperAdmin={true} />
@@ -83,7 +83,7 @@ function App() {
           }
         />
         <Route
-          path='/register'
+          path="/register"
           element={
             <PublicRoute>
               <RegisterPage />
@@ -91,7 +91,7 @@ function App() {
           }
         />
         <Route
-          path='/forgot-password'
+          path="/forgot-password"
           element={
             <PublicRoute>
               <ForgotPasswordPage />
@@ -103,7 +103,7 @@ function App() {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
         <Route
-          path='/home'
+          path="/home"
           element={
             <ProtectedRoute>
               <Home />
@@ -111,7 +111,7 @@ function App() {
           }
         />
         <Route
-          path='/exams'
+          path="/exams"
           element={
             <ProtectedRoute>
               <ExamContainer />

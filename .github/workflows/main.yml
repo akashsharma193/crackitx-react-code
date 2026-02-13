@@ -3,7 +3,7 @@ name: Deploy Examdy App to Hostinger
 on:
   push:
     branches:
-      - ajinkya_dev  # or master, depending on your branch name
+      - Gaurav  # or master, depending on your branch name
 
 jobs:
   build-and-deploy:
